@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #242424;
+  --bg-tertiary: #2e2e2e;
+  --border: #3a3a3a;
+  --text-primary: #e8e8e8;
+  --text-muted: #9a9a9a;
+  --gold: #f5c842;
+  --redstone: #cc2200;
+  --emerald: #17c964;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #1a1a1a;
+  color: #e8e8e8;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #242424; }
+::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+
+/* Dice tumble animation */
+@keyframes dice-tumble {
+  0%   { transform: rotateX(0deg)   rotateY(0deg);   }
+  15%  { transform: rotateX(180deg) rotateY(90deg);  }
+  30%  { transform: rotateX(90deg)  rotateY(270deg); }
+  45%  { transform: rotateX(270deg) rotateY(180deg); }
+  60%  { transform: rotateX(360deg) rotateY(90deg);  }
+  75%  { transform: rotateX(180deg) rotateY(360deg); }
+  90%  { transform: rotateX(90deg)  rotateY(180deg); }
+  100% { transform: rotateX(0deg)   rotateY(0deg);   }
+}
+.dice-rolling { animation: dice-tumble 0.8s ease-in-out; }
+
+/* React Flow */
+.react-flow__background { background-color: #1a1a1a !important; }
+.react-flow__controls button {
+  background: #242424 !important;
+  border-color: #3a3a3a !important;
+  color: #e8e8e8 !important;
+}
+.react-flow__minimap { background: #1a1a1a !important; }
