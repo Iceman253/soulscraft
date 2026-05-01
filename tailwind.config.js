@@ -4,31 +4,42 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Warm dark palette — replaces cold grey so every stone-* class reads warmer
         stone: {
-          950: '#0d0d0d',
-          900: '#1a1a1a',
-          800: '#242424',
-          700: '#2e2e2e',
-          600: '#3a3a3a',
-          500: '#656565',
-          400: '#909090',
-          300: '#b8b8b8',
-          200: '#e4e4e4',
-          100: '#ffffff',
+          950: '#070604',
+          900: '#0d0b08',   // main app bg
+          800: '#17140e',   // panels, cards, topbar
+          700: '#221f17',   // hover states, active backgrounds
+          600: '#32301f', // will not work as expected - just adjust
+          500: '#524c3c',   // subtle dividers, disabled
+          400: '#9e9282',   // muted text
+          300: '#bab09c',   // secondary text
+          200: '#d2c8b2',   // primary text
+          100: '#e6dece',   // headings
         },
-        gold: '#f5c842',
-        redstone: '#cc2200',
-        emerald: '#17c964',
-        overworld: '#2d6a2d',
-        nether: '#8b2500',
-        end: '#3d1a6e',
+        gold: '#cd8f22',      // richer amber — less "emoji yellow", more aged metal
+        redstone: '#bd2e14',
+        emerald: '#1a9e56',
+        overworld: '#295e30',
+        nether: '#7a2100',
+        end: '#3a1869',
+        teal: {
+          300: '#5ecdbb',
+          400: '#2bbdaa',
+          500: '#1fa898',
+          600: '#178a7e',
+        },
       },
       fontFamily: {
         display: ['"Press Start 2P"', 'monospace'],
+        heading: ['Cinzel', 'Georgia', 'serif'],
+        sans: ['"Crimson Pro"', 'Georgia', 'serif'],
         mono: ['"VT323"', 'monospace', 'ui-monospace'],
+      },
+      borderColor: {
+        DEFAULT: '#32301f',
       },
     },
   },
   plugins: [],
 }
-

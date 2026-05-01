@@ -45,25 +45,31 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
   }
 
   return (
-    <div className="shrink-0 h-12 bg-stone-800 border-b border-stone-700 flex items-center gap-2 px-3">
-      {/* Campaign name */}
-      <span className="font-display text-gold text-xs truncate max-w-xs shrink-0">
-        {activeCampaign?.name}
-      </span>
+    <div className="shrink-0 h-12 bg-stone-800 border-b border-stone-600 flex items-stretch px-3 gap-0">
 
-      <div className="w-px h-6 bg-stone-600 mx-1 shrink-0" />
+      {/* Campaign name — Press Start 2P gives it identity */}
+      <div className="flex items-center pr-3 shrink-0 max-w-[200px]">
+        <span className="font-display text-gold truncate" style={{ fontSize: '9px', letterSpacing: '0.02em' }}>
+          {activeCampaign?.name}
+        </span>
+      </div>
 
-      {/* Tab nav */}
-      <nav className="flex items-center gap-0.5 flex-1 overflow-x-auto">
+      {/* Vertical rule */}
+      <div className="self-center w-px h-5 bg-stone-600 mr-1 shrink-0" />
+
+      {/* Tab nav — underline treatment, not pill/background */}
+      <nav className="flex flex-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => onTabChange(t.id)}
-            className={`px-3 py-1 rounded text-sm whitespace-nowrap transition-colors ${
+            className={[
+              'h-full px-3.5 text-sm whitespace-nowrap transition-colors border-b-2 tracking-wide',
               activeTab === t.id
-                ? 'bg-stone-700 text-gold font-medium'
-                : 'text-stone-400 hover:text-stone-200 hover:bg-stone-700/50'
-            }`}
+                ? 'border-gold text-stone-100 font-heading'
+                : 'border-transparent text-stone-400 hover:text-stone-200 hover:border-stone-500 font-heading',
+            ].join(' ')}
+            style={{ fontSize: '12px', letterSpacing: '0.06em' }}
           >
             {t.label}
           </button>
@@ -71,55 +77,71 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
       </nav>
 
       {/* Right actions */}
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="self-center flex items-center gap-1 shrink-0 pl-2">
+
+        {/* Time advancement — subtle, text-only style */}
         <button
           onClick={() => setConfirm('scene')}
-          className="px-2.5 py-1 rounded text-xs bg-stone-700 text-stone-300 hover:bg-stone-600 hover:text-stone-100"
+          className="px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded transition-all"
           title="End Scene — decrements all scene-duration effects/enchantments"
         >
           End Scene
         </button>
         <button
           onClick={() => setConfirm('day')}
-          className="px-2.5 py-1 rounded text-xs bg-stone-700 text-stone-300 hover:bg-stone-600 hover:text-stone-100"
+          className="px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded transition-all"
           title="End Day — decrements all day-duration effects/enchantments"
         >
           End Day
         </button>
 
-        <div className="w-px h-5 bg-stone-600 mx-0.5" />
+        <div className="w-px h-5 bg-stone-600 mx-1 shrink-0" />
 
+        {/* Action buttons — slightly more contrast than plain stone, each with a distinct accent when active */}
         <button
           onClick={onTogglePlayerView}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium ${playerViewActive ? 'bg-teal-600 text-white' : 'bg-stone-700 text-stone-300 hover:bg-stone-600'}`}
           title="Toggle Player View"
+          className={[
+            'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs border transition-all',
+            playerViewActive
+              ? 'bg-teal-600/20 border-teal-500/50 text-teal-300'
+              : 'bg-transparent border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200',
+          ].join(' ')}
         >
-          <Eye size={13} /> Players
-        </button>
-        <button
-          onClick={onToggleCombat}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium ${combatActive ? 'bg-redstone text-white' : 'bg-stone-700 text-stone-300 hover:bg-stone-600'}`}
-        >
-          <Sword size={13} /> Combat
-        </button>
-        <button
-          onClick={onToggleDice}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs bg-stone-700 text-stone-300 hover:bg-stone-600"
-        >
-          <Dice6 size={13} /> Dice
+          <Eye size={12} /> Players
         </button>
 
-        <div className="w-px h-5 bg-stone-600 mx-0.5" />
+        <button
+          onClick={onToggleCombat}
+          className={[
+            'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs border transition-all',
+            combatActive
+              ? 'bg-redstone/20 border-redstone/60 text-red-300'
+              : 'bg-transparent border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200',
+          ].join(' ')}
+        >
+          <Sword size={12} /> Combat
+        </button>
+
+        <button
+          onClick={onToggleDice}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs border border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200 bg-transparent transition-all"
+        >
+          <Dice6 size={12} /> Dice
+        </button>
+
+        <div className="w-px h-5 bg-stone-600 mx-1 shrink-0" />
 
         <button
           onClick={() => setConfirm('exit')}
-          className="p-1.5 rounded text-stone-400 hover:text-stone-100 hover:bg-stone-700"
+          className="p-1.5 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700 transition-colors"
           title="Exit to campaign list"
         >
-          <LogOut size={15} />
+          <LogOut size={14} />
         </button>
       </div>
 
+      {/* Confirm dialogs */}
       {confirm === 'scene' && (
         <ConfirmDialog
           title="End Scene"

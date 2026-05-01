@@ -1,19 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Custom properties ──────────────────────────────────────────────── */
 :root {
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #242424;
-  --bg-tertiary: #2e2e2e;
-  --border: #3a3a3a;
-  --text-primary: #e8e8e8;
-  --text-muted: #9a9a9a;
-  --gold: #f5c842;
-  --redstone: #cc2200;
-  --emerald: #17c964;
+  --bg-primary:   #0d0b08;
+  --bg-secondary: #17140e;
+  --bg-tertiary:  #221f17;
+  --border:       #32302a;
+  --text-primary: #d2c8b2;
+  --text-muted:   #9e9282;
+  --gold:         #cd8f22;
+  --redstone:     #bd2e14;
+  --emerald:      #1a9e56;
 }
 
 * { box-sizing: border-box; }
@@ -25,21 +26,49 @@ html, body, #root {
 }
 
 body {
-  background: #1a1a1a;
-  color: #e8e8e8;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+  line-height: 1.55;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #242424; }
-::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+/* Grain overlay — adds warmth and stops the "flat digital" feel */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px;
+}
 
-/* Dice tumble animation */
+/* ── Scrollbars ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar         { width: 5px; height: 5px; }
+::-webkit-scrollbar-track   { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb   { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #524c3c; }
+
+/* ── Inputs ─────────────────────────────────────────────────────────── */
+input, textarea, select {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+}
+
+/* ── Global focus ring ──────────────────────────────────────────────── */
+:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* ── Cinzel heading utility ─────────────────────────────────────────── */
+.font-heading { font-family: 'Cinzel', Georgia, serif; }
+
+/* ── Dice tumble ────────────────────────────────────────────────────── */
 @keyframes dice-tumble {
   0%   { transform: rotateX(0deg)   rotateY(0deg);   }
   15%  { transform: rotateX(180deg) rotateY(90deg);  }
@@ -52,11 +81,34 @@ body {
 }
 .dice-rolling { animation: dice-tumble 0.8s ease-in-out; }
 
-/* React Flow */
-.react-flow__background { background-color: #1a1a1a !important; }
-.react-flow__controls button {
-  background: #242424 !important;
-  border-color: #3a3a3a !important;
-  color: #e8e8e8 !important;
+/* ── React Flow overrides ───────────────────────────────────────────── */
+.react-flow__background { background-color: var(--bg-primary) !important; }
+
+.react-flow__controls {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  gap: 2px;
 }
-.react-flow__minimap { background: #1a1a1a !important; }
+.react-flow__controls button {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 3px !important;
+  color: var(--text-primary) !important;
+  transition: background 120ms, border-color 120ms;
+}
+.react-flow__controls button:hover {
+  background: var(--bg-tertiary) !important;
+  border-color: #52503a !important;
+}
+.react-flow__minimap {
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+}
+.react-flow__minimap-mask { fill: var(--bg-primary) !important; opacity: 0.7 !important; }
+
+/* Panel separators — slightly warmer than raw tailwind defaults */
+.panel-rule {
+  border-top: 1px solid var(--border);
+}
