@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   ReactFlow, type Node, type Edge,
   Handle, Position, type NodeProps,
+  useReactFlow, ReactFlowProvider,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useShallow } from 'zustand/react/shallow'
@@ -83,10 +84,11 @@ const nodeTypes = {
   unknownDest: UnknownDestinationNode,
 }
 
-// ── Main PlayerMap ────────────────────────────────────────────────────────
-export function PlayerMap() {
+// ── Inner canvas (needs ReactFlowProvider context for useReactFlow) ──────────
+function PlayerMapCanvas() {
   const { areas, edges, playerVisibleAreaIds, travelingMarkers } = useWorldStore()
   const characters = useCharacterStore(s => s.characters)
+  const { fitView } = useReactFlow()
 
   const { rfNodes, rfEdges } = useMemo(() => {
     const visibleSet = new Set(playerVisibleAreaIds)
@@ -184,6 +186,14 @@ export function PlayerMap() {
     return { rfNodes, rfEdges: [...areaEdges, ...travelEdges] }
   }, [areas, edges, playerVisibleAreaIds, travelingMarkers, characters])
 
+  // Re-fit whenever the set of visible nodes changes so newly revealed areas
+  // are always in view rather than appearing off-screen.
+  useEffect(() => {
+    if (rfNodes.length > 0) {
+      setTimeout(() => fitView({ padding: 0.3, duration: 400 }), 50)
+    }
+  }, [rfNodes.length, fitView])
+
   if (playerVisibleAreaIds.length === 0 && travelingMarkers.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-stone-950 text-stone-500 text-sm">
@@ -209,7 +219,17 @@ export function PlayerMap() {
         zoomOnScroll
         fitView
         fitViewOptions={{ padding: 0.3 }}
+        proOptions={{ hideAttribution: true }}
       />
     </div>
+  )
+}
+
+// ── Public export — wrapped in provider so useReactFlow works inside ─────────
+export function PlayerMap() {
+  return (
+    <ReactFlowProvider>
+      <PlayerMapCanvas />
+    </ReactFlowProvider>
   )
 }
