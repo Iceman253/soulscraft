@@ -61,7 +61,7 @@ export function MerchantModal({ onClose }: Props) {
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-700 shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-lg">🏪</span>
-            <h2 className="font-bold text-stone-100 text-base">Merchant Wares</h2>
+            <h2 className="font-bold text-stone-100 text-base font-heading tracking-wide">Merchant Wares</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded text-stone-400 hover:text-stone-100 hover:bg-stone-700 transition-colors">
             <X size={16} />
@@ -74,14 +74,14 @@ export function MerchantModal({ onClose }: Props) {
           {/* Left panel — Wares */}
           <div className="w-[45%] border-r border-stone-700 flex flex-col min-h-0">
             <div className="px-4 py-2.5 border-b border-stone-700/60 shrink-0">
-              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Wares</span>
+              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">Wares</span>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-4">
 
               {/* World Items */}
               {items.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">World Items</div>
+                  <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">World Items</div>
                   <div className="space-y-1">
                     {items.map(item => (
                       <div
@@ -89,7 +89,7 @@ export function MerchantModal({ onClose }: Props) {
                         className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                           selectedItem === item.name
                             ? 'bg-amber-900/40 border border-amber-700/60'
-                            : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-750 hover:border-stone-600'
+                            : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-700/60 hover:border-stone-600'
                         }`}
                         onClick={() => setSelectedItem(item.name)}
                       >
@@ -108,7 +108,7 @@ export function MerchantModal({ onClose }: Props) {
 
               {/* Weapons Catalog */}
               <div>
-                <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">⚔️ Weapons</div>
+                <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">⚔️ Weapons</div>
                 <div className="space-y-1">
                   {WEAPONS_CATALOG.map(name => (
                     <div
@@ -116,7 +116,7 @@ export function MerchantModal({ onClose }: Props) {
                       className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                         selectedItem === name
                           ? 'bg-amber-900/40 border border-amber-700/60'
-                          : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-750 hover:border-stone-600'
+                          : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-700/60 hover:border-stone-600'
                       }`}
                       onClick={() => setSelectedItem(name)}
                     >
@@ -134,7 +134,7 @@ export function MerchantModal({ onClose }: Props) {
 
               {/* Armor Catalog */}
               <div>
-                <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">🛡️ Armor</div>
+                <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">🛡️ Armor</div>
                 <div className="space-y-1">
                   {ARMOR_CATALOG.map(name => (
                     <div
@@ -142,7 +142,7 @@ export function MerchantModal({ onClose }: Props) {
                       className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                         selectedItem === name
                           ? 'bg-amber-900/40 border border-amber-700/60'
-                          : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-750 hover:border-stone-600'
+                          : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-700/60 hover:border-stone-600'
                       }`}
                       onClick={() => setSelectedItem(name)}
                     >
@@ -164,13 +164,13 @@ export function MerchantModal({ onClose }: Props) {
           {/* Right panel — Purchase */}
           <div className="w-[55%] flex flex-col min-h-0">
             <div className="px-4 py-2.5 border-b border-stone-700/60 shrink-0">
-              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Purchase</span>
+              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">Purchase</span>
             </div>
             <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
 
               {/* Selected Item */}
               <div>
-                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2">Item</label>
+                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2 font-heading">Item</label>
                 {selectedItem
                   ? (
                     <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-900/30 border border-amber-700/50">
@@ -194,31 +194,31 @@ export function MerchantModal({ onClose }: Props) {
 
               {/* Quantity */}
               <div>
-                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2">Quantity</label>
+                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2 font-heading">Quantity</label>
                 <input
                   type="number"
                   value={quantity}
                   min={1}
                   onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500"
+                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
                 />
               </div>
 
               {/* Price */}
               <div>
-                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2">Price</label>
+                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2 font-heading">Price</label>
                 <input
                   type="number"
                   value={price}
                   min={0}
                   onChange={e => setPrice(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500"
+                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
                 />
               </div>
 
               {/* Currency */}
               <div>
-                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2">Currency</label>
+                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2 font-heading">Currency</label>
                 <div className="flex gap-2 flex-wrap">
                   {CURRENCY_OPTIONS.map(opt => (
                     <button
@@ -239,7 +239,7 @@ export function MerchantModal({ onClose }: Props) {
 
               {/* Character */}
               <div>
-                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2">Buyer</label>
+                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2 font-heading">Buyer</label>
                 <select
                   value={charId}
                   onChange={e => setCharId(e.target.value)}
@@ -261,7 +261,7 @@ export function MerchantModal({ onClose }: Props) {
               {/* Character currency preview */}
               {selectedChar && (
                 <div className="bg-stone-800 border border-stone-700/60 rounded-lg p-3">
-                  <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">{selectedChar.name}'s Wallet</div>
+                  <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">{selectedChar.name}'s Wallet</div>
                   <div className="flex flex-wrap gap-2">
                     {CURRENCY_OPTIONS.map(opt => (
                       <div
@@ -269,7 +269,7 @@ export function MerchantModal({ onClose }: Props) {
                         className={`flex items-center gap-1 px-2 py-1 rounded bg-stone-700 text-xs ${currency === opt.key ? 'text-amber-300' : 'text-stone-400'}`}
                       >
                         <img src={opt.img} alt={opt.label} className="w-3.5 h-3.5 object-contain" />
-                        {selectedChar.currency[opt.key]}
+                        <span className="font-mono tabular-nums">{selectedChar.currency[opt.key]}</span>
                       </div>
                     ))}
                   </div>

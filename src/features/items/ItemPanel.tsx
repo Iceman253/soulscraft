@@ -55,7 +55,7 @@ export function ItemPanel() {
   return (
     <div className="h-full flex flex-col p-4 overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-stone-100">World Items</h2>
+        <h2 className="font-semibold text-stone-100 font-heading tracking-wide">World Items</h2>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowMerchant(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-700 text-stone-200 font-semibold hover:bg-stone-600 text-sm">
             🏪 Merchant
@@ -75,7 +75,7 @@ export function ItemPanel() {
       {/* Character Gear section */}
       {charGear.length > 0 && (
         <div className="mb-6">
-          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Equipped Gear</div>
+          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">Equipped Gear</div>
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
             {charGear.map((g, i) => (
               <div key={i} className="bg-stone-800 border border-stone-700/60 rounded-xl p-3 opacity-90">
@@ -97,7 +97,7 @@ export function ItemPanel() {
 
       {/* World items */}
       {(filtered.length > 0 || charGear.length === 0) && (
-        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Items</div>
+        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">Items</div>
       )}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
         {filtered.length === 0 && (
@@ -176,7 +176,7 @@ function ItemCard({ item, areas, onUpdate, onDelete, onMove }: {
 
       <div className="flex items-center justify-center gap-1.5 mt-1">
         <button onClick={() => onUpdate(item.id, { quantity: Math.max(1, item.quantity - 1) })} className="w-5 h-5 rounded bg-stone-700 text-stone-400 text-xs hover:bg-stone-600">-</button>
-        <span className="text-xs text-stone-300 w-6 text-center">{item.quantity}</span>
+        <span className="text-xs text-stone-300 w-6 text-center font-mono tabular-nums">{item.quantity}</span>
         <button onClick={() => onUpdate(item.id, { quantity: item.quantity + 1 })} className="w-5 h-5 rounded bg-stone-700 text-stone-400 text-xs hover:bg-stone-600">+</button>
       </div>
 

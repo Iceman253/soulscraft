@@ -66,6 +66,7 @@ export function BestiaryPanel() {
   const [newTypes, setNewTypes] = useState<string[]>(['natural'])
   const [newHp, setNewHp] = useState<BestiaryEntry['hpTier']>('weak')
   const [newMaxHp, setNewMaxHp] = useState('')
+  const [newDef, setNewDef] = useState('')
 
   const selected = entries.find(e => e.id === selectedId)
   const filtered = entries.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
@@ -76,10 +77,12 @@ export function BestiaryPanel() {
   const handleAdd = () => {
     if (!newName.trim()) return
     const customHp = newMaxHp ? parseInt(newMaxHp) : undefined
+    const customDef = newDef ? parseInt(newDef) : undefined
     const id = addEntry({
       name: newName.trim(),
       hpTier: newHp,
       maxHp: customHp,
+      def: customDef,
       size: 'medium',
       creatureType: newTypes.length ? newTypes : ['natural'],
       speed: 'normal',
@@ -87,7 +90,7 @@ export function BestiaryPanel() {
       isCustom: true,
     })
     setSelectedId(id)
-    setNewName(''); setNewTypes(['natural']); setNewHp('weak'); setNewMaxHp(''); setShowAdd(false)
+    setNewName(''); setNewTypes(['natural']); setNewHp('weak'); setNewMaxHp(''); setNewDef(''); setShowAdd(false)
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +110,7 @@ export function BestiaryPanel() {
       <div className="w-72 shrink-0 border-r border-stone-700 flex flex-col">
         <div className="p-3 border-b border-stone-700 space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-stone-100 text-sm">Bestiary</h2>
+            <h2 className="font-semibold text-stone-100 text-sm font-heading tracking-wide">Bestiary</h2>
             <button onClick={() => setShowAdd(true)} className="p-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600"><Plus size={13} /></button>
           </div>
           <div className="relative">
@@ -156,7 +159,7 @@ export function BestiaryPanel() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <input value={selected.name} onChange={e => updateEntry(selected.id, { name: e.target.value })}
-                    className="text-xl font-bold text-stone-100 bg-transparent outline-none hover:bg-stone-800 rounded px-1 -mx-1 flex-1 min-w-0" />
+                    className="text-xl font-bold text-stone-100 bg-transparent outline-none hover:bg-stone-800 rounded px-1 -mx-1 flex-1 min-w-0 font-heading tracking-wide" />
                   {selected.isCustom && (
                     <button onClick={() => { deleteEntry(selected.id); setSelectedId(null) }} className="p-1.5 rounded text-stone-500 hover:text-red-400 hover:bg-stone-700 shrink-0"><Trash2 size={14} /></button>
                   )}
@@ -182,12 +185,22 @@ export function BestiaryPanel() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-stone-500 block mb-1">Custom Max HP <span className="text-stone-600">(overrides tier)</span></label>
+                <label className="text-xs text-stone-500 block mb-1">Custom Max HP <span className="text-stone-500">(overrides tier)</span></label>
                 <input
                   type="number" min={1}
                   value={selected.maxHp ?? ''}
                   onChange={e => updateEntry(selected.id, { maxHp: e.target.value ? parseInt(e.target.value) : undefined })}
                   placeholder={`Default: ${selected.hpTier}`}
+                  className="w-full bg-stone-800 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-stone-500 block mb-1">Defense (DEF)</label>
+                <input
+                  type="number" min={0}
+                  value={selected.def ?? ''}
+                  onChange={e => updateEntry(selected.id, { def: e.target.value ? parseInt(e.target.value) : undefined })}
+                  placeholder="0"
                   className="w-full bg-stone-800 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50"
                 />
               </div>
@@ -239,6 +252,12 @@ export function BestiaryPanel() {
                 <label className="text-sm text-stone-400 block mb-1">Custom HP</label>
                 <input type="number" min={1} value={newMaxHp} onChange={e => setNewMaxHp(e.target.value)}
                   placeholder="Optional"
+                  className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-2 text-stone-200 text-sm outline-none" />
+              </div>
+              <div>
+                <label className="text-sm text-stone-400 block mb-1">Defense (DEF)</label>
+                <input type="number" min={0} value={newDef} onChange={e => setNewDef(e.target.value)}
+                  placeholder="0"
                   className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-2 text-stone-200 text-sm outline-none" />
               </div>
             </div>

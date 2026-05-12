@@ -91,6 +91,7 @@ export interface Currency {
 export interface CharacterItem {
   id: string
   name: string
+  customName?: string        // player's personal label (e.g. "My Lucky Sword")
   quantity: number
   description?: string
   isBlock?: boolean
@@ -119,6 +120,9 @@ export interface Ability {
   sdCost: number
   recharge: 'rest' | 'scene' | 'day' | 'none'
   materials?: string
+  /** Combat applicability — see CombatRole in lib/classAbilities.ts.
+   *  Optional; if absent, the ability is treated as 'utility' (Dice Roller only). */
+  combatRole?: 'attack' | 'defense' | 'general' | 'utility'
 }
 
 export type EffectDuration = 'scenes' | 'days' | 'until-rest' | 'permanent' | 'manual'
@@ -162,4 +166,7 @@ export interface Character {
   storage: InventorySection
   rations: number
   notes: string
+  // Death state (rulebook p.74)
+  isDead?: boolean    // character has died (HP 0, SD 0)
+  isGhost?: boolean   // in ghost mode during Tower of Trials attempt
 }

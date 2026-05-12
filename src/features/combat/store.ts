@@ -4,11 +4,13 @@ import { newId } from '../../lib/id'
 import { log } from '../log/store'
 import { computeDef } from '../../lib/armor'
 
-const HP_TIER: Record<BestiaryEntry['hpTier'], number> = {
-  weak: 5,
-  average: 10,
-  strong: 20,
-  mighty: 40,
+// Rulebook p.101: Weak 1-4 HP, Average 5-10 HP, Strong 11-12 HP, Mighty 13+ HP.
+// Defaults sit at the midpoint / typical value of each tier.
+export const HP_TIER: Record<BestiaryEntry['hpTier'], number> = {
+  weak: 4,
+  average: 8,
+  strong: 12,
+  mighty: 16,
 }
 
 interface CombatStore {
@@ -26,6 +28,9 @@ interface CombatStore {
   addCombatantEffect: (id: string, effect: Omit<ActiveEffect, 'id'>) => void
   removeCombatantEffect: (id: string, effectId: string) => void
   updateCombatantNotes: (id: string, notes: string) => void
+  toggleTough: (id: string) => void
+  /** Replace a defeated slime/magma cube with two smaller ones. */
+  splitSlime: (id: string) => void
   endCombat: () => void
 }
 
@@ -217,6 +222,69 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         combatants: session.combatants.map(c => c.id === id ? { ...c, notes } : c),
       },
     })
+  },
+
+  toggleTough(id) {
+    const session = get().session
+    if (!session) return
+    set({
+      session: {
+        ...session,
+        combatants: session.combatants.map(c => c.id === id ? { ...c, isTough: !c.isTough } : c),
+      },
+    })
+  },
+
+  splitSlime(id) {
+    const session = get().session
+    if (!session) return
+    const parent = session.combatants.find(c => c.id === id)
+    if (!parent) return
+
+    // Determine current stage from the name and pick child stats.
+    // Manual: large slime/magma cube splits into 2 medium (HP 5), medium → 2 small (HP 3).
+    const name = parent.name.toLowerCase()
+    const isSmall  = name.includes('small')
+    const isMedium = name.includes('medium')
+    if (isSmall) return // small slimes don't split further
+
+    const baseLabel = parent.name
+      .replace(/^(small|medium|large)\s+/i, '')
+      .trim() || (name.includes('magma') ? 'Magma Cube' : 'Slime')
+
+    const childStage = isMedium ? 'Small' : 'Medium'
+    const childHp    = isMedium ? 3       : 5
+    const childDie   = isMedium ? 'd4'    : 'd6'
+
+    const makeChild = (idx: number): Combatant => ({
+      id: newId(),
+      name: `${childStage} ${baseLabel} ${idx}`,
+      initiative: parent.initiative,
+      maxHp: childHp,
+      currentHp: childHp,
+      def: 0,
+      damageDie: childDie,
+      kind: 'creature',
+      sourceId: parent.sourceId,
+      activeEffects: [],
+      notes: parent.notes,
+    })
+
+    const idx = session.combatants.findIndex(c => c.id === id)
+    const children = [makeChild(1), makeChild(2)]
+    const next = [
+      ...session.combatants.slice(0, idx),
+      ...children,
+      ...session.combatants.slice(idx + 1),
+    ]
+
+    // Adjust activeIndex if the removed combatant was before it
+    let activeIndex = session.activeIndex
+    if (idx < session.activeIndex) activeIndex = session.activeIndex + 1
+    else if (idx === session.activeIndex) activeIndex = idx // first child takes the slot
+
+    set({ session: { ...session, combatants: next, activeIndex } })
+    log('combat-end', `🟢 ${parent.name} split into 2 × ${childStage} ${baseLabel} (${childHp} HP each).`)
   },
 
   endCombat() {

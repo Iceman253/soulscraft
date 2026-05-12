@@ -1,17 +1,26 @@
 import { useState } from 'react'
-import { Plus, UserPlus } from 'lucide-react'
+import { Plus, UserPlus, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useCharacterStore, defaultClassFeatureState } from './store'
+import { log } from '../log/store'
 import { CharacterCard } from './CharacterCard'
 import { CharacterSheet } from './CharacterSheet'
 import { Modal } from '../../ui/Modal'
-import { SPECIES, CLASSES, CLASS_DAMAGE_DICE, CLASS_DISCIPLINES, DISCIPLINE_EDGES, DEFAULT_CLASS_SKILLS, SPECIES_DATA } from '../../lib/constants'
+import { SPECIES, CLASSES, CLASS_DAMAGE_DICE, CLASS_DISCIPLINES, DISCIPLINE_EDGES, DEFAULT_CLASS_SKILLS, SPECIES_DATA, calcMaxHp, calcMaxSd } from '../../lib/constants'
+import { CLASS_ABILITIES } from '../../lib/classAbilities'
 import { emptyLoadout } from '../../lib/armor'
 import { newId } from '../../lib/id'
-import type { Character, Skill } from '../../types'
+import type { Character, Skill, Ability } from '../../types'
+
+// Skill bonus per class
+const CLASS_SKILL_BONUS: Record<string, 1|2|3> = {
+  Warrior: 1, Vindicator: 1, Hunter: 2, Evoker: 2,
+  Delver: 3, Wildspeaker: 3, Enchanter: 3, Tecton: 3, Alchemist: 3,
+}
 
 function buildNewCharacter(name: string, species: string, variantName: string, characterClass: string, discipline: string): Omit<Character, 'id'> {
+  const skillBonus = CLASS_SKILL_BONUS[characterClass] ?? 1
   const defaultSkills: Skill[] = (DEFAULT_CLASS_SKILLS[characterClass] ?? []).map(s => ({
-    id: newId(), name: s, bonus: 1 as const, description: '',
+    id: newId(), name: s, bonus: skillBonus as 1|2|3, description: '',
   }))
   const speciesInfo = SPECIES_DATA[species]
   const speciesVariants = speciesInfo?.variants ?? []
@@ -22,6 +31,21 @@ function buildNewCharacter(name: string, species: string, variantName: string, c
   ]
   const damageDie = CLASS_DAMAGE_DICE[characterClass] ?? 'd6'
 
+  // Rulebook p.7: "You start with three available Special Abilities at Level 1"
+  const startingAbilities: Ability[] = (CLASS_ABILITIES[characterClass] ?? [])
+    .filter(a => a.tier === 'level1')
+    .map(a => ({
+      id: newId(),
+      name: a.name,
+      sdCost: a.sdCost,
+      description: a.description,
+      recharge: 'rest' as const,
+      combatRole: a.combatRole,
+    }))
+
+  const maxHp = calcMaxHp(characterClass, 1)
+  const maxSd = calcMaxSd(1)
+
   return {
     name,
     species,
@@ -29,15 +53,15 @@ function buildNewCharacter(name: string, species: string, variantName: string, c
     class: characterClass,
     level: 1,
     xp: 0,
-    maxHp: 10,
-    currentHp: 10,
-    maxSd: 6,
-    currentSd: 6,
+    maxHp,
+    currentHp: maxHp,
+    maxSd,
+    currentSd: maxSd,
     damageDie,
     discipline,
     skills: defaultSkills,
     traits: defaultTraits,
-    abilities: [],
+    abilities: startingAbilities,
     disciplineEdge: DISCIPLINE_EDGES[discipline]
       ? { name: DISCIPLINE_EDGES[discipline].name, description: DISCIPLINE_EDGES[discipline].description, used: false }
       : { name: '', description: '', used: false },
@@ -86,7 +110,12 @@ export function CharacterPanel() {
 
   const handleCreate = () => {
     if (!name.trim()) return
-    const id = addCharacter(buildNewCharacter(name.trim(), species, variant, characterClass, discipline))
+    const base = buildNewCharacter(name.trim(), species, variant, characterClass, discipline)
+    // Easter egg: Infinite gets... infinite HP
+    const isInfinite = name.trim().toLowerCase() === 'infinite'
+    if (isInfinite) { base.maxHp = 999999; base.currentHp = 999999 }
+    const id = addCharacter(base)
+    if (isInfinite) log('character-move', '∞ Infinite has arrived...')
     setSelectedId(id)
     setShowAdd(false)
     setName('')
@@ -104,7 +133,7 @@ export function CharacterPanel() {
   return (
     <div className="h-full flex flex-col p-4">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-stone-100">Characters</h2>
+        <h2 className="font-semibold text-stone-100 font-heading tracking-wide">Characters</h2>
         <button
           onClick={() => setShowAdd(true)}
           className="flex items-center gap-2 px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm"
@@ -122,14 +151,27 @@ export function CharacterPanel() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto">
-          {characters.map(c => (
-            <CharacterCard
-              key={c.id}
-              character={c}
-              onOpen={() => setSelectedId(c.id)}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto space-y-4">
+          {/* Living characters */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {characters.filter(c => !c.isDead).map(c => (
+              <CharacterCard key={c.id} character={c} onOpen={() => setSelectedId(c.id)} />
+            ))}
+          </div>
+
+          {/* Deceased characters */}
+          {characters.some(c => c.isDead) && (
+            <div>
+              <div className="text-xs text-stone-500 font-medium uppercase tracking-wider mb-2 flex items-center gap-1.5 font-heading">
+                <span>💀</span> Fallen
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 opacity-70">
+                {characters.filter(c => c.isDead).map(c => (
+                  <CharacterCard key={c.id} character={c} onOpen={() => setSelectedId(c.id)} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -218,9 +260,27 @@ export function CharacterPanel() {
               </div>
             )}
 
-            <div className="text-xs text-stone-500">
-              {CLASS_DAMAGE_DICE[characterClass] && <>Damage die: <span className="text-gold">{CLASS_DAMAGE_DICE[characterClass]}</span></>}
+            {/* Class stats + starting abilities preview */}
+            <div className="bg-stone-900 border border-stone-600 rounded-lg px-3 py-2.5 space-y-2">
+              <div className="flex gap-4 text-xs">
+                <span>HP: <span className="text-gold font-bold font-mono tabular-nums">{calcMaxHp(characterClass, 1)}</span></span>
+                <span>SD: <span className="text-gold font-bold font-mono tabular-nums">{calcMaxSd(1)}</span></span>
+                <span>Damage: <span className="text-gold font-bold font-mono">{CLASS_DAMAGE_DICE[characterClass]}</span></span>
+                <span>Skill bonus: <span className="text-gold font-bold font-mono">+{CLASS_SKILL_BONUS[characterClass] ?? 1}</span></span>
+              </div>
+              <div>
+                <div className="text-xs text-stone-500 font-medium mb-1 font-heading tracking-wide">Starting Special Abilities</div>
+                <div className="space-y-1">
+                  {(CLASS_ABILITIES[characterClass] ?? []).filter(a => a.tier === 'level1').map(a => (
+                    <div key={a.name} className="flex items-start gap-2">
+                      <span className="text-xs font-semibold text-stone-200 shrink-0">{a.name}</span>
+                      <span className="text-xs text-stone-500 truncate">{a.description.substring(0, 60)}…</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
               <button onClick={handleCreate} disabled={!name.trim()} className="px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm disabled:opacity-50">Create</button>

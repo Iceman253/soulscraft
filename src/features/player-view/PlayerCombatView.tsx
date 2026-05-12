@@ -38,9 +38,9 @@ export function PlayerCombatView() {
       <div className="shrink-0 px-4 py-3 bg-stone-800 border-b border-stone-700">
         <div className="flex items-center gap-3">
           <Swords size={16} className="text-redstone" />
-          <span className="font-bold text-stone-100">Round {session.round}</span>
+          <span className="font-bold text-stone-100 font-heading tracking-wide">Round <span className="font-mono tabular-nums">{session.round}</span></span>
           {activeCombatant && (
-            <span className="ml-auto text-sm text-gold font-semibold">
+            <span className="ml-auto text-sm text-gold font-semibold font-heading tracking-wide">
               ⚡ {activeCombatant.name}
             </span>
           )}

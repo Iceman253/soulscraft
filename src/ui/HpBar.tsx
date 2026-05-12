@@ -13,7 +13,7 @@ export function HpBar({ current, max, className = '' }: HpBarProps) {
       <div className="flex-1 h-2 bg-stone-700 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct * 100}%` }} />
       </div>
-      <span className="text-xs text-stone-400 tabular-nums shrink-0">{current}/{max}</span>
+      <span className="text-sm text-stone-400 tabular-nums shrink-0 font-mono">{current}/{max}</span>
     </div>
   )
 }

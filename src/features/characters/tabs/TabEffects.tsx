@@ -74,11 +74,11 @@ export function TabEffects({ character: c }: TabEffectsProps) {
 
       {/* Active effects list */}
       <div>
-        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">
+        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">
           Active Effects ({c.activeEffects.length})
         </div>
         {c.activeEffects.length === 0 && (
-          <div className="text-xs text-stone-600 italic">No active effects</div>
+          <div className="text-xs text-stone-500 italic">No active effects</div>
         )}
         <div className="space-y-2">
           {c.activeEffects.map(effect => (

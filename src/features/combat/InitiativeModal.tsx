@@ -25,7 +25,7 @@ export function InitiativeModal({ rolls, revealedCount, rolling, onApply, onDisc
         <div className="flex items-center justify-between px-5 py-4 border-b border-stone-700">
           <div className="flex items-center gap-2">
             <Dices size={16} className="text-gold" />
-            <span className="font-bold text-stone-100">Initiative Rolls</span>
+            <span className="font-bold text-stone-100 font-heading tracking-wide">Initiative Rolls</span>
           </div>
           {!rolling && (
             <button onClick={onDiscard}
@@ -48,11 +48,11 @@ export function InitiativeModal({ rolls, revealedCount, rolling, onApply, onDisc
                   <span className="text-xl animate-[dice-tumble_0.4s_ease-in-out_infinite]">🎲</span>
                 ) : revealed ? (
                   <div className="flex items-center gap-1.5">
-                    <span className="w-8 h-8 rounded-lg bg-stone-700 border border-stone-600 flex items-center justify-center text-sm font-bold text-gold">{r.d1}</span>
+                    <span className="w-8 h-8 rounded-lg bg-stone-700 border border-stone-600 flex items-center justify-center text-sm font-bold text-gold font-mono tabular-nums">{r.d1}</span>
                     <span className="text-stone-600 text-xs">+</span>
-                    <span className="w-8 h-8 rounded-lg bg-stone-700 border border-stone-600 flex items-center justify-center text-sm font-bold text-gold">{r.d2}</span>
+                    <span className="w-8 h-8 rounded-lg bg-stone-700 border border-stone-600 flex items-center justify-center text-sm font-bold text-gold font-mono tabular-nums">{r.d2}</span>
                     <span className="text-stone-500 text-xs">=</span>
-                    <span className="w-9 h-8 rounded-lg bg-stone-600 border border-stone-500 flex items-center justify-center text-base font-bold text-stone-100">{r.total}</span>
+                    <span className="w-9 h-8 rounded-lg bg-stone-600 border border-stone-500 flex items-center justify-center text-base font-bold text-stone-100 font-mono tabular-nums">{r.total}</span>
                   </div>
                 ) : (
                   <span className="text-stone-700">—</span>

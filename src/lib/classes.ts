@@ -228,7 +228,7 @@ export const QUICK_EFFECTS: Array<{
 }> = [
   { name: 'Poison',          durationType: 'scenes',     defaultDuration: 3 },
   { name: 'Weakness',        durationType: 'scenes',     defaultDuration: 3 },
-  { name: 'Wither',          durationType: 'scenes',     defaultDuration: 2 },
+  { name: 'Withering',       durationType: 'scenes',     defaultDuration: 2 },
   { name: 'Slowness',        durationType: 'scenes',     defaultDuration: 2 },
   { name: 'Blindness',       durationType: 'scenes',     defaultDuration: 1 },
   { name: 'Fire Resistance', durationType: 'until-rest'                     },

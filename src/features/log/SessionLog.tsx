@@ -36,7 +36,7 @@ export function SessionLog() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-stone-700 shrink-0">
-        <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Session Log</span>
+        <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider font-heading">Session Log</span>
         <button onClick={clearLog} className="p-1 rounded text-stone-500 hover:text-red-400 hover:bg-stone-700">
           <Trash2 size={12} />
         </button>
@@ -60,11 +60,11 @@ export function SessionLog() {
       {/* Entries */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {entries.length === 0 && (
-          <p className="text-xs text-stone-600 text-center py-4">No entries yet</p>
+          <p className="text-xs text-stone-500 text-center py-4">No entries yet</p>
         )}
         {[...entries].reverse().map(entry => (
           <div key={entry.id} className="group flex items-start gap-1 text-xs leading-relaxed">
-            <span className="text-stone-600 mr-0.5 shrink-0 mt-0.5">
+            <span className="text-stone-500 font-mono mr-0.5 shrink-0 mt-0.5">
               {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
             <span className={`flex-1 ${TYPE_COLORS[entry.type] ?? 'text-stone-300'}`}>{entry.text}</span>

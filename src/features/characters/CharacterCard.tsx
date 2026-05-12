@@ -7,7 +7,15 @@ import { Badge } from '../../ui/Badge'
 import { computeDef } from '../../lib/armor'
 import { CURRENCY_OPTIONS } from '../../lib/currency'
 import { TravelingModal } from '../player-view/TravelingModal'
+import { rollDie, parseSides } from '../../features/combat/combatUtils'
+import { log } from '../log/store'
 import type { Character } from '../../types'
+
+function outcomeLabel(total: number) {
+  if (total >= 10) return { label: 'Full Success', color: 'text-emerald' }
+  if (total >= 7)  return { label: 'Partial',      color: 'text-amber-400' }
+  return                  { label: 'Failure',       color: 'text-red-400' }
+}
 
 interface CharacterCardProps {
   character: Character
@@ -22,19 +30,47 @@ export function CharacterCard({ character: c, onOpen }: CharacterCardProps) {
   const isTraveling = travelingMarkers.some(m => m.characterId === c.id)
 
   const [showTravelModal, setShowTravelModal] = useState(false)
+  const [dmgRoll, setDmgRoll] = useState<number | null>(null)
+
+  const rollDamage = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const result = rollDie(parseSides(c.damageDie))
+    setDmgRoll(result)
+    log('dice-roll', `🎲 ${c.name} damage roll: ${result} (${c.damageDie})`)
+    setTimeout(() => setDmgRoll(null), 3000)
+  }
 
   return (
     <>
       <div
         onClick={onOpen}
-        className="bg-stone-800 border border-stone-700 rounded-lg p-3 cursor-pointer hover:border-stone-500 hover:bg-stone-750 transition-all group"
+        className={`border rounded-lg p-3 cursor-pointer transition-all group ${
+          c.isDead
+            ? 'bg-stone-900 border-stone-800 hover:border-stone-700 opacity-80'
+            : c.isGhost
+              ? 'bg-stone-800/60 border-purple-900/60 hover:border-purple-700/60'
+              : 'bg-stone-800 border-stone-700 hover:border-stone-500 hover:bg-stone-700/60'
+        }`}
       >
         <div className="flex items-start gap-2.5 mb-2.5">
           <TokenAvatar name={c.name} characterId={c.id} size={40} />
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-stone-100 truncate text-sm group-hover:text-gold transition-colors">{c.name}</div>
-            <div className="text-xs text-stone-400">{c.species} {c.class}</div>
-            <div className="text-xs text-stone-500">Level {c.level}</div>
+            <div className="flex items-center gap-1.5">
+              {c.isDead && <span className="text-base leading-none" title="Fallen">💀</span>}
+              {c.isGhost && !c.isDead && <span className="text-base leading-none" title="Ghost — Tower of Trials">👻</span>}
+              <div className={`font-semibold truncate text-sm transition-colors ${c.name.toLowerCase() === 'infinite' ? 'rainbow-name' : c.isDead ? 'text-stone-500 line-through' : 'text-stone-100 group-hover:text-gold'}`}>{c.name}</div>
+            </div>
+            <div className="text-xs text-stone-400">{c.species} {c.class}{c.discipline ? ` · ${c.discipline}` : ''}</div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-stone-300 font-mono">Lv.{c.level}</span>
+              {/* XP pips */}
+              <div className="flex gap-0.5" title={`${c.xp}/5 XP`}>
+                {Array.from({ length: 5 }, (_, i) => (
+                  <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < c.xp ? 'bg-gold' : 'bg-stone-700'}`} />
+                ))}
+              </div>
+              {c.xp >= 5 && <span className="text-xs text-gold font-bold animate-pulse font-heading tracking-wide">↑ Level Up!</span>}
+            </div>
           </div>
           {/* Traveling badge + button */}
           <div className="flex flex-col items-end gap-1 shrink-0">
@@ -45,7 +81,7 @@ export function CharacterCard({ character: c, onOpen }: CharacterCardProps) {
             )}
             <button
               onClick={e => { e.stopPropagation(); setShowTravelModal(true) }}
-              className="text-xs text-stone-500 hover:text-teal-400 transition-colors"
+              className="text-xs text-teal-400/80 hover:text-teal-300 underline decoration-dotted underline-offset-2 transition-colors"
               title="Mark as traveling"
             >
               {isTraveling ? 'Edit travel' : 'Mark traveling'}
@@ -57,17 +93,27 @@ export function CharacterCard({ character: c, onOpen }: CharacterCardProps) {
 
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1">
-            <span className="text-xs text-stone-500">SD</span>
+            <span className="text-xs text-stone-300 font-heading tracking-wider uppercase">SD</span>
             <SdDots current={c.currentSd} max={c.maxSd} size="sm" />
           </div>
           <div className="flex items-center gap-1.5">
             {def > 0 && <Badge variant="blue">DEF {def}</Badge>}
-            <Badge variant="muted">{c.damageDie}</Badge>
+            <button
+              onClick={rollDamage}
+              title={`Roll ${c.damageDie} damage`}
+              className={`px-2 py-0.5 rounded text-xs font-mono border transition-all ${
+                dmgRoll !== null
+                  ? 'bg-gold/30 border-gold text-gold font-bold shadow-sm shadow-gold/30'
+                  : 'bg-stone-700 border-stone-500 text-stone-200 hover:border-gold/60 hover:text-gold hover:bg-stone-700/80'
+              }`}
+            >
+              {dmgRoll !== null ? `= ${dmgRoll}` : `🎲 ${c.damageDie}`}
+            </button>
           </div>
         </div>
 
         {location && (
-          <div className="text-xs text-stone-500 truncate">📍 {location.name}</div>
+          <div className="text-xs text-stone-300 truncate">📍 {location.name}</div>
         )}
 
         {/* Currency + rations */}

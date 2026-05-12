@@ -1,9 +1,22 @@
 import { useState } from 'react'
-import { Search, FlaskConical, Sparkles, ChevronDown, ChevronRight, Info } from 'lucide-react'
+import { Search, FlaskConical, Sparkles, ChevronDown, ChevronRight, Info, Flame } from 'lucide-react'
 import { POTION_RECIPES, ENCHANTER_SIGNS_DATA } from '../../lib/constants'
 import type { PotionRecipe, EnchanterSign } from '../../lib/constants'
 
-type RefTab = 'potions' | 'enchanting'
+type RefTab = 'potions' | 'enchanting' | 'hazards'
+
+// Rulebook pp. 73 — environmental damage tables
+const HAZARD_TABLE = [
+  { name: 'Lava',        icon: '🌋', note: 'Certain death. Full contact instantly kills most creatures. Partial contact destroys equipment + catastrophic injury.', damage: 'Instant kill / GM discretion', ignoresDef: true },
+  { name: 'Fire',        icon: '🔥', note: 'Brief contact: no roll (blackens skin, ignites gear). Prolonged exposure:', damage: '3d6 – 5d6', ignoresDef: false },
+  { name: 'Soul Fire',   icon: '🔵', note: 'Same as Fire but ignores DEF.', damage: '3d6 – 5d6', ignoresDef: true },
+  { name: 'Drowning',    icon: '🌊', note: 'Hold breath 1 round, then per round until air restored or death.', damage: '1d10 / round', ignoresDef: true },
+  { name: 'Falling',     icon: '⬇️',  note: 'Short drops: no roll. Long / violent impacts:', damage: '2d6 – 4d6', ignoresDef: false },
+  { name: 'Explosion (Small)',   icon: '💥', note: '', damage: '3d6', ignoresDef: false },
+  { name: 'Explosion (Medium)',  icon: '💥', note: '', damage: '6d6', ignoresDef: false },
+  { name: 'Explosion (Large)',   icon: '💥', note: '', damage: '10d6', ignoresDef: false },
+  { name: 'Explosion (Massive)', icon: '💥', note: 'Or lethal.', damage: '15d6', ignoresDef: false },
+] as const
 
 export function ReferencePanel() {
   const [tab, setTab] = useState<RefTab>('potions')
@@ -26,7 +39,7 @@ export function ReferencePanel() {
     <div className="h-full flex flex-col">
       {/* Sticky header — never scrolls away */}
       <div className="shrink-0 px-4 pt-4 pb-3 border-b border-stone-700 bg-stone-900">
-        <h2 className="font-semibold text-stone-100 mb-3">Reference</h2>
+        <h2 className="font-semibold text-stone-100 mb-3 font-heading tracking-wide">Reference</h2>
 
         {/* Tab selector */}
         <div className="flex rounded-lg overflow-hidden border border-stone-700 mb-3">
@@ -46,6 +59,14 @@ export function ReferencePanel() {
           >
             <Sparkles size={14} /> Enchanting Signs
           </button>
+          <button
+            onClick={() => setTab('hazards')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm transition-colors ${
+              tab === 'hazards' ? 'bg-stone-700 text-gold font-medium' : 'bg-stone-800 text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <Flame size={14} /> Hazards
+          </button>
         </div>
 
         {/* Search */}
@@ -54,8 +75,8 @@ export function ReferencePanel() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={tab === 'potions' ? 'Search potions, ingredients…' : 'Search signs…'}
-            className="w-full bg-stone-800 border border-stone-700 rounded-lg pl-8 pr-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500"
+            placeholder={tab === 'potions' ? 'Search potions, ingredients…' : tab === 'enchanting' ? 'Search signs…' : ''}
+            className={`w-full bg-stone-800 border border-stone-700 rounded-lg pl-8 pr-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500 ${tab === 'hazards' ? 'hidden' : ''}`}
           />
         </div>
       </div>
@@ -64,6 +85,38 @@ export function ReferencePanel() {
       <div className="flex-1 min-h-0 overflow-y-auto p-4">
         {tab === 'potions' && <PotionSection potions={filteredPotions} />}
         {tab === 'enchanting' && <EnchantingSection signs={filteredSigns} />}
+        {tab === 'hazards' && <HazardsSection />}
+      </div>
+    </div>
+  )
+}
+
+// ── Hazards ───────────────────────────────────────────────────────────
+
+function HazardsSection() {
+  return (
+    <div className="space-y-3">
+      <div className="bg-stone-800 border border-stone-700 rounded-xl px-3 py-2.5 text-xs text-stone-400 leading-snug">
+        <strong className="text-stone-300">Environmental damage</strong> — from Soulscraft 3.1e pp. 73. DEF does not apply unless noted. These are GM guidelines; lesser hazards should use narrative consequences instead of HP loss.
+      </div>
+      <div className="space-y-2">
+        {HAZARD_TABLE.map(h => (
+          <div key={h.name} className="bg-stone-800 border border-stone-700 rounded-xl px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-base">{h.icon}</span>
+                <span className="font-semibold text-stone-100 text-sm font-heading tracking-wide">{h.name}</span>
+                {h.ignoresDef && <span className="text-xs px-1.5 py-0.5 rounded bg-red-900/30 border border-red-800/40 text-red-400">Ignores DEF</span>}
+              </div>
+              <span className="font-mono text-sm text-gold font-bold shrink-0">{h.damage}</span>
+            </div>
+            {h.note && <div className="text-xs text-stone-500 leading-snug">{h.note}</div>}
+          </div>
+        ))}
+      </div>
+      <div className="bg-stone-800 border border-stone-700 rounded-xl px-3 py-2.5 text-xs text-stone-500 space-y-1">
+        <div className="font-medium text-stone-400 font-heading tracking-wide">Instant-kill rule</div>
+        <div>When a player successfully hits a creature whose current HP ≤ the player's max damage die value, the creature drops to 0 HP regardless of DEF. Exception: creatures with the <strong className="text-orange-400">Tough</strong> tag must always be rolled against.</div>
       </div>
     </div>
   )
@@ -105,7 +158,7 @@ function PotionCard({ potion: p }: { potion: PotionRecipe }) {
       >
         <FlaskConical size={15} className={`shrink-0 ${isHarmful ? 'text-red-400' : p.name.includes('Awkward') || p.name.includes('Dragon') ? 'text-stone-500' : 'text-emerald-400'}`} />
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-stone-100">{p.name}</div>
+          <div className="text-sm font-medium text-stone-100 font-heading tracking-wide">{p.name}</div>
           <div className="text-xs text-stone-500 truncate">{p.effect}</div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -164,7 +217,7 @@ function EnchantingSection({ signs }: { signs: EnchanterSign[] }) {
 
       {/* Example combos */}
       <div className="bg-stone-800 border border-stone-700 rounded-xl p-3">
-        <div className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Example Combinations</div>
+        <div className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2 font-heading">Example Combinations</div>
         <div className="space-y-1.5 text-xs">
           {[
             ['Element + Harm + Creature', '"When this blade strikes Undead, it erupts in fire."'],
@@ -182,7 +235,7 @@ function EnchantingSection({ signs }: { signs: EnchanterSign[] }) {
       {/* Base Signs */}
       {baseSigns.length > 0 && (
         <div>
-          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Signs</div>
+          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">Signs</div>
           <div className="space-y-1.5">
             {baseSigns.map(s => <SignCard key={s.name} sign={s} />)}
           </div>
@@ -192,7 +245,7 @@ function EnchantingSection({ signs }: { signs: EnchanterSign[] }) {
       {/* Advanced Signs */}
       {advancedSigns.length > 0 && (
         <div>
-          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Advanced Signs</div>
+          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">Advanced Signs</div>
           <div className="space-y-1.5">
             {advancedSigns.map(s => <SignCard key={s.name} sign={s} />)}
           </div>
@@ -212,9 +265,9 @@ function SignCard({ sign: s }: { sign: EnchanterSign }) {
       <div className="flex items-start gap-2">
         <Sparkles size={13} className={`mt-0.5 shrink-0 ${s.advanced ? 'text-purple-400' : 'text-yellow-400'}`} />
         <div>
-          <div className="text-sm font-medium text-stone-100">{s.name}</div>
+          <div className="text-sm font-medium text-stone-100 font-heading tracking-wide">{s.name}</div>
           <p className="text-xs text-stone-400 mt-0.5">{s.description}</p>
-          {s.notes && <p className="text-xs text-stone-600 italic mt-0.5">{s.notes}</p>}
+          {s.notes && <p className="text-xs text-stone-500 italic mt-0.5">{s.notes}</p>}
         </div>
       </div>
     </div>

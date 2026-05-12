@@ -4,6 +4,7 @@ export interface BestiaryEntry {
   name: string
   hpTier: 'weak' | 'average' | 'strong' | 'mighty'
   maxHp?: number
+  def?: number
   size: 'small' | 'medium' | 'large' | 'massive'
   creatureType: string[]
   speed?: 'slow' | 'normal' | 'fast'

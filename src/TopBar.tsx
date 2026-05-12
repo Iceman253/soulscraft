@@ -1,6 +1,9 @@
-import { LogOut, Sword, Dice6, Eye } from 'lucide-react'
+import { LogOut, Sword, Dice6, Eye, Bell, Trophy } from 'lucide-react'
 import { useCampaignStore } from './features/campaigns/store'
 import { useCharacterStore } from './features/characters/store'
+import { useRequestStore } from './features/requests/store'
+import { GMRequestsPanel } from './features/requests/GMRequestsPanel'
+import { SessionMilestoneModal } from './features/characters/SessionMilestoneModal'
 import { useState } from 'react'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 
@@ -29,7 +32,10 @@ interface TopBarProps {
 export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, onTogglePlayerView, combatActive, playerViewActive }: TopBarProps) {
   const { activeCampaign, exitToSwitcher } = useCampaignStore()
   const { advanceEffectTime, advanceArmorEnchantmentTime, advanceWeaponEnchantmentTime, resetMagicCirclesOnDayEnd } = useCharacterStore()
+  const pendingCount = useRequestStore(s => s.requests.filter(r => r.status === 'pending').length)
   const [confirm, setConfirm] = useState<null | 'scene' | 'day' | 'exit'>(null)
+  const [showRequests, setShowRequests] = useState(false)
+  const [showMilestone, setShowMilestone] = useState(false)
 
   const endScene = () => {
     advanceEffectTime('scenes')
@@ -94,6 +100,13 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
         >
           End Day
         </button>
+        <button
+          onClick={() => setShowMilestone(true)}
+          className="flex items-center gap-1 px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded transition-all"
+          title="End of Session — award milestone XP"
+        >
+          <Trophy size={11} /> End Session
+        </button>
 
         <div className="w-px h-5 bg-stone-600 mx-1 shrink-0" />
 
@@ -132,6 +145,28 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
 
         <div className="w-px h-5 bg-stone-600 mx-1 shrink-0" />
 
+        {/* Player requests bell */}
+        <div className="relative">
+          <button
+            onClick={() => setShowRequests(v => !v)}
+            title="Player requests"
+            className={[
+              'relative flex items-center justify-center w-7 h-7 rounded transition-colors',
+              pendingCount > 0
+                ? 'text-gold hover:bg-stone-700'
+                : 'text-stone-500 hover:text-stone-300 hover:bg-stone-700',
+            ].join(' ')}
+          >
+            <Bell size={14} className={pendingCount > 0 ? 'animate-[wiggle_0.4s_ease-in-out_infinite]' : ''} />
+            {pendingCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-gold text-stone-900 text-[9px] font-bold flex items-center justify-center leading-none">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+          {showRequests && <GMRequestsPanel onClose={() => setShowRequests(false)} />}
+        </div>
+
         <button
           onClick={() => setConfirm('exit')}
           className="p-1.5 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700 transition-colors"
@@ -169,6 +204,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
           onClose={() => setConfirm(null)}
         />
       )}
+      {showMilestone && <SessionMilestoneModal onClose={() => setShowMilestone(false)} />}
     </div>
   )
 }

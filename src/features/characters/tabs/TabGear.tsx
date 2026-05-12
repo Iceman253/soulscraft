@@ -46,8 +46,8 @@ export function TabGear({ character: c }: TabGearProps) {
       {/* Armor */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Armor</div>
-          <div className="text-sm font-bold text-blue-300">
+          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">Armor</div>
+          <div className="text-sm font-bold text-blue-300 font-mono tabular-nums">
             DEF {(c.armorLoadout.armor?.currentDef ?? 0) + (c.armorLoadout.shield?.currentDef ?? 0)}
           </div>
         </div>
@@ -99,7 +99,7 @@ export function TabGear({ character: c }: TabGearProps) {
 
       {/* Weapons */}
       <div>
-        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Weapons</div>
+        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">Weapons</div>
         <div className="space-y-2">
           {(['mainHand', 'offHand'] as const).map(hand => (
             <WeaponSlotRow
@@ -191,7 +191,7 @@ function ArmorSlotRow({ slot, label, tags, piece, validMaterials, unequippedOnHa
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-stone-500">DEF</span>
                   <input type="number" value={piece.currentDef} onChange={e => onOverride(parseInt(e.target.value) || 0)}
-                    className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-blue-300 text-xs outline-none" />
+                    className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-blue-300 text-xs outline-none font-mono tabular-nums" />
                   {piece.currentDef !== piece.baseDef && (
                     <button onClick={onReset} title="Reset to base" className="p-0.5 text-stone-500 hover:text-stone-300"><RotateCcw size={10} /></button>
                   )}
@@ -200,7 +200,7 @@ function ArmorSlotRow({ slot, label, tags, piece, validMaterials, unequippedOnHa
               {tags && <div className="text-xs text-stone-500 italic">{tags}</div>}
             </div>
           ) : (
-            <div className="text-xs text-stone-600 italic">Not equipped</div>
+            <div className="text-xs text-stone-500 italic">Not equipped</div>
           )}
         </div>
 
@@ -338,14 +338,14 @@ function WeaponSlotRow({ hand, weapon, unequippedOnHand, onEquip, onUnequip, onO
               <div className="flex items-center gap-1">
                 <span className="text-xs text-stone-500">+DMG</span>
                 <input type="number" value={weapon.currentDamageBonus} onChange={e => onOverride(parseInt(e.target.value) || 0)}
-                  className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-orange-300 text-xs outline-none" />
+                  className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-orange-300 text-xs outline-none font-mono tabular-nums" />
                 {weapon.currentDamageBonus !== weapon.baseDamageBonus && (
                   <button onClick={onReset} className="p-0.5 text-stone-500 hover:text-stone-300"><RotateCcw size={10} /></button>
                 )}
               </div>
             </div>
           ) : (
-            <div className="text-xs text-stone-600 italic">Empty</div>
+            <div className="text-xs text-stone-500 italic">Empty</div>
           )}
         </div>
 

@@ -52,7 +52,7 @@ function WarriorFeatures({ fs, onUse }: { fs: FS<'Warrior'>; onUse: (id: string)
 function HunterFeatures({ fs, onUpdate }: { fs: FS<'Hunter'>; onUpdate: (p: Record<string, unknown>) => void }) {
   return (
     <div>
-      <div className="text-xs text-stone-500 mb-1">Current Prey</div>
+      <div className="text-xs text-stone-500 mb-1">Current Prey (reset on rest)</div>
       <select
         value={fs.state.preyType ?? ''}
         onChange={e => onUpdate({ preyType: e.target.value || null })}
@@ -62,22 +62,51 @@ function HunterFeatures({ fs, onUpdate }: { fs: FS<'Hunter'>; onUpdate: (p: Reco
         {HUNTER_PREY_TYPES.map(pt => <option key={pt} value={pt}>{pt}</option>)}
       </select>
       {fs.state.preyType && (
-        <div className="mt-1.5">
+        <div className="mt-1.5 space-y-1">
           <Badge variant="red">🎯 Hunting: {fs.state.preyType}</Badge>
-          <span className="text-xs text-stone-500 ml-2">+1 to all rolls against this prey</span>
+          <div className="text-xs text-stone-500 bg-stone-800 rounded p-2 leading-snug">
+            No roll needed to find signs of, track, or sense <strong className="text-stone-300">{fs.state.preyType}</strong> creatures if they are (or were recently) in your area.
+          </div>
         </div>
       )}
     </div>
   )
 }
 
+const VINDICATOR_CAUSES = [
+  'Protect the helpless',
+  'Serve the master',
+  'Conquer the enemy',
+  'Crush the unworthy',
+  'Uphold the order',
+] as const
+
 function VindicatorFeatures({ fs, onUse, onUpdate }: { fs: FS<'Vindicator'>; onUse: (id: string) => void; onUpdate: (p: Record<string, unknown>) => void }) {
+  const isCustom = fs.state.activeCause && !VINDICATOR_CAUSES.includes(fs.state.activeCause as typeof VINDICATOR_CAUSES[number])
   return (
     <div className="space-y-3">
       <div>
-        <div className="text-xs text-stone-500 mb-1">Active Cause</div>
-        <input value={fs.state.activeCause} onChange={e => onUpdate({ activeCause: e.target.value })} placeholder="What injustice drives you today?"
-          className="w-full bg-stone-800 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50" />
+        <div className="text-xs text-stone-500 mb-1">Active Cause — grants +1 to aligned rolls</div>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {VINDICATOR_CAUSES.map(cause => (
+            <button key={cause} type="button"
+              onClick={() => onUpdate({ activeCause: cause })}
+              className={`px-2.5 py-1 rounded border text-xs transition-all ${fs.state.activeCause === cause ? 'bg-gold/20 border-gold/60 text-gold' : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'}`}>
+              {cause}
+            </button>
+          ))}
+        </div>
+        <input
+          value={isCustom ? fs.state.activeCause : ''}
+          onChange={e => onUpdate({ activeCause: e.target.value })}
+          placeholder="Or write a custom Cause…"
+          className="w-full bg-stone-800 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50"
+        />
+        {fs.state.activeCause && (
+          <div className="mt-1.5 text-xs text-stone-500 bg-stone-800 rounded p-2">
+            When acting in clear alignment with <strong className="text-stone-300">"{fs.state.activeCause}"</strong>, gain <strong className="text-gold">+1</strong> to the roll.
+          </div>
+        )}
       </div>
       <div>
         <div className="text-xs text-stone-500 mb-1.5">Voices of Truth (reset on rest)</div>

@@ -1,8 +1,37 @@
+import { useState } from 'react'
 import { useCharacterStore } from '../store'
-import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, Sword, Shield, Gift } from 'lucide-react'
+import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, Sword, Shield, Gift, Package } from 'lucide-react'
 import { fileToDataUrl, saveItemImage, loadItemImage } from '../../../lib/imageCache'
 import { CURRENCY_OPTIONS } from '../../../lib/currency'
 import type { Character, CharacterItem } from '../../../types'
+
+// Rulebook equipment packs (pp. 91) — quick-fill starting gear
+const EQUIPMENT_PACKS: { name: string; items: { name: string; quantity: number }[]; currency?: Partial<Character['currency']>; rations?: number }[] = [
+  {
+    name: 'Wilderness',
+    rations: 10,
+    currency: { emerald: 25 },
+    items: [{ name: 'Bed', quantity: 1 }, { name: 'Lantern', quantity: 1 }, { name: 'Spyglass', quantity: 1 }, { name: 'Compass', quantity: 1 }],
+  },
+  {
+    name: 'Miner\'s',
+    rations: 10,
+    currency: { emerald: 25 },
+    items: [{ name: 'Iron Pickaxe', quantity: 1 }, { name: 'Lantern', quantity: 1 }, { name: 'Coal', quantity: 20 }, { name: 'Compass', quantity: 1 }],
+  },
+  {
+    name: 'Scholar\'s',
+    rations: 10,
+    currency: { emerald: 50 },
+    items: [{ name: 'Journal', quantity: 1 }, { name: 'Quill and Ink', quantity: 1 }, { name: 'Torch', quantity: 10 }, { name: 'Compass', quantity: 1 }, { name: 'Amethyst Shard', quantity: 1 }, { name: 'Sealing Wax', quantity: 1 }],
+  },
+  {
+    name: 'Soldier\'s',
+    rations: 10,
+    currency: { emerald: 50 },
+    items: [{ name: 'Bed', quantity: 1 }, { name: 'Compass', quantity: 1 }, { name: 'Iron Dagger', quantity: 1 }],
+  },
+]
 
 const BLOCK_CAP = 10
 
@@ -22,6 +51,14 @@ export function TabInventory({ character: c }: TabInventoryProps) {
     moveItemToStorage, moveItemToHand, setCurrency, setRations,
     giveItemToCharacter,
   } = useCharacterStore()
+  const [showPacks, setShowPacks] = useState(false)
+
+  function applyPack(pack: typeof EQUIPMENT_PACKS[number]) {
+    pack.items.forEach(item => addOnHandItem(c.id, { name: item.name, quantity: item.quantity }))
+    if (pack.currency) setCurrency(c.id, { ...c.currency, ...Object.fromEntries(Object.entries(pack.currency).map(([k, v]) => [k, (c.currency[k as keyof typeof c.currency] ?? 0) + (v ?? 0)])) })
+    if (pack.rations) setRations(c.id, c.rations + pack.rations)
+    setShowPacks(false)
+  }
 
   const blockCount = c.onHand.items.filter(i => i.isBlock).reduce((sum, i) => sum + (i.quantity ?? 1), 0)
   const blocksFull = blockCount >= BLOCK_CAP
@@ -30,7 +67,7 @@ export function TabInventory({ character: c }: TabInventoryProps) {
     <div className="p-4 space-y-5">
       {/* Currency */}
       <div className="bg-stone-800 border border-stone-700 rounded-lg p-3">
-        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Currency</div>
+        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">Currency</div>
         <div className="flex flex-wrap gap-3">
           {CURRENCY_OPTIONS.map(({ key, label, img }) => (
             <div key={key} className="flex items-center gap-1.5">
@@ -40,22 +77,42 @@ export function TabInventory({ character: c }: TabInventoryProps) {
                 value={c.currency[key]}
                 min={0}
                 onChange={e => setCurrency(c.id, { [key]: parseInt(e.target.value) || 0 })}
-                className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-200 text-sm outline-none focus:border-gold/50"
+                className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-200 text-sm outline-none focus:border-gold/50 font-mono tabular-nums"
               />
               <span className="text-xs text-stone-500">{label}</span>
             </div>
           ))}
         </div>
-        <div className="text-xs text-stone-600 mt-2">1 Diamond = 10 Emerald = 100 Gold = 1,000 Iron = 10,000 Copper</div>
+        <div className="text-xs text-stone-500 mt-2">1 Diamond = 10 Emerald = 100 Gold = 1,000 Iron = 10,000 Copper</div>
       </div>
 
       {/* Rations */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm text-stone-400">🍖 Rations</span>
         <div className="flex items-center gap-1.5">
           <button onClick={() => setRations(c.id, Math.max(0, c.rations - 1))} className="w-6 h-6 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">-</button>
-          <span className="text-stone-100 font-bold w-6 text-center">{c.rations}</span>
+          <span className="text-stone-100 font-bold w-6 text-center font-mono tabular-nums">{c.rations}</span>
           <button onClick={() => setRations(c.id, c.rations + 1)} className="w-6 h-6 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">+</button>
+        </div>
+        {/* Equipment packs quick-start */}
+        <div className="relative ml-auto">
+          <button onClick={() => setShowPacks(v => !v)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-stone-700 border border-stone-600 text-stone-300 hover:bg-stone-600 text-xs transition-colors">
+            <Package size={11} /> Equipment Pack
+          </button>
+          {showPacks && (
+            <div className="absolute right-0 top-full mt-1 w-56 bg-stone-900 border border-stone-600 rounded-xl shadow-2xl z-20 overflow-hidden">
+              <div className="px-3 py-2 border-b border-stone-700 text-xs text-stone-400 font-medium">Starting Equipment Packs</div>
+              {EQUIPMENT_PACKS.map(pack => (
+                <button key={pack.name} onClick={() => applyPack(pack)}
+                  className="w-full text-left px-3 py-2 hover:bg-stone-800 transition-colors group">
+                  <div className="text-xs font-semibold text-stone-200 group-hover:text-gold">{pack.name} Pack</div>
+                  <div className="text-xs text-stone-500 mt-0.5">{pack.items.map(i => i.name).join(', ')}{pack.rations ? ` + ${pack.rations} rations` : ''}</div>
+                </button>
+              ))}
+              <button onClick={() => setShowPacks(false)} className="w-full text-center px-3 py-1.5 text-xs text-stone-600 hover:text-stone-400 border-t border-stone-700">Cancel</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -110,7 +167,7 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
     <div>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider">{title}</div>
+          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">{title}</div>
           {blockCount !== undefined && (
             <span className={`text-xs font-mono px-1.5 py-0.5 rounded border ${
               blocksFull
@@ -127,7 +184,7 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
       </div>
       <div className="space-y-1.5">
         {items.length === 0 && (
-          <div className="text-xs text-stone-600 italic py-1">Empty</div>
+          <div className="text-xs text-stone-500 italic py-1">Empty</div>
         )}
         {items.map(item => (
           <ItemRow key={item.id} item={item} charId={charId} onUpdate={onUpdate} onRemove={onRemove} onMove={onMove} onGive={onGive} moveIcon={moveIcon} moveTitle={moveTitle} />
@@ -198,7 +255,7 @@ function ItemRow({ item, charId, onUpdate, onRemove, onMove, onGive, moveIcon, m
         value={item.quantity}
         min={1}
         onChange={e => onUpdate(item.id, { quantity: parseInt(e.target.value) || 1 })}
-        className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 text-xs text-center outline-none"
+        className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 text-xs text-center outline-none font-mono tabular-nums"
       />
 
       <button onClick={() => onMove(item.id)} title={moveTitle}

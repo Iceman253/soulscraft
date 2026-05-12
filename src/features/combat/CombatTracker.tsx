@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, Plus, ArrowRight, Shield, Swords, Dices, Sword, Zap } from 'lucide-react'
-import { useCombatStore } from './store'
+import { useCombatStore, HP_TIER } from './store'
 import { useCharacterStore } from '../characters/store'
 import { useBestiaryStore } from '../bestiary/store'
 import { HpBar } from '../../ui/HpBar'
@@ -11,16 +11,13 @@ import { log } from '../log/store'
 import { rollDie, rollD6, parseSides, maxOfDie } from './combatUtils'
 import { AttackModal, initialPhase } from './AttackModal'
 import type { AttackFlow } from './AttackModal'
+import { commitAppliedModifiers, totalBonus, hasDamageMod } from '../characters/AbilityApplyPanel'
 import { InitiativeModal } from './InitiativeModal'
 import type { InitRoll } from './InitiativeModal'
 import { EffectPicker } from './EffectPicker'
 import type { StatusTemplate } from './statusEffects'
 import { STATUS_EFFECTS } from './statusEffects'
-import type { BestiaryEntry, ActiveEffect } from '../../types'
-
-const HP_TIER_VALUES: Record<BestiaryEntry['hpTier'], number> = {
-  weak: 5, average: 10, strong: 20, mighty: 40,
-}
+import type { ActiveEffect } from '../../types'
 
 interface CombatTrackerProps { onClose: () => void }
 
@@ -28,8 +25,15 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
   const {
     session, startCombat, addCharacterCombatant, addCreatureCombatant, removeComabtant,
     setInitiative, sortByInitiative, nextTurn, adjustCombatantHp, updateCombatantNotes,
-    addCombatantEffect, removeCombatantEffect, endCombat,
+    addCombatantEffect, removeCombatantEffect, toggleTough, splitSlime, endCombat,
   } = useCombatStore()
+
+  // Detects creatures that should split on death (Slime, Magma Cube — manual p.110)
+  const canSplitOnDeath = (name: string) => {
+    const n = name.toLowerCase()
+    if (n.includes('small')) return false
+    return n.includes('slime') || n.includes('magma cube') || n.includes('magma') && n.includes('cube')
+  }
 
   const characters = useCharacterStore(s => s.characters)
   const creatures = useBestiaryStore(s => s.entries)
@@ -88,7 +92,8 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
   const rollAttack = () => {
     if (!attack) return
     const d1 = rollD6(), d2 = rollD6()
-    const total = d1 + d2 + attack.skillBonus
+    const appliedBonus = totalBonus(attack.applied ?? [])
+    const total = d1 + d2 + attack.skillBonus + appliedBonus
     const outcome: 'success' | 'partial' | 'failure' =
       total >= 10 ? 'success' : total >= 7 ? 'partial' : 'failure'
     setAttack(a => a ? { ...a, attackRoll: { d1, d2, total, outcome }, phase: outcome === 'failure' ? 'done' : 'damage' } : null)
@@ -111,24 +116,67 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
     const die = attacker.damageDie ?? 'd6'
     const raw = rollDie(parseSides(die))
     const defReduction = attack.defenseRoll?.outcome === 'reduce' ? 1 : 0
-    const dealt = Math.max(0, raw - target.def - defReduction)
-    const instantKill = target.currentHp <= maxOfDie(die) && dealt > 0
-    setAttack(a => a ? { ...a, damageRoll: { raw, def: target.def, defReduction, dealt, instantKill }, phase: 'done' } : null)
+
+    // Apply status modifiers from target's active effects
+    const hasBrittle    = target.activeEffects.some(e => e.name === 'Brittle')     // double physical damage
+    const hasAbsorption = target.activeEffects.some(e => e.name === 'Absorption')  // halve all damage
+
+    // Apply attacker's staged damage mods (Deadly Strike) and defender's (Hold Ground, Dodge, Block, Redirect)
+    const attackerMods = attack.applied ?? []
+    const defenderMods = attack.defenderApplied ?? []
+    const attackerDouble  = hasDamageMod(attackerMods, 'double')
+    const defenderNoDmg   = hasDamageMod(defenderMods, 'no-damage')
+    const defenderHalves  = hasDamageMod(defenderMods, 'half-incoming')
+
+    let afterEffects = Math.max(0, raw - target.def - defReduction)
+    if (attackerDouble) afterEffects = afterEffects * 2           // Deadly Strike — double damage on hit
+    if (hasBrittle)     afterEffects = afterEffects * 2
+    if (hasAbsorption)  afterEffects = Math.ceil(afterEffects / 2)
+    if (defenderHalves) afterEffects = Math.ceil(afterEffects / 2) // Hold Ground / Block / Redirect
+    if (defenderNoDmg)  afterEffects = 0                            // Dodge — full evasion
+    const dealt = Math.max(0, afterEffects)
+    // Rulebook: instant kill when target HP ≤ attacker max damage — but NOT against Tough creatures or PCs.
+    // Deadly Strike doesn't enable instant-kill on PCs; defender mods can suppress it.
+    const instantKill = !target.isTough && target.kind !== 'character' && target.currentHp <= maxOfDie(die) && dealt > 0
+    const effectNote = [
+      attackerDouble  ? '[Deadly Strike ×2]' : '',
+      hasBrittle      ? '[Brittle×2]'        : '',
+      hasAbsorption   ? '[Absorption÷2]'     : '',
+      defenderHalves  ? '[Defender ½]'       : '',
+      defenderNoDmg   ? '[Defender evades]'  : '',
+      target.isTough && target.currentHp <= maxOfDie(die) ? '[Tough — no instant kill]' : '',
+    ].filter(Boolean).join(' ')
+    setAttack(a => a ? { ...a, damageRoll: { raw, def: target.def, defReduction, dealt, instantKill, effectNote: effectNote || undefined }, phase: 'done' } : null)
   }
 
-  const applyDamage = () => {
+  const applyDamage = (complication?: { reduceDamage: boolean; note: string }) => {
     if (!attack || !session || !attack.damageRoll) return
     const target = session.combatants.find(c => c.id === attack.targetId)
     const attacker = session.combatants.find(c => c.id === attack.attackerId)
     if (!target || !attacker) return
-    const { dealt, instantKill } = attack.damageRoll
-    adjustCombatantHp(target.id, instantKill ? -target.currentHp : -dealt)
+    const { instantKill } = attack.damageRoll
+    const finalDealt = !instantKill && complication?.reduceDamage
+      ? Math.max(0, attack.damageRoll.dealt - 1)
+      : attack.damageRoll.dealt
+    adjustCombatantHp(target.id, instantKill ? -target.currentHp : -finalDealt)
+
+    // Commit staged ability/skill modifiers — marks charges used, deducts SD.
+    if (attacker.kind === 'character' && attack.applied && attack.applied.length > 0) {
+      commitAppliedModifiers(attacker.sourceId, attack.applied)
+    }
+    if (target.kind === 'character' && attack.defenderApplied && attack.defenderApplied.length > 0) {
+      commitAppliedModifiers(target.sourceId, attack.defenderApplied)
+    }
+
+    const appliedAtkStr  = attack.applied         && attack.applied.length         > 0 ? ` [Atk used: ${attack.applied.map(m => m.name).join(', ')}]` : ''
+    const appliedDefStr  = attack.defenderApplied && attack.defenderApplied.length > 0 ? ` [Def used: ${attack.defenderApplied.map(m => m.name).join(', ')}]` : ''
     const atkStr = attack.attackRoll ? ` (roll: ${attack.attackRoll.total})` : ''
     const defStr = attack.defenseRoll ? ` | def: ${attack.defenseRoll.total} (${attack.defenseRoll.outcome})` : ''
     const dmgStr = instantKill
       ? ` → instant defeat`
-      : ` → ${attack.damageRoll.raw}−${attack.damageRoll.def}${attack.damageRoll.defReduction ? `−${attack.damageRoll.defReduction}` : ''}=${dealt} dealt`
-    log('combat-end', `⚔️ ${attacker.name} → ${target.name}${atkStr}${defStr}${dmgStr}`)
+      : ` → ${attack.damageRoll.raw}−${attack.damageRoll.def}${attack.damageRoll.defReduction ? `−${attack.damageRoll.defReduction}` : ''}${complication?.reduceDamage ? '−1' : ''}=${finalDealt} dealt${attack.damageRoll.effectNote ?? ''}`
+    const complicationStr = complication?.note ? ` [⚡ Complication: ${complication.note}]` : (complication ? ' [⚡ partial cost]' : '')
+    log('combat-end', `⚔️ ${attacker.name} → ${target.name}${atkStr}${defStr}${dmgStr}${complicationStr}${appliedAtkStr}${appliedDefStr}`)
     setAttack(null)
   }
 
@@ -141,8 +189,27 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
       damagePerRound: template.damagePerRound,
     }
     addCombatantEffect(combatantId, effect)
-    const cName = session?.combatants.find(c => c.id === combatantId)?.name ?? ''
-    log('combat-end', `${template.harmful ? '🩸' : '✨'} ${template.name} applied to ${cName}.${template.damagePerRound ? ` (${template.damagePerRound}/turn)` : ''}`)
+    const cTarget = session?.combatants.find(c => c.id === combatantId)
+    const cName = cTarget?.name ?? ''
+    let extraNote = template.damagePerRound ? ` (${template.damagePerRound}/turn)` : ''
+
+    // Special auto-effects on application
+    if (template.name === 'Withering' && cTarget) {
+      // Drain all SD for PC combatants (Withering: SD → 0 while active)
+      if (cTarget.kind === 'character') {
+        const charStore = useCharacterStore.getState()
+        const char = charStore.characters.find(c => c.id === cTarget.sourceId)
+        if (char) { charStore.adjustSd(char.id, -char.currentSd); extraNote += ' — SD drained to 0' }
+      }
+    }
+    if (template.name === 'Health Boost' && cTarget) {
+      // Roll 1d6 temp HP — add to current HP up to maxHp (the temp HP is lost first when damaged)
+      const tempHp = rollD6()
+      adjustCombatantHp(combatantId, tempHp)
+      extraNote += ` — +${tempHp} temp HP rolled`
+    }
+
+    log('combat-end', `${template.harmful ? '🩸' : '✨'} ${template.name} applied to ${cName}.${extraNote}`)
     setEffectPickerFor(null)
   }
 
@@ -151,7 +218,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-stone-950 text-stone-200">
         <Swords size={48} className="text-redstone mb-4 opacity-60" />
-        <h2 className="text-xl font-bold mb-2">Combat Tracker</h2>
+        <h2 className="text-xl font-bold mb-2 font-heading tracking-wide">Combat Tracker</h2>
         <p className="text-stone-500 mb-6 text-sm">Start a new combat encounter</p>
         <button onClick={startCombat} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-redstone hover:bg-red-700 text-white font-bold text-lg">
           <Swords size={20} /> Begin Combat
@@ -172,7 +239,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
       <div className="shrink-0 bg-stone-800 border-b border-stone-700 px-4 py-3 flex items-center gap-3">
         <div className="flex items-center gap-2">
           <Swords size={16} className="text-redstone" />
-          <span className="font-bold text-stone-100">Combat — Round {session.round}</span>
+          <span className="font-bold text-stone-100 font-heading tracking-wide">Combat — Round <span className="font-mono tabular-nums">{session.round}</span></span>
         </div>
         {activeCombatant && <Badge variant="red">Active: {activeCombatant.name}</Badge>}
         <div className="ml-auto flex gap-2">
@@ -209,7 +276,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                     <div className="text-xs text-stone-500">Init</div>
                     <input type="number" value={c.initiative}
                       onChange={e => setInitiative(c.id, parseInt(e.target.value) || 0)}
-                      className="w-12 bg-stone-900 border border-stone-600 rounded px-1 py-0.5 text-stone-200 text-sm text-center outline-none" />
+                      className="w-12 bg-stone-900 border border-stone-600 rounded px-1 py-0.5 text-stone-200 text-sm text-center outline-none font-mono tabular-nums" />
                   </div>
 
                   {/* Avatar */}
@@ -225,7 +292,33 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                       {i === session.activeIndex && <Badge variant="gold">Active</Badge>}
                       <Badge variant={c.kind === 'character' ? 'blue' : 'red'}>{c.kind}</Badge>
                       {c.currentHp <= 0 && <span className="text-xs text-stone-500 font-medium">💀 Defeated</span>}
+                      {c.currentHp <= 0 && c.kind === 'creature' && canSplitOnDeath(c.name) && (
+                        <button
+                          onClick={() => splitSlime(c.id)}
+                          title="Split into 2 smaller versions"
+                          className="px-1.5 py-0.5 rounded text-xs border bg-emerald/10 border-emerald/40 text-emerald hover:bg-emerald/20 transition-colors"
+                        >
+                          🟢 Split!
+                        </button>
+                      )}
                       {c.damageDie && c.currentHp > 0 && <span className="text-xs text-stone-500 font-mono">{c.damageDie}</span>}
+                      {/* Missed-rest penalty badge for PC combatants */}
+                      {c.kind === 'character' && (() => {
+                        const char = characters.find(ch => ch.id === c.sourceId)
+                        return char && char.missedRests > 0
+                          ? <span className="text-xs text-orange-400 font-bold" title={`${char.missedRests} missed rest(s) — apply -${char.missedRests}d4 to their rolls`}>⚠️ -{char.missedRests}d4</span>
+                          : null
+                      })()}
+                      {/* Tough tag toggle — only on creatures */}
+                      {c.kind === 'creature' && (
+                        <button
+                          onClick={() => toggleTough(c.id)}
+                          title={c.isTough ? 'Tough: immune to instant kill — click to remove' : 'Mark as Tough (immune to instant kill)'}
+                          className={`px-1.5 py-0.5 rounded text-xs border transition-colors ${c.isTough ? 'bg-orange-900/40 border-orange-600/60 text-orange-300' : 'bg-stone-700 border-stone-600 text-stone-500 hover:text-stone-300'}`}
+                        >
+                          {c.isTough ? '🪨 Tough' : '+ Tough'}
+                        </button>
+                      )}
                     </div>
                     <HpBar current={c.currentHp} max={c.maxHp} className="mt-1" />
                   </div>
@@ -233,7 +326,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                   {/* DEF */}
                   <div className="flex items-center gap-1 shrink-0">
                     <Shield size={12} className="text-blue-400" />
-                    <span className="text-sm text-blue-300 font-bold">{c.def}</span>
+                    <span className="text-sm text-blue-300 font-bold font-mono tabular-nums">{c.def}</span>
                   </div>
 
                   {/* Attack button */}
@@ -287,11 +380,14 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                   </div>
                 )}
 
-                {/* Effect picker */}
+                {/* Effect picker — pass creature type tags for immunity warnings */}
                 {effectPickerFor === c.id && (
                   <EffectPicker
                     onApply={(template) => applyStatusEffect(c.id, template)}
                     onClose={() => setEffectPickerFor(null)}
+                    targetTags={c.kind === 'creature'
+                      ? (creatures.find(cr => cr.id === c.sourceId)?.creatureType ?? [])
+                      : []}
                   />
                 )}
 
@@ -308,7 +404,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
 
         {/* Add combatants panel */}
         <div className="w-80 shrink-0 border-l border-stone-700 p-4 overflow-y-auto">
-          <div className="text-sm font-medium text-stone-300 mb-3">Add Combatants</div>
+          <div className="text-sm font-medium text-stone-300 mb-3 font-heading tracking-wide">Add Combatants</div>
 
           {/* Characters */}
           <div className="space-y-1 mb-4">
@@ -323,12 +419,37 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
             ))}
           </div>
 
+          {/* NPC Quick-Add — rulebook p.103 */}
+          <div className="mb-4">
+            <div className="text-xs text-stone-500 mb-1.5">Quick NPCs</div>
+            <div className="grid grid-cols-2 gap-1">
+              {([
+                { name: 'Common Folk', hp: 4,  die: 'd4',  def: 0 },
+                { name: 'Guard',       hp: 10, die: 'd8',  def: 1 },
+                { name: 'Noble',       hp: 4,  die: 'd4',  def: 0 },
+                { name: 'Soldier',     hp: 12, die: 'd10', def: 2 },
+                { name: 'Brigand',     hp: 10, die: 'd8',  def: 1 },
+                { name: 'Thief',       hp: 6,  die: 'd6',  def: 0 },
+              ] as const).map(npc => (
+                <button key={npc.name}
+                  onClick={() => {
+                    const fakeBestiaryEntry = { id: npc.name, name: npc.name, hpTier: 'average' as const, size: 'medium' as const, creatureType: ['natural'], isCustom: false }
+                    addCreatureCombatant(fakeBestiaryEntry, npc.name, npc.hp, npc.def, npc.die)
+                  }}
+                  className="flex flex-col items-start px-2 py-1.5 rounded bg-stone-800 border border-stone-700 hover:border-stone-500 text-left text-xs transition-colors">
+                  <span className="font-medium text-stone-200">{npc.name}</span>
+                  <span className="text-stone-500 font-mono">{npc.hp}HP · {npc.die}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Creatures */}
-          <div className="text-xs text-stone-500 mb-2">Creatures</div>
+          <div className="text-xs text-stone-500 mb-2">Bestiary Creatures</div>
           <div className="space-y-1.5">
             {creatures.map(c => {
               const img = loadCreatureImage(c.id)
-              const defaultHp = c.maxHp ?? HP_TIER_VALUES[c.hpTier]
+              const defaultHp = c.maxHp ?? HP_TIER[c.hpTier]
               const hpVal = hpOverride[c.id] ?? String(defaultHp)
               const defVal = defOverride[c.id] ?? '0'
               const hp = parseInt(hpVal) || defaultHp
@@ -345,14 +466,14 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                       <span className="text-xs text-stone-500 w-6">HP</span>
                       <input type="number" min={1} value={hpVal}
                         onChange={e => setHpOverride(prev => ({ ...prev, [c.id]: e.target.value }))}
-                        className="flex-1 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 text-xs outline-none" />
+                        className="flex-1 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 text-xs outline-none font-mono tabular-nums" />
                     </div>
                     <div className="flex items-center gap-1 flex-1">
                       <Shield size={11} className="text-blue-400 shrink-0" />
                       <span className="text-xs text-stone-500">DEF</span>
                       <input type="number" min={0} value={defVal}
                         onChange={e => setDefOverride(prev => ({ ...prev, [c.id]: e.target.value }))}
-                        className="flex-1 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-blue-300 text-xs outline-none" />
+                        className="flex-1 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-blue-300 text-xs outline-none font-mono tabular-nums" />
                     </div>
                   </div>
                   <button
@@ -394,9 +515,12 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
             if (attacker.kind === 'creature' && (attack.phase === 'defense-roll' || attack.phase === 'damage')) {
               newPhase = initialPhase(attacker, newTarget)
             }
-            setAttack(a => a ? { ...a, targetId: id, phase: newPhase, defenseRoll: undefined, damageRoll: undefined } : null)
+            // Clear defender mods when target changes — they applied to the old defender
+            setAttack(a => a ? { ...a, targetId: id, phase: newPhase, defenseRoll: undefined, damageRoll: undefined, defenderApplied: [] } : null)
           }}
           onSetBonus={b => setAttack(a => a ? { ...a, skillBonus: b } : null)}
+          onSetApplied={applied => setAttack(a => a ? { ...a, applied } : null)}
+          onSetDefenderApplied={defenderApplied => setAttack(a => a ? { ...a, defenderApplied } : null)}
           onRollAttack={rollAttack}
           onRollDefense={rollDefense}
           onSkipDefense={() => setAttack(a => a ? { ...a, phase: 'damage' } : null)}

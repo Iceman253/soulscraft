@@ -31,7 +31,19 @@ export function AreaNodeComponent({ data }: NodeProps) {
   const d = data as unknown as AreaNodeData
   const { area, fogEnabled, selected, onReveal, onOpenSubMap, onSelect, onCharClick } = d
   const allCharacters = useCharacterStore(s => s.characters)
-  const characters = useMemo(() => allCharacters.filter(c => c.locationId === area.id), [allCharacters, area.id])
+  const travelingMarkers = useWorldStore(s => s.travelingMarkers)
+  // Hide tokens for characters currently in transit — they're "between places" on the map.
+  const travelingIds = useMemo(() => new Set(travelingMarkers.map(m => m.characterId)), [travelingMarkers])
+  const characters = useMemo(
+    () => allCharacters.filter(c => c.locationId === area.id && !travelingIds.has(c.id)),
+    [allCharacters, area.id, travelingIds]
+  )
+  // Travelers whose origin is this area — shown as a subtle "🚶 N" badge so the GM remembers
+  // someone is in transit *from here*, even though their token has moved off.
+  const travelersFromHere = useMemo(
+    () => allCharacters.filter(c => travelingIds.has(c.id) && c.locationId === area.id),
+    [allCharacters, area.id, travelingIds]
+  )
   const isPlayerVisible = useWorldStore(s => s.playerVisibleAreaIds.includes(area.id))
 
   const hidden = fogEnabled && !area.revealed
@@ -88,8 +100,16 @@ export function AreaNodeComponent({ data }: NodeProps) {
                   </button>
                 ))}
                 {characters.length > 4 && (
-                  <span className="text.xs text-stone-500">+{characters.length - 4}</span>
+                  <span className="text-xs text-stone-400">+{characters.length - 4}</span>
                 )}
+              </div>
+            )}
+            {travelersFromHere.length > 0 && (
+              <div
+                className="mt-1 text-xs text-amber-300/90 italic flex items-center gap-1"
+                title={`Traveling from here: ${travelersFromHere.map(c => c.name).join(', ')}`}
+              >
+                🚶 <span className="font-mono">{travelersFromHere.length}</span> traveling
               </div>
             )}
 

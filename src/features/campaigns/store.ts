@@ -17,6 +17,7 @@ function emptyData(id: string, name: string): CampaignData {
     quests: [], bestiary: [],
     restEvents: [], logEntries: [],
     pinnedNotes: [], xpLog: [],
+    playerView: { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' },
     schemaVersion: 1,
   }
 }

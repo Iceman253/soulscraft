@@ -16,8 +16,9 @@ export function RestPanel() {
   const toggleCond = (key: keyof RestConditions) => setConditions(prev => ({ ...prev, [key]: !prev[key] }))
 
   const metCount = Object.values(conditions).filter(Boolean).length
-  const quality = metCount >= 4 ? 'Good Rest' : 'Poor Rest'
-  const qualityColor = metCount >= 4 ? 'text-emerald' : 'text-orange-400'
+  // Rulebook: "most or all conditions met" = 3+ out of 4 for Good Rest
+  const quality = metCount >= 3 ? 'Good Rest' : 'Poor Rest'
+  const qualityColor = metCount >= 3 ? 'text-emerald' : 'text-orange-400'
 
   const handleLogRest = () => {
     if (selectedChars.length === 0 || !location.trim()) return
@@ -27,14 +28,14 @@ export function RestPanel() {
 
   return (
     <div className="h-full flex flex-col p-4 overflow-y-auto">
-      <h2 className="font-semibold text-stone-100 mb-4 flex items-center gap-2">
+      <h2 className="font-semibold text-stone-100 mb-4 flex items-center gap-2 font-heading tracking-wide">
         <Moon size={16} className="text-blue-300" /> Rest Log
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {/* Log a rest */}
         <div className="bg-stone-800 border border-stone-700 rounded-xl p-4 space-y-3">
-          <div className="font-medium text-stone-200 text-sm">Log a Rest</div>
+          <div className="font-medium text-stone-200 text-sm font-heading tracking-wide">Log a Rest</div>
 
           {/* Location */}
           <div>
@@ -53,7 +54,7 @@ export function RestPanel() {
                   {selectedChars.includes(c.id) && '✓ '}{c.name}
                 </button>
               ))}
-              {characters.length === 0 && <span className="text-xs text-stone-600">No characters yet</span>}
+              {characters.length === 0 && <span className="text-xs text-stone-500">No characters yet</span>}
             </div>
           </div>
 
@@ -80,10 +81,10 @@ export function RestPanel() {
 
           {/* Quality preview */}
           <div className={`text-sm font-semibold ${qualityColor}`}>
-            {metCount}/4 conditions met → {quality}
+            <span className="font-mono tabular-nums">{metCount}/4</span> conditions met → {quality} {metCount >= 3 ? '✓' : '(need 3+)'}
           </div>
           <div className="text-xs text-stone-500">
-            {metCount >= 4 ? 'Full HP & SD restored. Class features reset.' : 'Partial HP & half SD restored. Class features reset.'}
+            {metCount >= 3 ? 'Full HP & SD restored. Negative effects cleared. Class features reset.' : 'Half of lost HP & SD restored. Class features reset.'}
           </div>
 
           <button onClick={handleLogRest} disabled={selectedChars.length === 0 || !location.trim()}
@@ -94,8 +95,8 @@ export function RestPanel() {
 
         {/* Rest history */}
         <div className="bg-stone-800 border border-stone-700 rounded-xl p-4">
-          <div className="font-medium text-stone-200 text-sm mb-3">Rest History</div>
-          {events.length === 0 && <div className="text-xs text-stone-600">No rests logged yet</div>}
+          <div className="font-medium text-stone-200 text-sm mb-3 font-heading tracking-wide">Rest History</div>
+          {events.length === 0 && <div className="text-xs text-stone-500">No rests logged yet</div>}
           <div className="space-y-2 max-h-80 overflow-y-auto">
             {[...events].reverse().map(ev => {
               const charNames = ev.characterIds.map(id => characters.find(c => c.id === id)?.name ?? '?').join(', ')
@@ -110,7 +111,7 @@ export function RestPanel() {
                   </div>
                   <div className="text-xs text-stone-400">📍 {ev.location}</div>
                   <div className="text-xs text-stone-500">{charNames}</div>
-                  <div className="text-xs text-stone-600">{cond || 'No conditions met'}</div>
+                  <div className="text-xs text-stone-500">{cond || 'No conditions met'}</div>
                 </div>
               )
             })}
@@ -121,7 +122,7 @@ export function RestPanel() {
       {/* No-rest penalty tracker */}
       {characters.length > 0 && (
         <div className="bg-stone-800 border border-stone-700 rounded-xl p-4 mt-2">
-          <div className="font-medium text-stone-200 text-sm mb-3 flex items-center gap-2">
+          <div className="font-medium text-stone-200 text-sm mb-3 flex items-center gap-2 font-heading tracking-wide">
             <AlertTriangle size={14} className="text-orange-400" />
             No-Rest Penalties
           </div>
@@ -130,8 +131,8 @@ export function RestPanel() {
               <div key={c.id} className="flex items-center gap-3">
                 <span className="flex-1 text-sm text-stone-300 truncate">{c.name}</span>
                 {c.missedRests > 0
-                  ? <span className="text-xs text-orange-400 font-bold">-{c.missedRests}d4 to all rolls</span>
-                  : <span className="text-xs text-stone-600">No penalty</span>
+                  ? <span className="text-xs text-orange-400 font-bold font-mono">-{c.missedRests}d4 to all rolls</span>
+                  : <span className="text-xs text-stone-500">No penalty</span>
                 }
                 <div className="flex gap-1 shrink-0">
                   <button

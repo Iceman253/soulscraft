@@ -94,14 +94,14 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
           <div>
             <label className="text-xs text-stone-400 mb-1.5 block">Traveling from</label>
             <div className="px-3 py-2 rounded bg-stone-800/50 border border-stone-700 text-stone-400 text-sm">
-              {fromArea ? `📍 ${fromArea.name}` : <span className="italic text-stone-600">No current location set</span>}
+              {fromArea ? `📍 ${fromArea.name}` : <span className="italic text-stone-500">No current location set</span>}
             </div>
           </div>
 
           {/* Destination (GM-only) */}
           <div>
             <label className="text-xs text-stone-400 mb-1.5 block">
-              Destination <span className="text-stone-600">(hidden from players until they arrive)</span>
+              Destination <span className="text-stone-500">(hidden from players until they arrive)</span>
             </label>
             <select value={toAreaId} onChange={e => setToAreaId(e.target.value)}
               className="w-full bg-stone-800 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
@@ -116,7 +116,7 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
           {availableEdges.length > 0 && (
             <div>
               <label className="text-xs text-stone-400 mb-1.5 block">
-                Road / path <span className="text-stone-600">(optional)</span>
+                Road / path <span className="text-stone-500">(optional)</span>
               </label>
               <select value={edgeId} onChange={e => setEdgeId(e.target.value)}
                 className="w-full bg-stone-800 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
@@ -132,7 +132,7 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
           {/* Travel note shown to players */}
           <div>
             <label className="text-xs text-stone-400 mb-1.5 block">
-              Travel note for players <span className="text-stone-600">(optional — shown on map path)</span>
+              Travel note for players <span className="text-stone-500">(optional — shown on map path)</span>
             </label>
             <input
               value={label}

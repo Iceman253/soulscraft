@@ -20,7 +20,7 @@ export function PinnedNotes() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-stone-700 shrink-0">
-        <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Pinned Notes</span>
+        <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider font-heading">Pinned Notes</span>
         <button onClick={() => setAdding(v => !v)} className="p-1 rounded text-stone-500 hover:text-gold hover:bg-stone-700">
           <Plus size={12} />
         </button>
@@ -50,7 +50,7 @@ export function PinnedNotes() {
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
         {notes.length === 0 && !adding && (
-          <p className="text-xs text-stone-600 text-center py-3">No pinned notes</p>
+          <p className="text-xs text-stone-500 text-center py-3">No pinned notes</p>
         )}
         {notes.map(note => (
           <div key={note.id} className="group relative bg-stone-800 rounded px-2 py-1.5 border-l-2" style={{ borderColor: note.color ?? '#f5c842' }}>

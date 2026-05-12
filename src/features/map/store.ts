@@ -106,10 +106,13 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
   sessionNote: '',
 
   hydrate(areas, edges, playerView?) {
+    const areaIds = new Set(areas.map(a => a.id))
+    // Drop any visible-area IDs that no longer exist (area was deleted but ID wasn't cleaned up)
+    const playerVisibleAreaIds = (playerView?.visibleAreaIds ?? []).filter(id => areaIds.has(id))
     set({
       areas,
       edges,
-      playerVisibleAreaIds: playerView?.visibleAreaIds ?? [],
+      playerVisibleAreaIds,
       travelingMarkers: playerView?.travelingMarkers ?? [],
       sessionNote: playerView?.sessionNote ?? '',
     })
@@ -131,6 +134,12 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     const areas = get().areas.filter(a => a.id !== id)
     const edges = get().edges.filter(e => e.sourceId !== id && e.targetId !== id)
     updAreas(areas, edges, set)
+    // Clean up any stale visibility entry for the deleted area
+    const playerVisibleAreaIds = get().playerVisibleAreaIds.filter(v => v !== id)
+    if (playerVisibleAreaIds.length !== get().playerVisibleAreaIds.length) {
+      set({ playerVisibleAreaIds })
+      savePlayerView(playerVisibleAreaIds, get().travelingMarkers)
+    }
   },
 
   moveArea(id, position) {

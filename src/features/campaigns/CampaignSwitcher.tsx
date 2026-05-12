@@ -98,7 +98,7 @@ export function CampaignSwitcher({ onPlay }: Props) {
         {index.length === 0 && (
           <div className="text-center py-20">
             <p className="font-heading text-stone-500 tracking-wider mb-1" style={{ fontSize: '13px' }}>No campaigns yet</p>
-            <p className="text-stone-600 text-sm">Create one above to begin your chronicle.</p>
+            <p className="text-stone-500 text-sm">Create one above to begin your chronicle.</p>
           </div>
         )}
 
@@ -121,7 +121,7 @@ export function CampaignSwitcher({ onPlay }: Props) {
                   {meta.description && (
                     <div className="text-stone-400 text-sm truncate italic">{meta.description}</div>
                   )}
-                  <div className="text-xs text-stone-600 mt-1 flex gap-3 font-mono">
+                  <div className="text-xs text-stone-500 mt-1 flex gap-3 font-mono">
                     <span>{new Date(meta.lastPlayedAt).toLocaleDateString()}</span>
                     {warn && <span className="text-amber-500">{mb} MB ⚠</span>}
                   </div>
@@ -277,7 +277,7 @@ export function CampaignSwitcher({ onPlay }: Props) {
                 </h2>
                 <p className="text-stone-500 text-sm text-center mb-4 italic">Select your character for this session.</p>
                 <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto">
-                  {pendingCharacters.map(c => (
+                  {pendingCharacters.filter(c => !c.isDead).map(c => (
                     <button
                       key={c.id}
                       onClick={() => { onPlay(pendingId, c.id); closeRolePicker() }}
@@ -286,10 +286,24 @@ export function CampaignSwitcher({ onPlay }: Props) {
                       <TokenAvatar name={c.name} characterId={c.id} size={32} />
                       <div>
                         <div className="font-heading text-stone-100 tracking-wide" style={{ fontSize: '13px' }}>{c.name}</div>
-                        <div className="text-xs text-stone-500">{c.characterClass} · Level {c.level}</div>
+                        <div className="text-xs text-stone-500">{c.class} · Level {c.level}</div>
                       </div>
                     </button>
                   ))}
+                  {pendingCharacters.some(c => c.isDead) && (
+                    <div className="mt-1 border-t border-stone-700 pt-2">
+                      <div className="text-xs text-stone-500 px-1 mb-1.5">Fallen characters</div>
+                      {pendingCharacters.filter(c => c.isDead).map(c => (
+                        <div key={c.id} className="flex items-center gap-3 p-3 rounded border border-stone-800 opacity-50 cursor-not-allowed">
+                          <span className="text-base">💀</span>
+                          <div>
+                            <div className="font-heading text-stone-500 tracking-wide line-through" style={{ fontSize: '13px' }}>{c.name}</div>
+                            <div className="text-xs text-stone-600">{c.class} · Fallen</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => setRoleStep('pick-role')}

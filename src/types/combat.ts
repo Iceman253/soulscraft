@@ -13,6 +13,7 @@ export interface Combatant {
   sourceId: string
   activeEffects: ActiveEffect[]
   notes: string
+  isTough?: boolean   // Rulebook: Tough tag — immune to instant kills, must be rolled to defeat
 }
 
 export interface CombatSession {

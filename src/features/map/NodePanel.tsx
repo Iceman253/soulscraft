@@ -78,7 +78,7 @@ export function NodePanel({ area, onClose, onOpenSubMap }: NodePanelProps) {
         {/* Characters here */}
         {characters.length > 0 && (
           <div>
-            <div className="text-xs text-stone-500 mb-2 uppercase tracking-wider">Characters Here</div>
+            <div className="text-xs text-stone-500 mb-2 uppercase tracking-wider font-heading">Characters Here</div>
             <div className="space-y-1">
               {characters.map(c => (
                 <div key={c.id} className="flex items-center gap-2 text-sm text-stone-300">
@@ -93,7 +93,7 @@ export function NodePanel({ area, onClose, onOpenSubMap }: NodePanelProps) {
         {/* Items here */}
         {items.length > 0 && (
           <div>
-            <div className="text-xs text-stone-500 mb-2 uppercase tracking-wider">Items Here</div>
+            <div className="text-xs text-stone-500 mb-2 uppercase tracking-wider font-heading">Items Here</div>
             <div className="space-y-1">
               {items.map(item => (
                 <div key={item.id} className="text-sm text-stone-300">{item.quantity}× {item.name}</div>

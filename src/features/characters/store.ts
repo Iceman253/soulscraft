@@ -9,7 +9,7 @@ import { useCampaignStore } from '../campaigns/store'
 import { useWorldStore } from '../map/store'
 import { log } from '../log/store'
 import { getBaseDef, fullSetLoadout } from '../../lib/armor'
-import { WARRIOR_MANEUVERS, DELVER_EVASIONS, VINDICATOR_VOICES, CLASS_DAMAGE_DICE, CLASS_DISCIPLINES, DISCIPLINE_EDGES, DEFAULT_CLASS_SKILLS, SPECIES_DATA } from '../../lib/constants'
+import { WARRIOR_MANEUVERS, DELVER_EVASIONS, VINDICATOR_VOICES, CLASS_DAMAGE_DICE, CLASS_DISCIPLINES, DISCIPLINE_EDGES, DEFAULT_CLASS_SKILLS, SPECIES_DATA, calcMaxHp } from '../../lib/constants'
 
 interface CharacterStore {
   characters: Character[]
@@ -29,6 +29,11 @@ interface CharacterStore {
   adjustSd: (id: string, delta: number) => void
   awardXp: (characterId: string, amount: number, source: XpEvent['source'], note?: string) => void
   levelUp: (id: string) => void
+
+  // Death / resurrection (rulebook p.74)
+  markDead: (id: string) => void
+  setGhost: (id: string, isGhost: boolean) => void
+  resurrect: (id: string) => void
 
   // Location
   setLocation: (id: string, locationId: string | null) => void
@@ -329,12 +334,25 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   adjustHp(id, delta) {
+    const before = get().characters.find(c => c.id === id)
     const characters = mapChar(get().characters, id, c => ({
       ...c,
       currentHp: Math.max(0, Math.min(c.maxHp, c.currentHp + delta)),
     }))
     set({ characters })
     save(characters, get().xpLog)
+    const after = characters.find(c => c.id === id)
+    if (before && after && before.currentHp > 0 && after.currentHp === 0) {
+      if (before.name.toLowerCase() === 'infinite') {
+        log('character-move', '∞ Infinite has been defeated... You have done the impossible.')
+      }
+      // Auto-mark dead if HP hits 0 AND no SD left to spend (rulebook: "character dies")
+      if (after.currentSd === 0 && !after.isDead) {
+        const dead = mapChar(characters, id, c => ({ ...c, isDead: true }))
+        set({ characters: dead }); save(dead, get().xpLog)
+        log('character-move', `💀 ${after.name} has fallen — no HP and no SD remaining.`)
+      }
+    }
   },
 
   adjustSd(id, delta) {
@@ -363,17 +381,63 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   levelUp(id) {
-    const characters = mapChar(get().characters, id, c => ({
-      ...c,
-      level: c.level + 1,
-      xp: c.xp - 5,
-      maxSd: 5 + (c.level + 1),
-      currentSd: 5 + (c.level + 1),
-    }))
+    // Manual: leveling up raises maxHp/maxSd. Current SD only refills on rest, so
+    // we don't auto-top-up SD here. Current HP gets the new HP delta added (the
+    // character "feels" the new vitality immediately) but is capped at maxHp.
+    const characters = mapChar(get().characters, id, c => {
+      const newLevel = c.level + 1
+      const newMaxHp = calcMaxHp(c.class, newLevel)
+      const newMaxSd = 5 + newLevel
+      const hpGain = Math.max(0, newMaxHp - c.maxHp)
+      return {
+        ...c,
+        level: newLevel,
+        xp: c.xp - 5,
+        maxHp: newMaxHp,
+        currentHp: Math.min(newMaxHp, c.currentHp + hpGain),
+        maxSd: newMaxSd,
+        // Preserve currentSd; only nudge it up if it was already at the old cap
+        // (treat that as "fresh" — common right after a rest)
+        currentSd: c.currentSd === c.maxSd ? newMaxSd : Math.min(newMaxSd, c.currentSd),
+      }
+    })
     set({ characters })
     save(characters, get().xpLog)
     const char = characters.find(c => c.id === id)
-    if (char) log('level-up', `🎉 ${char.name} leveled up to Level ${char.level}!`)
+    if (char) log('level-up', `🎉 ${char.name} leveled up to Level ${char.level}! Max HP: ${char.maxHp}, Max SD: ${char.maxSd}. (SD refills on rest.)`)
+  },
+
+  // ── Death / resurrection ────────────────────────────────────────────────────
+  markDead(id) {
+    const char = get().characters.find(c => c.id === id)
+    if (!char) return
+    // Do NOT zero out SD — the player may still want to spend SD to avoid death.
+    // SD is only drained if the player chooses not to spend it and the GM confirms death.
+    const characters = mapChar(get().characters, id, c => ({
+      ...c, isDead: true, isGhost: false, currentHp: 0,
+    }))
+    set({ characters }); save(characters, get().xpLog)
+    log('character-move', `💀 ${char.name} has died.`)
+  },
+
+  setGhost(id, isGhost) {
+    const char = get().characters.find(c => c.id === id)
+    if (!char) return
+    const characters = mapChar(get().characters, id, c => ({ ...c, isGhost }))
+    set({ characters }); save(characters, get().xpLog)
+    log('character-move', isGhost
+      ? `👻 ${char.name} is now a Ghost — observing the Tower of Trials.`
+      : `👻 ${char.name} is no longer in Ghost form.`)
+  },
+
+  resurrect(id) {
+    const char = get().characters.find(c => c.id === id)
+    if (!char) return
+    const characters = mapChar(get().characters, id, c => ({
+      ...c, isDead: false, isGhost: false, currentHp: c.maxHp, currentSd: c.maxSd,
+    }))
+    set({ characters }); save(characters, get().xpLog)
+    log('character-move', `✨ ${char.name} has been resurrected by the Tower Keepers! Full HP and SD restored.`)
   },
 
   setLocation(id, locationId) {

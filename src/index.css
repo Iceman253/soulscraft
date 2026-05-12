@@ -8,10 +8,10 @@
 :root {
   --bg-primary:   #0d0b08;
   --bg-secondary: #17140e;
-  --bg-tertiary:  #221f17;
-  --border:       #32302a;
-  --text-primary: #d2c8b2;
-  --text-muted:   #9e9282;
+  --bg-tertiary:  #2a2619;
+  --border:       #4a4332;
+  --text-primary: #d8ccb2;
+  --text-muted:   #aea18a;
   --gold:         #cd8f22;
   --redstone:     #bd2e14;
   --emerald:      #1a9e56;
@@ -51,11 +51,18 @@ body::after {
 ::-webkit-scrollbar         { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track   { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb   { background: var(--border); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #524c3c; }
+::-webkit-scrollbar-thumb:hover { background: #857a5e; }
 
-/* ── Inputs ─────────────────────────────────────────────────────────── */
+/* ── Form controls ──────────────────────────────────────────────────────
+   Browsers reset font-family on form elements (buttons especially) to the
+   system UI font, which causes Tailwind's body font to silently fail on
+   anything that doesn't carry an explicit `font-*` class. Force inheritance
+   so unstyled buttons/inputs read in Crimson Pro by default. */
+input, textarea, select, button {
+  font-family: inherit;
+  font-size: inherit;
+}
 input, textarea, select {
-  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 15px;
 }
 
@@ -67,6 +74,29 @@ input, textarea, select {
 
 /* ── Cinzel heading utility ─────────────────────────────────────────── */
 .font-heading { font-family: 'Cinzel', Georgia, serif; }
+
+/* ── Bell wiggle ────────────────────────────────────────────────────── */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%       { transform: rotate(-12deg); }
+  75%       { transform: rotate(12deg); }
+}
+
+/* ── Rainbow name easter egg ────────────────────────────────────────── */
+@keyframes rainbow-shift {
+  0%   { color: #ff4444; }
+  14%  { color: #ff9900; }
+  28%  { color: #ffee00; }
+  42%  { color: #44dd44; }
+  57%  { color: #44aaff; }
+  71%  { color: #8844ff; }
+  85%  { color: #ff44cc; }
+  100% { color: #ff4444; }
+}
+.rainbow-name {
+  animation: rainbow-shift 2s linear infinite;
+  font-weight: 700;
+}
 
 /* ── Dice tumble ────────────────────────────────────────────────────── */
 @keyframes dice-tumble {
@@ -99,7 +129,7 @@ input, textarea, select {
 }
 .react-flow__controls button:hover {
   background: var(--bg-tertiary) !important;
-  border-color: #52503a !important;
+  border-color: #6a624c !important;
 }
 .react-flow__minimap {
   background: var(--bg-primary) !important;
