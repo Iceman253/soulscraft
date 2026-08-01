@@ -8,6 +8,7 @@ import { useRestStore } from './features/rest/store'
 import { useItemStore } from './features/items/store'
 import { useLogStore } from './features/log/store'
 import { useNotesStore } from './features/notes/store'
+import { useEconomyStore } from './features/economy/store'
 import { CampaignSwitcher } from './features/campaigns/CampaignSwitcher'
 import { AppShell } from './AppShell'
 
@@ -42,7 +43,7 @@ export default function App() {
     const d = activeCampaign
     // Migration guard: add playerView default for campaigns created before this feature
     const playerView = d.playerView
-      ? { sessionNote: '', ...d.playerView }   // fill missing sessionNote on old saves
+      ? { ...d.playerView, sessionNote: d.playerView.sessionNote ?? '' }   // fill missing sessionNote on old saves
       : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
     useWorldStore.getState().hydrate(d.areas, d.edges, playerView)
     useCharacterStore.getState().hydrate(d.characters, d.xpLog)
@@ -52,6 +53,7 @@ export default function App() {
     useItemStore.getState().hydrate(d.items)
     useLogStore.getState().hydrate(d.logEntries)
     useNotesStore.getState().hydrate(d.pinnedNotes)
+    useEconomyStore.getState().hydrate(d.economy)
   }, [activeId]) // re-hydrate on campaign switch
 
   const isPlayerMode = playerCharacterId !== null
@@ -82,6 +84,7 @@ export default function App() {
         useItemStore.getState().hydrate(d.items)
         useLogStore.getState().hydrate(d.logEntries)
         useNotesStore.getState().hydrate(d.pinnedNotes)
+        useEconomyStore.getState().hydrate(d.economy)
         // Keep campaign store in sync so flushCurrent (GM only) never saves stale data
         useCampaignStore.getState().updateCampaignData(d)
       } catch { /* malformed data — ignore */ }

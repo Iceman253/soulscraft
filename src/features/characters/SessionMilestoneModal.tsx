@@ -17,7 +17,9 @@ interface Props { onClose: () => void }
 
 export function SessionMilestoneModal({ onClose }: Props) {
   const { characters, awardXp } = useCharacterStore()
-  const pcs = characters.filter(c => c.type === 'pc')
+  // The character model doesn't distinguish PCs from NPCs — offer everyone
+  // and let the GM untick non-party members below.
+  const pcs = characters
 
   const [answered, setAnswered] = useState<Record<QuestionId, boolean>>({
     world: false, challenge: false, reward: false,

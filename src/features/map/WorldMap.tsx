@@ -17,6 +17,7 @@ import { NodePanel } from './NodePanel'
 import { SubMap } from './SubMap'
 import { AddNodeModal } from './AddNodeModal'
 import { ContextMenu } from '../../ui/ContextMenu'
+import type { AreaEdge as AreaEdgeType } from '../../types'
 
 const nodeTypes = { area: AreaNodeComponent }
 const edgeTypes = { area: AreaEdgeComponent }
@@ -83,9 +84,13 @@ export function WorldMap() {
     targetHandle: e.targetHandle,
     type: 'area',
     selected: selectedEdgeIds.has(e.id),
-    data: { edge: e, onDelete: () => deleteEdge(e.id) },
+    data: {
+      edge: e,
+      onDelete: () => deleteEdge(e.id),
+      onUpdate: (patch: Partial<AreaEdgeType>) => updateEdge(e.id, patch),
+    },
     label: e.label,
-  })), [edges, deleteEdge, selectedEdgeIds])
+  })), [edges, deleteEdge, updateEdge, selectedEdgeIds])
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     // Apply every change (drag, select, etc.) to the LOCAL state so the node follows the cursor smoothly.

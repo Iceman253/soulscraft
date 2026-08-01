@@ -7,6 +7,7 @@ import type { LogEntry } from './log'
 import type { PinnedNote } from './notes'
 import type { XpEvent } from './xp'
 import type { Item } from './items'
+import type { EconomyData } from './economy'
 
 // ── Campaign ───────────────────────────────────────────────────────────
 export interface CampaignMeta {
@@ -38,6 +39,7 @@ export interface CampaignData {
   logEntries: LogEntry[]
   pinnedNotes: PinnedNote[]
   xpLog: XpEvent[]
+  economy: EconomyData
   schemaVersion: number
   playerView: PlayerViewData
 }

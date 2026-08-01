@@ -42,6 +42,8 @@ export interface AreaEdge {
   targetHandle?: string
   label?: string
   travelDanger?: 'safe' | 'risky' | 'deadly'
+  /** In-game days the journey takes — feeds remoteness suggestions and travel cost (rations). */
+  travelDays?: number
 }
 
 export interface TravelingMarker {

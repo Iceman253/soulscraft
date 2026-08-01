@@ -8,6 +8,7 @@ import {
 } from '../../lib/storage'
 import { downloadJson, deserializeCampaign } from '../../lib/export'
 import { newId } from '../../lib/id'
+import { emptyEconomy } from '../../lib/economyEngine'
 
 function emptyData(id: string, name: string): CampaignData {
   return {
@@ -17,6 +18,7 @@ function emptyData(id: string, name: string): CampaignData {
     quests: [], bestiary: [],
     restEvents: [], logEntries: [],
     pinnedNotes: [], xpLog: [],
+    economy: emptyEconomy(),
     playerView: { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' },
     schemaVersion: 1,
   }

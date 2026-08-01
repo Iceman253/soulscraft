@@ -5,10 +5,16 @@ import { useWorldStore } from '../../map/store'
 import { CLASSES, CLASS_DISCIPLINES, DISCIPLINE_EDGES, SPECIES, SPECIES_DATA } from '../../../lib/constants'
 import { Badge } from '../../../ui/Badge'
 import { ClassFeatures } from '../classFeatures/ClassFeatures'
-import { LevelUpModal } from '../LevelUpModal'
 import { rollDie } from '../../combat/combatUtils'
 import { log } from '../../log/store'
-import type { Character, Skill, Trait } from '../../../types'
+import type { Character, Skill, Trait, CombatRole } from '../../../types'
+
+const SKILL_ROLE_LABELS: { role: CombatRole; label: string; title: string }[] = [
+  { role: 'attack',  label: 'Atk',  title: 'Auto-surfaces in the attack panel — adds its bonus to attack rolls' },
+  { role: 'defense', label: 'Def',  title: 'Auto-surfaces in the defense panel — adds its bonus to defense rolls' },
+  { role: 'utility', label: 'Util', title: 'Out-of-combat only — appears in the dice roller (exploration, crafting, etc.)' },
+  { role: 'general', label: 'GM',   title: 'GM discretion — appears in dice roller only; GM decides when it applies (social, narrative). Not auto-applied in combat.' },
+]
 
 // ── Inline roll result ────────────────────────────────────────────────────────
 interface RollResult { d1: number; d2: number; sdBonus?: number; total: number }
@@ -74,6 +80,40 @@ function SkillRow({ sk, char, onUpdate, onDelete }: { sk: Skill; char: Character
         )}
         <button onClick={onDelete} className="p-1 text-stone-500 hover:text-red-400"><Trash2 size={12} /></button>
       </div>
+
+      {/* Description — explains what the skill is and when its bonus applies */}
+      <textarea value={sk.description ?? ''} onChange={e => onUpdate({ description: e.target.value })} placeholder="Description — what this skill represents and when its bonus applies..." rows={2}
+        className="mt-1 w-full bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-400 text-xs outline-none resize-none focus:border-gold/50" />
+
+      {/* Combat-role chips — quick toggle for where this skill should surface */}
+      <div className="flex flex-wrap items-center gap-1 mt-1">
+        <span className="text-[10px] text-stone-500 uppercase tracking-wider mr-0.5">Shows in</span>
+        {SKILL_ROLE_LABELS.map(({ role, label, title }) => {
+          const roles = sk.combatRoles ?? ['general', 'utility']
+          const on = roles.includes(role)
+          return (
+            <button
+              key={role}
+              type="button"
+              onClick={() => onUpdate({ combatRoles: on ? roles.filter(r => r !== role) : [...roles, role] })}
+              title={title}
+              className={`px-1.5 py-0.5 rounded border text-[10px] font-medium transition-colors ${
+                on
+                  ? 'bg-amber-900/40 border-amber-500/60 text-amber-200'
+                  : 'bg-stone-800 border-stone-600 text-stone-500 hover:text-stone-300'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
+        {sk.appliedEffects && sk.appliedEffects.length > 0 && (
+          <span className="ml-1 text-[10px] text-purple-400" title={sk.appliedEffects.map(e => `${e.effectName} → ${e.target}`).join(', ')}>
+            ✨ {sk.appliedEffects.length} effect{sk.appliedEffects.length === 1 ? '' : 's'}
+          </span>
+        )}
+      </div>
+
       {result && <RollResultBadge r={result} penalty={char.missedRests} />}
     </div>
   )
@@ -117,8 +157,33 @@ function TraitRow({ tr, char, onUpdate, onDelete }: { tr: Trait; char: Character
         )}
         <button onClick={onDelete} className="p-1 text-stone-500 hover:text-red-400"><Trash2 size={12} /></button>
       </div>
-      <textarea value={tr.description} onChange={e => onUpdate({ description: e.target.value })} placeholder="Description..." rows={2}
-        className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-400 text-xs outline-none resize-none" />
+      <textarea value={tr.description} onChange={e => onUpdate({ description: e.target.value })} placeholder="Description — what this trait does and when its +1 applies..." rows={2}
+        className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-400 text-xs outline-none resize-none focus:border-gold/50" />
+
+      {/* Combat-role chips — quick toggle for where this trait should surface */}
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="text-[10px] text-stone-500 uppercase tracking-wider mr-0.5">Shows in</span>
+        {SKILL_ROLE_LABELS.map(({ role, label, title }) => {
+          const roles = tr.combatRoles ?? ['general']
+          const on = roles.includes(role)
+          return (
+            <button
+              key={role}
+              type="button"
+              onClick={() => onUpdate({ combatRoles: on ? roles.filter(r => r !== role) : [...roles, role] })}
+              title={title}
+              className={`px-1.5 py-0.5 rounded border text-[10px] font-medium transition-colors ${
+                on
+                  ? 'bg-amber-900/40 border-amber-500/60 text-amber-200'
+                  : 'bg-stone-800 border-stone-600 text-stone-500 hover:text-stone-300'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
       {result && <RollResultBadge r={result} penalty={char.missedRests} />}
     </div>
   )
@@ -127,10 +192,9 @@ function TraitRow({ tr, char, onUpdate, onDelete }: { tr: Trait; char: Character
 interface TabStatsProps { character: Character }
 
 export function TabStats({ character: c }: TabStatsProps) {
-  const { updateCharacter, changeClass, changeDiscipline, changeSpeciesVariant, addSkill, updateSkill, deleteSkill, addTrait, updateTrait, deleteTrait, awardXp, levelUp, setLocation, missRest, resetMissedRests } = useCharacterStore()
+  const { updateCharacter, changeClass, changeDiscipline, changeSpeciesVariant, addSkill, updateSkill, deleteSkill, addTrait, updateTrait, deleteTrait, awardXp, setLocation, missRest, resetMissedRests } = useCharacterStore()
   const areas = useWorldStore(s => s.areas)
   const [xpAmt, setXpAmt] = useState('')
-  const [showLevelUp, setShowLevelUp] = useState(false)
 
   const disciplines = CLASS_DISCIPLINES[c.class] ?? []
   const speciesVariants = SPECIES_DATA[c.species]?.variants ?? []
@@ -224,7 +288,12 @@ export function TabStats({ character: c }: TabStatsProps) {
           <span className="text-sm font-medium text-stone-200 font-heading tracking-wide">XP</span>
           <span className="text-gold font-bold font-mono tabular-nums">{c.xp} / 5</span>
           {c.xp >= 5 && (
-            <button onClick={() => setShowLevelUp(true)} className="ml-auto px-2 py-0.5 rounded bg-gold text-stone-900 text-xs font-bold hover:bg-yellow-400 animate-pulse">⬆ Level Up!</button>
+            <span
+              className="ml-auto px-2 py-0.5 rounded bg-stone-700 border border-amber-500/40 text-amber-300 text-xs font-semibold"
+              title="Only the player can choose their level-up ability — they'll see the prompt in the Player View."
+            >
+              ⏳ Ready — player picks
+            </span>
           )}
         </div>
         <div className="flex gap-2">
@@ -266,7 +335,7 @@ export function TabStats({ character: c }: TabStatsProps) {
       </div>
 
       {/* Skills — each has a Roll button */}
-      <Section title="Skills" onAdd={() => addSkill(c.id, { name: '', bonus: 1, description: '' })}>
+      <Section title="Skills" onAdd={() => addSkill(c.id, { name: '', bonus: 1, description: '', combatRoles: ['utility'] })}>
         {c.skills.length === 0
           ? <div className="text-xs text-stone-500 italic">No skills yet</div>
           : c.skills.map(sk => (
@@ -279,7 +348,7 @@ export function TabStats({ character: c }: TabStatsProps) {
       </Section>
 
       {/* Traits — each has a +1 roll button */}
-      <Section title="Traits" onAdd={() => addTrait(c.id, { name: '', description: '' })}>
+      <Section title="Traits" onAdd={() => addTrait(c.id, { name: '', description: '', combatRoles: ['general'] })}>
         {c.traits.length === 0
           ? <div className="text-xs text-stone-500 italic">No traits yet</div>
           : c.traits.map(tr => (
@@ -296,9 +365,6 @@ export function TabStats({ character: c }: TabStatsProps) {
         <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">Class Features</div>
         <ClassFeatures character={c} />
       </div>
-
-      {/* Level-up modal */}
-      {showLevelUp && <LevelUpModal character={c} onClose={() => setShowLevelUp(false)} />}
     </div>
   )
 }

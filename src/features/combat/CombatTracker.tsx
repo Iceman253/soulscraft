@@ -160,12 +160,53 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
       : attack.damageRoll.dealt
     adjustCombatantHp(target.id, instantKill ? -target.currentHp : -finalDealt)
 
-    // Commit staged ability/skill modifiers — marks charges used, deducts SD.
+    // ── Commit staged modifiers + auto-route status effects ──────────────
+    // For the attacker, "success" = attack-roll outcome === 'success' (10+).
+    // For PC-on-PC where attacker has no roll (creature), default to true.
+    const attackerSucceeded = attack.attackRoll
+      ? attack.attackRoll.outcome === 'success'
+      : true
+    // For the defender, "success" = defense-roll outcome === 'dodge' (10+).
+    const defenderSucceeded = attack.defenseRoll
+      ? attack.defenseRoll.outcome === 'dodge'
+      : false
+
     if (attacker.kind === 'character' && attack.applied && attack.applied.length > 0) {
-      commitAppliedModifiers(attacker.sourceId, attack.applied)
+      const res = commitAppliedModifiers(attacker.sourceId, attack.applied, attackerSucceeded)
+      // Apply target-bound effects to the combatant being attacked (only if still alive after damage)
+      res.pendingTargetEffects.forEach(spec => {
+        const template = STATUS_EFFECTS.find(s => s.name === spec.effectName)
+        addCombatantEffect(target.id, {
+          name: spec.effectName,
+          description: template?.description,
+          durationType: spec.durationType ?? 'manual',
+          remaining: spec.remaining,
+          damagePerRound: template?.damagePerRound,
+        })
+        log('effect-applied', `🩸 ${spec.effectName} auto-applied to ${target.name} (from ${attacker.name}).`)
+      })
+      // Ally effects — log for GM to route, since there's no ally selector in combat yet.
+      res.pendingAllyEffects.forEach(spec => {
+        log('effect-applied', `📝 GM: route ${spec.effectName} to an ally of ${attacker.name}.`)
+      })
     }
     if (target.kind === 'character' && attack.defenderApplied && attack.defenderApplied.length > 0) {
-      commitAppliedModifiers(target.sourceId, attack.defenderApplied)
+      const res = commitAppliedModifiers(target.sourceId, attack.defenderApplied, defenderSucceeded)
+      // Defender-staged target effects = retaliation onto the attacker
+      res.pendingTargetEffects.forEach(spec => {
+        const template = STATUS_EFFECTS.find(s => s.name === spec.effectName)
+        addCombatantEffect(attacker.id, {
+          name: spec.effectName,
+          description: template?.description,
+          durationType: spec.durationType ?? 'manual',
+          remaining: spec.remaining,
+          damagePerRound: template?.damagePerRound,
+        })
+        log('effect-applied', `🩸 ${spec.effectName} auto-applied to ${attacker.name} (from ${target.name}'s defense).`)
+      })
+      res.pendingAllyEffects.forEach(spec => {
+        log('effect-applied', `📝 GM: route ${spec.effectName} to an ally of ${target.name}.`)
+      })
     }
 
     const appliedAtkStr  = attack.applied         && attack.applied.length         > 0 ? ` [Atk used: ${attack.applied.map(m => m.name).join(', ')}]` : ''

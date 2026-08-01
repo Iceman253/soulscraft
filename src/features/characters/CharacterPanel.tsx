@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, UserPlus, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Plus, UserPlus } from 'lucide-react'
 import { useCharacterStore, defaultClassFeatureState } from './store'
 import { log } from '../log/store'
 import { CharacterCard } from './CharacterCard'
@@ -20,14 +20,18 @@ const CLASS_SKILL_BONUS: Record<string, 1|2|3> = {
 function buildNewCharacter(name: string, species: string, variantName: string, characterClass: string, discipline: string): Omit<Character, 'id'> {
   const skillBonus = CLASS_SKILL_BONUS[characterClass] ?? 1
   const defaultSkills: Skill[] = (DEFAULT_CLASS_SKILLS[characterClass] ?? []).map(s => ({
-    id: newId(), name: s, bonus: skillBonus as 1|2|3, description: '',
+    id: newId(),
+    name: s.name,
+    bonus: skillBonus as 1|2|3,
+    description: s.description,
+    combatRoles: s.combatRoles,
   }))
   const speciesInfo = SPECIES_DATA[species]
   const speciesVariants = speciesInfo?.variants ?? []
   const variant = speciesVariants.find(v => v.name === variantName) ?? speciesVariants[0]
   const defaultTraits = [
-    ...(speciesInfo ? [{ id: newId(), name: speciesInfo.speciesTrait.name, description: speciesInfo.speciesTrait.description }] : []),
-    ...(variant ? [{ id: newId(), name: variant.trait.name, description: variant.trait.description }] : []),
+    ...(speciesInfo ? [{ id: newId(), name: speciesInfo.speciesTrait.name, description: speciesInfo.speciesTrait.description, combatRoles: speciesInfo.speciesTrait.combatRoles }] : []),
+    ...(variant ? [{ id: newId(), name: variant.trait.name, description: variant.trait.description, combatRoles: variant.trait.combatRoles }] : []),
   ]
   const damageDie = CLASS_DAMAGE_DICE[characterClass] ?? 'd6'
 
@@ -40,7 +44,9 @@ function buildNewCharacter(name: string, species: string, variantName: string, c
       sdCost: a.sdCost,
       description: a.description,
       recharge: 'rest' as const,
-      combatRole: a.combatRole,
+      combatRole: a.combatRole,            // legacy single tag (compat)
+      combatRoles: a.combatRoles ?? (a.combatRole ? [a.combatRole] : undefined),
+      appliedEffects: a.appliedEffects,
     }))
 
   const maxHp = calcMaxHp(characterClass, 1)
@@ -63,7 +69,13 @@ function buildNewCharacter(name: string, species: string, variantName: string, c
     traits: defaultTraits,
     abilities: startingAbilities,
     disciplineEdge: DISCIPLINE_EDGES[discipline]
-      ? { name: DISCIPLINE_EDGES[discipline].name, description: DISCIPLINE_EDGES[discipline].description, used: false }
+      ? {
+          name: DISCIPLINE_EDGES[discipline].name,
+          description: DISCIPLINE_EDGES[discipline].description,
+          combatRoles: DISCIPLINE_EDGES[discipline].combatRoles,
+          appliedEffects: DISCIPLINE_EDGES[discipline].appliedEffects,
+          used: false,
+        }
       : { name: '', description: '', used: false },
     classFeatureState: defaultClassFeatureState(characterClass),
     armorLoadout: emptyLoadout(),

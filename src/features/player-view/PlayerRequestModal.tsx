@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Send, X } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { useRequestStore, type RequestType } from '../requests/store'
 import { useQuestStore } from '../quests/store'
 import { Modal } from '../../ui/Modal'
@@ -30,7 +30,6 @@ const REQUEST_TYPES: { type: RequestType; icon: string; label: string; desc: str
 export function PlayerRequestModal({ character: c, onClose }: Props) {
   const addRequest = useRequestStore(s => s.addRequest)
   const quests = useQuestStore(s => s.quests)
-  const areas = useWorldStore(s => s.areas)
 
   const [step, setStep] = useState<'pick-type' | 'fill'>('pick-type')
   const [type, setType] = useState<RequestType | null>(null)

@@ -1,7 +1,12 @@
 import { useState } from 'react'
-import { Pencil, Check, X, ChevronDown, ChevronRight, Trash2, Skull, Send } from 'lucide-react'
+import { Pencil, Check, X, ChevronDown, ChevronRight, Trash2, Skull, Send, Sparkles, Hourglass, RotateCcw } from 'lucide-react'
 import { PlayerRequestModal } from './PlayerRequestModal'
+import { PlayerMarketModal } from './PlayerMarketModal'
+import { LevelUpModal, type LevelUpInitialState } from '../characters/LevelUpModal'
 import { useCharacterStore } from '../characters/store'
+import { useRequestStore } from '../requests/store'
+import { useEconomyStore } from '../economy/store'
+import type { CombatRole, AppliedStatusEffectSpec } from '../../types'
 import { useWorldStore } from '../map/store'
 import { useCombatStore } from '../combat/store'
 import { HpBar } from '../../ui/HpBar'
@@ -28,7 +33,7 @@ function isAtRestSpot(areas: Area[], locationId: string | null, subLocationId: s
   const area = areas.find(a => a.id === locationId)
   if (!area) return false
   // Search recursively for the sub-node
-  function findNode(nodes: typeof area.subNodes): boolean {
+  function findNode(nodes: Area['subNodes']): boolean {
     for (const n of nodes) {
       if (n.id === subLocationId) return n.type === 'rest-spot'
       if (n.subNodes?.length && findNode(n.subNodes)) return true
@@ -100,11 +105,49 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
   const [editingNotes, setEditingNotes] = useState(false)
   const [draftNotes, setDraftNotes] = useState('')
   const [showRequestModal, setShowRequestModal] = useState(false)
+  const [showMarket, setShowMarket] = useState(false)
+  const [showLevelUp, setShowLevelUp] = useState(false)
+  const [levelUpInitial, setLevelUpInitial] = useState<LevelUpInitialState | undefined>(undefined)
+  const [expandedAbility, setExpandedAbility] = useState<string | null>(null)
   // Potion duration picker — shows for ongoing potions before applying
   const [pendingPotion, setPendingPotion] = useState<{ charId: string; item: CharacterItem; sceneDuration: number } | null>(null)
 
   const activeChar = characters.find(c => c.id === activeTab) ?? characters[0]
   const isOwnChar = !focusedCharacterId || focusedCharacterId === activeTab
+
+  // Watch for pending / denied skill-approval requests for the active character.
+  // Used to gate the Level Up button and surface a retry path when the GM denies.
+  const requests = useRequestStore(s => s.requests)
+  const clearRequest = useRequestStore(s => s.clearRequest)
+  const markets = useEconomyStore(s => s.economy.markets)
+  const pendingSkillApproval = activeChar
+    ? requests.find(r => r.type === 'skill-approval' && r.characterId === activeChar.id && r.status === 'pending')
+    : undefined
+  const deniedSkillApproval = activeChar
+    ? requests
+        .filter(r => r.type === 'skill-approval' && r.characterId === activeChar.id && r.status === 'denied')
+        .sort((a, b) => b.createdAt - a.createdAt)[0]
+    : undefined
+
+  // Re-open the level-up modal pre-filled with the player's previous denied proposal.
+  function retryLevelUpFromDenied() {
+    if (!deniedSkillApproval) return
+    const p = deniedSkillApproval.payload
+    setLevelUpInitial({
+      abilityName: typeof p.abilityName === 'string' ? p.abilityName : null,
+      skillName: typeof p.skillName === 'string' ? p.skillName : '',
+      skillDescription: typeof p.skillDescription === 'string' ? p.skillDescription : '',
+      skillRoles: Array.isArray(p.skillCombatRoles) ? p.skillCombatRoles as CombatRole[] : ['general'],
+      skillEffects: Array.isArray(p.skillAppliedEffects) ? p.skillAppliedEffects as AppliedStatusEffectSpec[] : [],
+    })
+    clearRequest(deniedSkillApproval.id)
+    setShowLevelUp(true)
+  }
+
+  function openFreshLevelUp() {
+    setLevelUpInitial(undefined)
+    setShowLevelUp(true)
+  }
 
   if (characters.length === 0) {
     return (
@@ -115,6 +158,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
   }
 
   const location  = activeChar ? areas.find(a => a.id === activeChar.locationId) : null
+  const localMarket = activeChar?.locationId ? markets.find(m => m.areaId === activeChar.locationId) ?? null : null
   const travelMarker = activeChar ? travelingMarkers.find(m => m.characterId === activeChar.id) : null
   const atRestSpot = activeChar ? isAtRestSpot(areas, activeChar.locationId, activeChar.subLocationId) : false
 
@@ -207,45 +251,58 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
   return (
     <div className="h-full flex flex-col bg-stone-900">
       {/* Character tabs */}
-      <div className="shrink-0 flex gap-0.5 px-2 pt-2 overflow-x-auto border-b border-stone-700">
-        {characters.map(c => {
-          const isActive = activeTab === c.id
-          const isDead  = !!c.isDead
-          const isGhost = !!c.isGhost
-          return (
-            <button
-              key={c.id}
-              onClick={() => setActiveTab(c.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t text-xs whitespace-nowrap transition-colors ${
-                isActive
-                  ? isDead
-                    ? 'bg-stone-900 text-stone-500 border-t border-l border-r border-stone-700 -mb-px pb-2'
-                    : isGhost
-                      ? 'bg-stone-800 text-purple-400 border-t border-l border-r border-purple-800/50 -mb-px pb-2'
-                      : 'bg-stone-800 text-gold border-t border-l border-r border-stone-600 -mb-px pb-2'
-                  : isDead
-                    ? 'text-stone-500 hover:text-stone-300 hover:bg-stone-800/30 line-through'
-                    : isGhost
-                      ? 'text-purple-400 hover:text-purple-200 hover:bg-stone-800/50'
-                      : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/50'
-              }`}
-            >
-              {isDead  && <span className="text-xs">💀</span>}
-              {isGhost && !isDead && <span className="text-xs">👻</span>}
-              {!isDead && !isGhost && <TokenAvatar name={c.name} characterId={c.id} size={16} />}
-              <span className={`${isDead ? 'line-through opacity-60' : ''} ${c.name.toLowerCase() === 'infinite' ? 'rainbow-name' : ''}`}>{c.name}</span>
-            </button>
-          )
-        })}
-        {/* Request button — only shown for own character */}
+      <div className="shrink-0 flex items-stretch px-2 pt-2 border-b border-stone-700">
+        <div className="flex gap-0.5 overflow-x-auto flex-1 min-w-0 pb-px">
+          {characters.map(c => {
+            const isActive = activeTab === c.id
+            const isDead  = !!c.isDead
+            const isGhost = !!c.isGhost
+            return (
+              <button
+                key={c.id}
+                onClick={() => setActiveTab(c.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t text-xs whitespace-nowrap transition-colors ${
+                  isActive
+                    ? isDead
+                      ? 'bg-stone-900 text-stone-500 border-t border-l border-r border-stone-700 -mb-px pb-2'
+                      : isGhost
+                        ? 'bg-stone-800 text-purple-400 border-t border-l border-r border-purple-800/50 -mb-px pb-2'
+                        : 'bg-stone-800 text-gold border-t border-l border-r border-stone-600 -mb-px pb-2'
+                    : isDead
+                      ? 'text-stone-500 hover:text-stone-300 hover:bg-stone-800/30 line-through'
+                      : isGhost
+                        ? 'text-purple-400 hover:text-purple-200 hover:bg-stone-800/50'
+                        : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/50'
+                }`}
+              >
+                {isDead  && <span className="text-xs">💀</span>}
+                {isGhost && !isDead && <span className="text-xs">👻</span>}
+                {!isDead && !isGhost && <TokenAvatar name={c.name} characterId={c.id} size={16} />}
+                <span className={`${isDead ? 'line-through opacity-60' : ''} ${c.name.toLowerCase() === 'infinite' ? 'rainbow-name' : ''}`}>{c.name}</span>
+              </button>
+            )
+          })}
+        </div>
+        {/* Request + market buttons — only shown for own character; outside the scroll region so they never trigger a scrollbar */}
         {activeChar && isOwnChar && (
-          <button
-            onClick={() => setShowRequestModal(true)}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs text-stone-400 hover:text-teal-300 hover:bg-stone-800/50 rounded-t whitespace-nowrap transition-colors shrink-0"
-            title="Send a request to the GM"
-          >
-            <Send size={11} /> Request
-          </button>
+          <>
+            {localMarket && (
+              <button
+                onClick={() => setShowMarket(true)}
+                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 text-xs text-stone-400 hover:text-amber-300 hover:bg-stone-800/50 rounded-t whitespace-nowrap transition-colors shrink-0"
+                title={`Browse ${localMarket.name}`}
+              >
+                🏪 Market
+              </button>
+            )}
+            <button
+              onClick={() => setShowRequestModal(true)}
+              className="ml-1 flex items-center gap-1.5 px-3 py-1.5 text-xs text-stone-400 hover:text-teal-300 hover:bg-stone-800/50 rounded-t whitespace-nowrap transition-colors shrink-0"
+              title="Send a request to the GM"
+            >
+              <Send size={11} /> Request
+            </button>
+          </>
         )}
       </div>
 
@@ -400,11 +457,133 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
               <div className="text-xs font-medium text-stone-400 mb-2 font-heading tracking-wide">Skills</div>
               <div className="flex flex-wrap gap-1.5">
                 {activeChar.skills.map(s => (
-                  <div key={s.id} className="flex items-center gap-1 bg-stone-800 border border-stone-700 rounded px-2 py-0.5">
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-1 bg-stone-800 border border-stone-700 rounded px-2 py-0.5"
+                    title={s.description || undefined}
+                  >
                     <span className="text-xs text-stone-200">{s.name}</span>
                     <span className="text-xs font-bold text-gold font-mono">{BONUS_LABEL[s.bonus] ?? `+${s.bonus}`}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* XP / Level-Up — only for own character */}
+          {isOwnChar && (
+            <div className="bg-stone-800 border border-stone-700 rounded-lg px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-stone-400 font-heading tracking-wide">XP</span>
+                <span className="text-gold font-bold font-mono tabular-nums text-sm">{activeChar.xp} / 5</span>
+                {pendingSkillApproval ? (
+                  <span
+                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded bg-stone-700 border border-amber-500/40 text-amber-300 text-xs font-semibold"
+                    title="Your level-up proposal is awaiting GM approval."
+                  >
+                    <Hourglass size={11} /> Pending GM review
+                  </span>
+                ) : activeChar.xp >= 5 ? (
+                  <button
+                    onClick={openFreshLevelUp}
+                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500 text-stone-900 text-xs font-bold hover:bg-amber-400 transition-colors animate-pulse"
+                  >
+                    <Sparkles size={11} /> Level Up
+                  </button>
+                ) : (
+                  <span className="ml-auto text-xs text-stone-500">{5 - activeChar.xp} to next level</span>
+                )}
+              </div>
+              <div className="mt-1.5 h-1.5 rounded-full bg-stone-900 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-600 to-amber-400 transition-all"
+                  style={{ width: `${Math.min(100, (activeChar.xp / 5) * 100)}%` }}
+                />
+              </div>
+
+              {/* Pending proposal summary — so the player sees what they sent */}
+              {pendingSkillApproval && (
+                <div className="mt-2 text-[11px] text-amber-200/80 leading-snug">
+                  Proposal sent:{' '}
+                  <span className="text-amber-200 font-medium">
+                    {String(pendingSkillApproval.payload.skillName ?? '')}
+                  </span>
+                  {pendingSkillApproval.payload.abilityName ? (
+                    <> + ability "{String(pendingSkillApproval.payload.abilityName)}"</>
+                  ) : null}
+                </div>
+              )}
+
+              {/* Denied banner with retry — only show when nothing pending */}
+              {!pendingSkillApproval && deniedSkillApproval && (
+                <div className="mt-2 rounded-md border border-red-800/50 bg-red-950/30 px-2.5 py-2 text-xs space-y-1.5">
+                  <div className="text-red-300 leading-snug">
+                    ❌ The GM denied your proposed skill{' '}
+                    <span className="font-semibold">
+                      "{String(deniedSkillApproval.payload.skillName ?? '')}"
+                    </span>
+                    . Adjust it and resubmit.
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={retryLevelUpFromDenied}
+                      className="flex items-center gap-1 px-2 py-1 rounded bg-amber-700/40 border border-amber-600/50 text-amber-200 hover:bg-amber-700/60 transition-colors text-xs font-medium"
+                    >
+                      <RotateCcw size={11} /> Pick again
+                    </button>
+                    <button
+                      onClick={() => clearRequest(deniedSkillApproval.id)}
+                      className="px-2 py-1 rounded text-stone-500 hover:text-stone-300 text-xs"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Abilities — click to expand description */}
+          {activeChar.abilities.length > 0 && (
+            <div>
+              <div className="text-xs font-medium text-stone-400 mb-2 font-heading tracking-wide">Abilities</div>
+              <div className="space-y-1">
+                {activeChar.abilities.map(a => {
+                  const expanded = expandedAbility === a.id
+                  const cost = a.sdCost > 0 ? `${a.sdCost} SD` : 'Free'
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => setExpandedAbility(expanded ? null : a.id)}
+                      className={`w-full text-left rounded-lg border px-2.5 py-1.5 transition-colors ${
+                        expanded
+                          ? 'bg-stone-800 border-amber-700/50'
+                          : 'bg-stone-800/60 border-stone-700 hover:border-stone-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {expanded
+                          ? <ChevronDown size={11} className="shrink-0 text-stone-500" />
+                          : <ChevronRight size={11} className="shrink-0 text-stone-500" />}
+                        <span className="text-xs text-stone-100 font-medium flex-1 truncate">{a.name}</span>
+                        <span className={`text-xs font-mono shrink-0 ${a.sdCost > 0 ? 'text-amber-400' : 'text-stone-500'}`}>{cost}</span>
+                        {a.recharge !== 'none' && (
+                          <span className="text-[10px] text-stone-500 uppercase tracking-wider shrink-0">{a.recharge}</span>
+                        )}
+                      </div>
+                      {expanded && (
+                        <div className="mt-1.5 pl-4 text-xs text-stone-400 leading-relaxed whitespace-pre-wrap">
+                          {a.description || <span className="italic text-stone-600">No description.</span>}
+                          {a.materials && (
+                            <div className="mt-1 text-stone-500">
+                              <span className="text-stone-600">Materials:</span> {a.materials}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -714,6 +893,22 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
       {/* Request modal */}
       {showRequestModal && activeChar && (
         <PlayerRequestModal character={activeChar} onClose={() => setShowRequestModal(false)} />
+      )}
+
+      {/* Local market — browse & request purchases/sales; GM approves everything */}
+      {showMarket && activeChar && localMarket && (
+        <PlayerMarketModal character={activeChar} market={localMarket} onClose={() => setShowMarket(false)} />
+      )}
+
+      {/* Level-Up modal — players self-select their level-up ability.
+          When opened via "Pick again" after a denial, initialState pre-fills
+          their previous choices so they can adjust rather than redo. */}
+      {showLevelUp && activeChar && isOwnChar && (
+        <LevelUpModal
+          character={activeChar}
+          onClose={() => { setShowLevelUp(false); setLevelUpInitial(undefined) }}
+          initialState={levelUpInitial}
+        />
       )}
     </div>
   )

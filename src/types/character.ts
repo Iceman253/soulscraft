@@ -77,6 +77,12 @@ export interface DisciplineEdge {
   name: string
   description: string
   used: boolean
+  /** Where this Edge surfaces in the AbilityApplyPanel. Same semantics as
+   *  Ability.combatRoles (strict). Defaults to ['general'] if omitted —
+   *  Edges fall back to dice-roller-only for unknown disciplines. */
+  combatRoles?: CombatRole[]
+  /** Status effects this Edge auto-applies when staged. */
+  appliedEffects?: AppliedStatusEffectSpec[]
 }
 
 // ── Characters ─────────────────────────────────────────────────────────
@@ -100,17 +106,47 @@ export interface CharacterItem {
 
 export interface InventorySection { items: CharacterItem[] }
 
+export type EffectDuration = 'scenes' | 'days' | 'until-rest' | 'permanent' | 'manual'
+
+/** Where an ability/skill is contextually relevant in combat.
+ *  See lib/classAbilities.ts for canonical definition. */
+export type CombatRole = 'attack' | 'defense' | 'general' | 'utility'
+
+/** Who an auto-applied status effect lands on when an ability/skill commits. */
+export type StatusEffectTarget = 'self' | 'target' | 'ally' | 'all-allies'
+
+/** Declares a status effect that an ability or skill applies on use.
+ *  Effect name must match a STATUS_EFFECTS[].name (see features/combat/statusEffects.ts). */
+export interface AppliedStatusEffectSpec {
+  effectName: string
+  target: StatusEffectTarget
+  /** Defaults to 'manual' (GM removes when appropriate) if omitted. */
+  durationType?: EffectDuration
+  /** Scene/day count when durationType is 'scenes' or 'days'. */
+  remaining?: number
+  /** If true, only apply when the parent roll succeeds (total ≥ 10). */
+  onSuccess?: boolean
+}
+
 export interface Skill {
   id: string
   name: string
   bonus: 1 | 2 | 3
   description?: string
+  /** Combat contexts where this skill surfaces in the AbilityApplyPanel.
+   *  Multi-select; empty/omitted = ['general','utility'] (works everywhere outside combat). */
+  combatRoles?: CombatRole[]
+  /** Status effects this skill auto-applies when staged & committed. */
+  appliedEffects?: AppliedStatusEffectSpec[]
 }
 
 export interface Trait {
   id: string
   name: string
   description: string
+  /** Where this trait surfaces in the AbilityApplyPanel. Strict — see CombatRole.
+   *  Defaults to ['general'] (dice roller only) if omitted. */
+  combatRoles?: CombatRole[]
 }
 
 export interface Ability {
@@ -120,12 +156,18 @@ export interface Ability {
   sdCost: number
   recharge: 'rest' | 'scene' | 'day' | 'none'
   materials?: string
-  /** Combat applicability — see CombatRole in lib/classAbilities.ts.
-   *  Optional; if absent, the ability is treated as 'utility' (Dice Roller only). */
-  combatRole?: 'attack' | 'defense' | 'general' | 'utility'
+  /** @deprecated Use combatRoles (array). Kept for migration; treated as `[combatRole]`. */
+  combatRole?: CombatRole
+  /** Combat applicability — multi-select. Strict filtering:
+   *  - 'attack'  → attacker panel only
+   *  - 'defense' → defender panel only
+   *  - 'general' → dice roller only (NOT shown in combat panels)
+   *  - 'utility' → dice roller only
+   *  An ability that works in both combat sides should be `['attack','defense']`. */
+  combatRoles?: CombatRole[]
+  /** Status effects this ability auto-applies on commit. */
+  appliedEffects?: AppliedStatusEffectSpec[]
 }
-
-export type EffectDuration = 'scenes' | 'days' | 'until-rest' | 'permanent' | 'manual'
 
 export interface ActiveEffect {
   id: string

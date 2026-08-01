@@ -142,9 +142,24 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
       if (cappedSd > 0 && selectedChar) {
         adjustSd(selectedChar.id, -cappedSd)
       }
-      // Commit staged ability/skill modifiers — marks charges used, deducts ability SD costs.
+      // Commit staged ability/skill modifiers — marks charges used, deducts ability SD costs,
+      // auto-applies self status effects. Determine roll success for gating `onSuccess`:
+      //  - Standard mode: success when total ≥ 10
+      //  - Difficult mode: success when 2+ of 3 rolls hit 10+
+      const rollSucceeded = mode === 'difficult'
+        ? (multiSuccess ?? false)
+        : sub[0].outcome === 'success'
       if (selectedChar && appliedMods.length > 0) {
-        commitAppliedModifiers(selectedChar.id, appliedMods)
+        const commitResult = commitAppliedModifiers(selectedChar.id, appliedMods, rollSucceeded)
+        // Target/ally effects can't auto-route from the Dice Roller (no combat target).
+        // Log them for the GM to apply manually.
+        const pending = [...commitResult.pendingTargetEffects, ...commitResult.pendingAllyEffects]
+        if (pending.length > 0) {
+          const lines = pending.map(e =>
+            `→ Apply ${e.effectName} to ${e.target}${e.onSuccess && !rollSucceeded ? ' (skipped — roll failed)' : ''}`
+          )
+          log('effect-applied', `📝 GM: ${selectedChar.name}'s abilities trigger: ${lines.join(' · ')}`)
+        }
       }
 
       const totalSd = cappedSd + appliedSdCost

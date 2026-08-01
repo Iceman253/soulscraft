@@ -11,12 +11,6 @@ import { rollDie, parseSides } from '../../features/combat/combatUtils'
 import { log } from '../log/store'
 import type { Character } from '../../types'
 
-function outcomeLabel(total: number) {
-  if (total >= 10) return { label: 'Full Success', color: 'text-emerald' }
-  if (total >= 7)  return { label: 'Partial',      color: 'text-amber-400' }
-  return                  { label: 'Failure',       color: 'text-red-400' }
-}
-
 interface CharacterCardProps {
   character: Character
   onOpen: () => void

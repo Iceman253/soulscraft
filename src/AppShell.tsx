@@ -8,12 +8,13 @@ import { QuestPanel } from './features/quests/QuestPanel'
 import { BestiaryPanel } from './features/bestiary/BestiaryPanel'
 import { RestPanel } from './features/rest/RestPanel'
 import { ItemPanel } from './features/items/ItemPanel'
+import { EconomyPanel } from './features/economy/EconomyPanel'
 import { ReferencePanel } from './features/reference/ReferencePanel'
 import { CombatTracker } from './features/combat/CombatTracker'
 import { DiceRoller } from './features/dice/DiceRoller'
 import { PlayerView } from './features/player-view/PlayerView'
 
-type Tab = 'map' | 'characters' | 'quests' | 'bestiary' | 'rest' | 'items' | 'reference'
+type Tab = 'map' | 'characters' | 'quests' | 'bestiary' | 'rest' | 'items' | 'economy' | 'reference'
 
 interface Props {
   /** null = GM mode; string (possibly empty) = player mode with optional characterId */
@@ -48,6 +49,7 @@ export function AppShell({ playerCharacterId }: Props) {
           {tab === 'bestiary'   && <BestiaryPanel />}
           {tab === 'rest'       && <RestPanel />}
           {tab === 'items'      && <ItemPanel />}
+          {tab === 'economy'    && <EconomyPanel />}
           {tab === 'reference'  && <ReferencePanel />}
         </div>
 

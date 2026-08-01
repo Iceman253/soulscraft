@@ -49,128 +49,227 @@ export const CLASS_DISCIPLINES: Record<string, string[]> = {
   Tecton:     ['Artisan', 'Mechanist', 'Architect'],
 }
 
-export const DISCIPLINE_EDGES: Record<string, { name: string; description: string; resetsOn: 'rest' | 'scene' }> = {
-  Soldier:        { resetsOn: 'rest',  name: 'Soldier Edge',        description: 'Once per rest, while fighting within Close range of an ally, you can grant yourself and that ally +1 DEF for the scene. This only applies to one ally.' },
-  Mercenary:      { resetsOn: 'scene', name: 'Mercenary Edge',      description: 'Once per scene, when you strike a creature who hasn\'t yet attacked you in this scene, add +1 damage.' },
-  Swashbuckler:   { resetsOn: 'scene', name: 'Swashbuckler Edge',   description: 'Once per scene, you may avoid an incoming attack, taking no damage and gaining +1 to your next action roll.' },
-  Assassin:       { resetsOn: 'scene', name: 'Assassin Edge',       description: 'Once per scene, if you strike a creature with a ranged attack while unseen, you remain hidden.' },
-  Guardian:       { resetsOn: 'rest',  name: 'Guardian Edge',       description: 'Once per rest, you may ask for the location of a hidden creature within Far range and receive a truthful answer.' },
-  Survivalist:    { resetsOn: 'rest',  name: 'Survivalist Edge',    description: 'Once per rest, during a Poor Quality Rest, you and your companions heal an additional +2 HP and regenerate an additional +1 SD due to your preparation.' },
-  Priest:         { resetsOn: 'rest',  name: 'Priest Edge',         description: 'Once per rest, you can hallow the area within Nearby range around you for one scene. While inside, your Cause applies to allies — when they make an action roll clearly aligned with your Cause, they gain +1 to the roll.' },
-  Inquisitor:     { resetsOn: 'rest',  name: 'Inquisitor Edge',     description: 'Once per rest, you can intimidate a creature, inflicting them with Confusion for one scene.' },
-  Paragon:        { resetsOn: 'rest',  name: 'Paragon Edge',        description: 'Once per rest, when you make a stand for your Cause, all allies who can see you can remove one negative Status Effect.' },
-  Maledict:       { resetsOn: 'rest',  name: 'Maledict Edge',       description: 'You get a +2 bonus to any action rolls that concern handling Curses and to damage rolls when you use a Curse to harm a creature.' },
-  'War Mage':     { resetsOn: 'rest',  name: 'War Mage Edge',       description: 'Your damage die is d8 when using an enchanted weapon or when you deal damage directly through an enchantment or curse.' },
-  Aegis:          { resetsOn: 'rest',  name: 'Aegis Edge',          description: 'Damage rolls against an object or creature that you have imbued with any defensive enchantment suffer a -1 penalty.' },
-  Raider:         { resetsOn: 'rest',  name: 'Raider Edge',         description: 'You gain +2 to action rolls that involve searching for valuable loot.' },
-  Archaeologist:  { resetsOn: 'rest',  name: 'Archaeologist Edge',  description: 'Having studied ancient architecture, you gain a 1d4 bonus to action rolls made to understand or anticipate the layout of a ruin. You can often tell what lies beyond a corridor, where hidden chambers might be, or how rooms connect, even without direct sight.' },
-  Reliquarian:    { resetsOn: 'rest',  name: 'Reliquarian Edge',    description: 'You possess a relic containing an ancient Rite (a Level 1 or Level 2 Status Effect of your choice). You may activate this Rite up to twice per rest, targeting yourself or any creature you can see. When activated, the effect lasts for one scene.' },
-  Beastshaper:    { resetsOn: 'rest',  name: 'Beastshaper Edge',    description: 'Once per rest, you can transform into a natural animal you have seen before. You retain your HP, DEF, and intelligence, but cannot use weapons, speech, or Special Abilities. The form lasts until you drop it or the next rest.' },
-  Shaman:         { resetsOn: 'rest',  name: 'Shaman Edge',         description: 'Once per rest, you may commune with a local nature spirit to learn general knowledge of the immediate natural area.' },
-  Rotmancer:      { resetsOn: 'rest',  name: 'Rotmancer Edge',      description: 'One of your two Tethers must always be to the Primal Force of Rot. You may call upon Rot to cause harm to a creature without breaking the Tether.' },
-  Thanaturge:     { resetsOn: 'rest',  name: 'Thanaturge Edge',     description: 'By spending an Essence of Decay, you can compel an Undead creature within sight whose maximum HP is 10 or less to obey one simple command. You can command up to five such creatures at a time (1 Essence of Decay per creature).' },
-  Chronomancer:   { resetsOn: 'rest',  name: 'Chronomancer Edge',   description: 'By spending Essence of Transformation, you can increase or decrease the duration of an ongoing effect by one step: Turn (1 Essence), Round (2 Essence), or Scene (3 Essence). Targets must be your own abilities, potions you created/used, or Status Effects on a creature you can touch.' },
-  Monstrologist:  { resetsOn: 'rest',  name: 'Monstrologist Edge',  description: 'By spending an Essence of Transformation, you can take on a subtle aberrant trait (extra eyes, tendrils, gills, etc.) for one scene, granting +1 to action rolls related to that adaptation. You cannot maintain more than one mutation at a time.' },
-  Revenant:       { resetsOn: 'rest',  name: 'Revenant Edge',       description: 'You have one permanent Vex companion that can fly, pass through walls, and follow your commands. It is intelligent and can speak. It shares your HP, DEF, and damage die, and reforms after a rest if destroyed.' },
-  Soulmender:     { resetsOn: 'rest',  name: 'Soulmender Edge',     description: 'Once per rest, when you restore HP to another creature by any means, you restore additional HP equal to your level and they may also remove a Status Effect.' },
-  Reaper:         { resetsOn: 'rest',  name: 'Reaper Edge',         description: 'Once per rest, when you reduce a creature to 0 HP, regain 1 SD.' },
-  Artisan:        { resetsOn: 'rest',  name: 'Artisan Edge',        description: 'When you use enchanted or otherwise magical components in crafting, you can preserve their magical effect.' },
-  Mechanist:      { resetsOn: 'rest',  name: 'Mechanist Edge',      description: 'Twice per rest, you may add 1d4 to your action rolls associated with redstone items and structures you have crafted, built, or closely examined.' },
-  Architect:      { resetsOn: 'rest',  name: 'Architect Edge',      description: 'When you build a structure, you require half the usual amount of blocks and half the normal time, rounded down.' },
+import type { CombatRole, AppliedStatusEffectSpec } from '../types'
+
+export const DISCIPLINE_EDGES: Record<string, { name: string; description: string; resetsOn: 'rest' | 'scene'; combatRoles: CombatRole[]; appliedEffects?: AppliedStatusEffectSpec[] }> = {
+  // Warrior disciplines
+  Soldier:        { resetsOn: 'rest',  combatRoles: ['defense'],          name: 'Soldier Edge',        description: 'Once per rest, while fighting within Close range of an ally, you can grant yourself and that ally +1 DEF for the scene. This only applies to one ally.' },
+  Mercenary:      { resetsOn: 'scene', combatRoles: ['attack'],           name: 'Mercenary Edge',      description: 'Once per scene, when you strike a creature who hasn\'t yet attacked you in this scene, add +1 damage.' },
+  Swashbuckler:   { resetsOn: 'scene', combatRoles: ['attack', 'defense'], name: 'Swashbuckler Edge',   description: 'Once per scene, you may avoid an incoming attack, taking no damage and gaining +1 to your next action roll.' },
+  // Hunter disciplines
+  Assassin:       { resetsOn: 'scene', combatRoles: ['attack'],           name: 'Assassin Edge',       description: 'Once per scene, if you strike a creature with a ranged attack while unseen, you remain hidden.' },
+  Guardian:       { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Guardian Edge',       description: 'Once per rest, you may ask for the location of a hidden creature within Far range and receive a truthful answer.' },
+  Survivalist:    { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Survivalist Edge',    description: 'Once per rest, during a Poor Quality Rest, you and your companions heal an additional +2 HP and regenerate an additional +1 SD due to your preparation.' },
+  // Vindicator disciplines
+  Priest:         { resetsOn: 'rest',  combatRoles: ['attack', 'defense'],name: 'Priest Edge',         description: 'Once per rest, you can hallow the area within Nearby range around you for one scene. While inside, your Cause applies to allies — when they make an action roll clearly aligned with your Cause, they gain +1 to the roll.' },
+  Inquisitor:     { resetsOn: 'rest',  combatRoles: ['attack'],           name: 'Inquisitor Edge',     description: 'Once per rest, you can intimidate a creature, inflicting them with Confusion for one scene.', appliedEffects: [{ effectName: 'Confusion', target: 'target', durationType: 'scenes', remaining: 1 }] },
+  Paragon:        { resetsOn: 'rest',  combatRoles: ['defense'],          name: 'Paragon Edge',        description: 'Once per rest, when you make a stand for your Cause, all allies who can see you can remove one negative Status Effect.' },
+  // Enchanter disciplines
+  Maledict:       { resetsOn: 'rest',  combatRoles: ['attack'],           name: 'Maledict Edge',       description: 'You get a +2 bonus to any action rolls that concern handling Curses and to damage rolls when you use a Curse to harm a creature.' },
+  'War Mage':     { resetsOn: 'rest',  combatRoles: ['attack'],           name: 'War Mage Edge',       description: 'Your damage die is d8 when using an enchanted weapon or when you deal damage directly through an enchantment or curse.' },
+  Aegis:          { resetsOn: 'rest',  combatRoles: ['defense'],          name: 'Aegis Edge',          description: 'Damage rolls against an object or creature that you have imbued with any defensive enchantment suffer a -1 penalty.' },
+  // Delver disciplines
+  Raider:         { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Raider Edge',         description: 'You gain +2 to action rolls that involve searching for valuable loot.' },
+  Archaeologist:  { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Archaeologist Edge',  description: 'Having studied ancient architecture, you gain a 1d4 bonus to action rolls made to understand or anticipate the layout of a ruin. You can often tell what lies beyond a corridor, where hidden chambers might be, or how rooms connect, even without direct sight.' },
+  Reliquarian:    { resetsOn: 'rest',  combatRoles: ['attack', 'defense'],name: 'Reliquarian Edge',    description: 'You possess a relic containing an ancient Rite (a Level 1 or Level 2 Status Effect of your choice). You may activate this Rite up to twice per rest, targeting yourself or any creature you can see. When activated, the effect lasts for one scene.' },
+  // Wildspeaker disciplines
+  Beastshaper:    { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Beastshaper Edge',    description: 'Once per rest, you can transform into a natural animal you have seen before. You retain your HP, DEF, and intelligence, but cannot use weapons, speech, or Special Abilities. The form lasts until you drop it or the next rest.' },
+  Shaman:         { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Shaman Edge',         description: 'Once per rest, you may commune with a local nature spirit to learn general knowledge of the immediate natural area.' },
+  Rotmancer:      { resetsOn: 'rest',  combatRoles: ['attack'],           name: 'Rotmancer Edge',      description: 'One of your two Tethers must always be to the Primal Force of Rot. You may call upon Rot to cause harm to a creature without breaking the Tether.' },
+  // Alchemist disciplines
+  Thanaturge:     { resetsOn: 'rest',  combatRoles: ['attack'],           name: 'Thanaturge Edge',     description: 'By spending an Essence of Decay, you can compel an Undead creature within sight whose maximum HP is 10 or less to obey one simple command. You can command up to five such creatures at a time (1 Essence of Decay per creature).' },
+  Chronomancer:   { resetsOn: 'rest',  combatRoles: ['attack', 'defense'], name: 'Chronomancer Edge',   description: 'By spending Essence of Transformation, you can increase or decrease the duration of an ongoing effect by one step: Turn (1 Essence), Round (2 Essence), or Scene (3 Essence). Targets must be your own abilities, potions you created/used, or Status Effects on a creature you can touch.' },
+  Monstrologist:  { resetsOn: 'rest',  combatRoles: ['attack', 'defense'],name: 'Monstrologist Edge',  description: 'By spending an Essence of Transformation, you can take on a subtle aberrant trait (extra eyes, tendrils, gills, etc.) for one scene, granting +1 to action rolls related to that adaptation. You cannot maintain more than one mutation at a time.' },
+  // Evoker disciplines
+  Revenant:       { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Revenant Edge',       description: 'You have one permanent Vex companion that can fly, pass through walls, and follow your commands. It is intelligent and can speak. It shares your HP, DEF, and damage die, and reforms after a rest if destroyed.' },
+  Soulmender:     { resetsOn: 'rest',  combatRoles: ['defense'],          name: 'Soulmender Edge',     description: 'Once per rest, when you restore HP to another creature by any means, you restore additional HP equal to your level and they may also remove a Status Effect.' },
+  Reaper:         { resetsOn: 'rest',  combatRoles: ['attack'],           name: 'Reaper Edge',         description: 'Once per rest, when you reduce a creature to 0 HP, regain 1 SD.' },
+  // Tecton disciplines
+  Artisan:        { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Artisan Edge',        description: 'When you use enchanted or otherwise magical components in crafting, you can preserve their magical effect.' },
+  Mechanist:      { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Mechanist Edge',      description: 'Twice per rest, you may add 1d4 to your action rolls associated with redstone items and structures you have crafted, built, or closely examined.' },
+  Architect:      { resetsOn: 'rest',  combatRoles: ['utility'],          name: 'Architect Edge',      description: 'When you build a structure, you require half the usual amount of blocks and half the normal time, rounded down.' },
 }
 
-export const DEFAULT_CLASS_SKILLS: Record<string, string[]> = {
-  Warrior:    ['Attack', 'Parry'],
-  Hunter:     ['Tracking', 'Stealth'],
-  Vindicator: ['Persuasion', 'Leadership'],
-  Enchanter:  ['Enchanting', 'Magic Knowledge'],
-  Delver:     ['Evasion', 'Appraisal'],
-  Wildspeaker:['Nature Lore', 'Survival'],
-  Alchemist:  ['Brewing', 'Ingredient Knowledge'],
-  Evoker:     ['Lifesense', 'Soul Craft'],
-  Tecton:     ['Engineering', 'Pattern Recognition'],
+/** Default starting skills for each class, with rulebook-grounded descriptions
+ *  and combat-role tags so the AbilityApplyPanel knows where to surface them.
+ *  Tooltips on the panel buttons read from `description`. */
+export interface DefaultSkill {
+  name: string
+  description: string
+  combatRoles: CombatRole[]
 }
 
+export const DEFAULT_CLASS_SKILLS: Record<string, DefaultSkill[]> = {
+  Warrior: [
+    { name: 'Attack', combatRoles: ['attack'],
+      description: 'Trained mastery of weapons and martial technique. Apply your Skill Bonus to attack rolls when striking with a weapon you know.' },
+    { name: 'Parry', combatRoles: ['defense'],
+      description: 'Deflect or block an incoming strike with weapon, shield, or trained reflex. Apply your Skill Bonus to defense rolls against melee or ranged attacks you can see.' },
+  ],
+  Hunter: [
+    { name: 'Tracking', combatRoles: ['utility'],
+      description: 'Examine your environment for signs of creatures that have passed through. Identify the creatures and how long ago they were present, and follow these signs to trail them. (Rulebook p.41)' },
+    { name: 'Stealth', combatRoles: ['attack', 'utility'],
+      description: 'Avoid being detected — hiding, sneaking, or moving in disguise. Apply your Skill Bonus when setting up an ambush or striking an unaware target, and when evading pursuit. (Rulebook p.41)' },
+  ],
+  Vindicator: [
+    { name: 'Persuasion', combatRoles: ['general'],
+      description: 'Use words, charm, or earnest conviction to sway others. Apply your Skill Bonus to social rolls — negotiating, convincing, or rallying — including in tense standoffs.' },
+    { name: 'Leadership', combatRoles: ['general'],
+      description: 'Use your presence, authority, or strength to make others follow your lead — by words or by force. Apply your Skill Bonus when commanding allies, intimidating foes, or holding a group together under pressure.' },
+  ],
+  Enchanter: [
+    { name: 'Enchanting', combatRoles: ['utility'],
+      description: 'Imbue objects with magical properties through ritual inscription of Runes and Signs. Apply your Skill Bonus to crafting rolls involving enchantment, rune-work, or magical preparation.' },
+    { name: 'Magic Knowledge', combatRoles: ['utility'],
+      description: 'Recognize magical effects, decipher arcane symbols, and understand spell theory. Apply your Skill Bonus to rolls identifying or analyzing enchantments, curses, or magical anomalies.' },
+  ],
+  Delver: [
+    { name: 'Evasion', combatRoles: ['defense'],
+      description: 'React with trained instinct to escape harm — duck, roll, sidestep, or take cover. Apply your Skill Bonus to defense rolls against attacks or hazards you can see coming.' },
+    { name: 'Appraisal', combatRoles: ['utility'],
+      description: 'Examine objects, relics, and ruins to determine their value, history, or function. Apply your Skill Bonus when assessing loot, identifying ancient items, or estimating worth.' },
+  ],
+  Wildspeaker: [
+    { name: 'Nature Lore', combatRoles: ['utility'],
+      description: 'Navigate wilderness, identify plants and minerals, and predict natural phenomena. Apply your Skill Bonus to rolls involving terrain, weather, wildlife, or natural hazards. (Rulebook p.32)' },
+    { name: 'Survival', combatRoles: ['utility'],
+      description: 'Find shelter, food, or safe rest in the wild. Endure harsh environments. Apply your Skill Bonus to rolls finding refuge, foraging, or surviving exposure.' },
+  ],
+  Alchemist: [
+    { name: 'Brewing', combatRoles: ['utility'],
+      description: 'Combine alchemical ingredients with care and proportion to produce potions and elixirs with reliable effects. Apply your Skill Bonus to potion-design and brewing rolls.' },
+    { name: 'Ingredient Knowledge', combatRoles: ['utility'],
+      description: 'Identify Essences, reagents, and their properties. Recognize what a substance can do before using it. Apply your Skill Bonus when analyzing substances or sourcing materials.' },
+  ],
+  Evoker: [
+    { name: 'Lifesense', combatRoles: ['utility'],
+      description: 'Sense the presence of living and undead creatures nearby — even those hidden or unconscious. Apply your Skill Bonus to rolls detecting beings through walls, darkness, or magical concealment.' },
+    { name: 'Soul Craft', combatRoles: ['defense'],
+      description: 'Manipulate soul energy for healing, anchoring, or transfer. Understand the boundary between life and death. Apply your Skill Bonus to rolls protecting allies from death-touched harm or assisting Soul Transfer effects.' },
+  ],
+  Tecton: [
+    { name: 'Engineering', combatRoles: ['utility'],
+      description: 'Understand how parts fit together — build, repair, or break complex systems. Apply your Skill Bonus to crafting, construction, and sabotage rolls. (Rulebook p.61)' },
+    { name: 'Pattern Recognition', combatRoles: ['utility'],
+      description: 'Spot hidden logic, repeating structures, and meaning in chaos. Apply your Skill Bonus when decoding ciphers, predicting enemy formations, or perceiving the underlying order of a place. (Rulebook p.61)' },
+  ],
+}
+
+export interface SpeciesTrait { name: string; description: string; combatRoles: CombatRole[] }
 export interface SpeciesVariant {
   name: string
-  trait: { name: string; description: string }
+  trait: SpeciesTrait
 }
 
-export const SPECIES_DATA: Record<string, { description: string; tags: string; speciesTrait: { name: string; description: string }; variants: SpeciesVariant[] }> = {
+/** Species and their traits. Each trait carries a `combatRoles` tag specifying
+ *  where it surfaces in the AbilityApplyPanel — `general`/`utility` means
+ *  dice-roller only; `attack`/`defense` means it shows on that combat side
+ *  with its +1 bonus. Descriptions include the combat application explicitly
+ *  so tooltips read consistently with class abilities. */
+export const SPECIES_DATA: Record<string, { description: string; tags: string; speciesTrait: SpeciesTrait; variants: SpeciesVariant[] }> = {
   Avatar: {
     description: 'Generally human in appearance, Avatars can shift their appearance on a whim — hair, skin, and even extra limbs, horns, or tails. Creativity, curiosity, and exploration define their societies.',
     tags: 'Magical (+1 to rolls involving magical knowledge or handling magic) · Medium',
-    speciesTrait: { name: 'Changeling', description: 'Avatars can change their appearance and physical traits — small changes like eye color quickly, larger changes over time. Cannot heal through this ability and always maintain a humanoid form.' },
+    speciesTrait: { name: 'Changeling', combatRoles: ['general'],
+      description: 'Avatars can change their appearance and physical traits — small changes like eye color quickly, larger changes over time. Cannot heal through this ability and always maintain a humanoid form. +1 to rolls involving disguise, infiltration, or social blending.' },
     variants: [
-      { name: 'Shaper', trait: { name: 'Educated', description: 'Shaper Avatars are knowledgeable and well-educated across various subjects.' } },
-      { name: 'Wilder', trait: { name: 'Survival Instinct', description: 'Wilder Avatars are adept at surviving in the wilderness.' } },
+      { name: 'Shaper', trait: { name: 'Educated', combatRoles: ['utility'],
+        description: 'Shaper Avatars are knowledgeable and well-educated across various subjects. +1 to rolls recalling lore, languages, or academic knowledge.' } },
+      { name: 'Wilder', trait: { name: 'Survival Instinct', combatRoles: ['utility'],
+        description: 'Wilder Avatars are adept at surviving in the wilderness. +1 to rolls foraging, finding shelter, or enduring natural hazards.' } },
     ],
   },
   Hearthborn: {
     description: 'Peace-loving and social humanoids with copper-toned skin, pointed ears, and no hair. They value community, industry, and diplomacy above all else.',
     tags: 'Natural (+1 to rolls for non-magical Travel and Rest) · Medium',
-    speciesTrait: { name: 'Hearthlight', description: 'Hearthborn can create an apple-sized hovering orb of light in their palm, adjusting brightness and color at will. They can make it move through the air as long as they can see it.' },
+    speciesTrait: { name: 'Hearthlight', combatRoles: ['utility'],
+      description: 'Hearthborn can create an apple-sized hovering orb of light in their palm, adjusting brightness and color at will. They can make it move through the air as long as they can see it. +1 to rolls involving illumination, signaling, or perceiving in dim conditions.' },
     variants: [
-      { name: 'Steadfolk', trait: { name: 'Trade and Craft', description: 'Steadfolk Hearthborn are experts in their trade or craft of choice. Choose one: Farmer, Craftsman, Scholar, Merchant, or Mason — or discuss another trade with your GM.' } },
-      { name: 'Trailfolk', trait: { name: 'Well-Traveled', description: 'Trailfolk Hearthborn are experts at traversing terrain and making long journeys.' } },
+      { name: 'Steadfolk', trait: { name: 'Trade and Craft', combatRoles: ['utility'],
+        description: 'Steadfolk Hearthborn are experts in their trade or craft of choice. Choose one: Farmer, Craftsman, Scholar, Merchant, or Mason. +1 to rolls within your chosen trade.' } },
+      { name: 'Trailfolk', trait: { name: 'Well-Traveled', combatRoles: ['utility'],
+        description: 'Trailfolk Hearthborn are experts at traversing terrain and making long journeys. +1 to rolls navigating, pacing travel, or recognizing distant landmarks.' } },
     ],
   },
   Alfay: {
     description: 'Small, winged humanoids with immortal lifespans and mischievous spirits. They dwell in hidden cities in wild places and retain a youthful energy that leads them into unexpected trouble.',
     tags: 'Magical (+1 to rolls involving magical knowledge or handling magic) · Small (+1 agility rolls, -1 strength rolls)',
-    speciesTrait: { name: 'Flight', description: 'Alfay can fly as fast and as high as a bird, slowed only by the weather and burdens they carry.' },
+    speciesTrait: { name: 'Flight', combatRoles: ['attack', 'defense'],
+      description: 'Alfay can fly as fast and as high as a bird, slowed only by the weather and burdens they carry. +1 to rolls leveraging aerial mobility — diving strikes, evading ground-bound foes, or repositioning out of reach.' },
     variants: [
-      { name: 'Azure Court',  trait: { name: 'Mocking',  description: 'Alfay of the Azure Court use ridicule to goad, embarrass, or unnerve others.' } },
-      { name: 'Golden Court', trait: { name: 'Meddling', description: 'Alfay of the Golden Court gain leverage by nudging events, conversations, or decisions in their favor without appearing directly involved.' } },
-      { name: 'Courtless',   trait: { name: 'Malice',   description: 'Courtless Alfay exploit weakness, using their craftiness to twist the knife and press emotional or psychological pressure points.' } },
+      { name: 'Azure Court',  trait: { name: 'Mocking',  combatRoles: ['general'],
+        description: 'Alfay of the Azure Court use ridicule to goad, embarrass, or unnerve others. +1 to rolls provoking, distracting, or destabilizing an opponent emotionally.' } },
+      { name: 'Golden Court', trait: { name: 'Meddling', combatRoles: ['general'],
+        description: 'Alfay of the Golden Court gain leverage by nudging events, conversations, or decisions in their favor without appearing directly involved. +1 to rolls manipulating outcomes from the periphery.' } },
+      { name: 'Courtless',    trait: { name: 'Malice',   combatRoles: ['general'],
+        description: 'Courtless Alfay exploit weakness, using their craftiness to twist the knife and press emotional or psychological pressure points. +1 to rolls exploiting a known weakness, fear, or trauma.' } },
     ],
   },
   Tuskarin: {
     description: 'Muscular humanoids with pronounced snouts, sharp tusks, and cloven hooves, native to the Nether. Despite their love of gold and brash demeanor, they are valued for their honesty and honor.',
     tags: 'Natural (+1 to rolls for non-magical Travel and Rest) · Size varies by variant',
-    speciesTrait: { name: 'Thick Skin', description: 'Tuskarin are built to withstand hardship, enduring pain and harsh conditions with unshakable resilience.' },
+    speciesTrait: { name: 'Thick Skin', combatRoles: ['defense'],
+      description: 'Tuskarin are built to withstand hardship, enduring pain and harsh conditions with unshakable resilience. +1 to defense rolls and rolls resisting environmental damage or fatigue.' },
     variants: [
-      { name: 'Brute', trait: { name: 'Strong', description: 'Tuskarin Brutes can use their strength to overpower, lift, break, or smash through obstacles. (Large: Close and Reach ranges treated as same; -1 agility rolls)' } },
-      { name: 'Wit',   trait: { name: 'Smart',  description: 'Tuskarin Wits can solve problems, recall knowledge, or use strategy or logic in tense situations. (Medium)' } },
-      { name: 'Runt',  trait: { name: 'Fast',   description: 'Tuskarin Runts can dodge, escape, move quickly, or act before others can react. (Small: +1 agility rolls, -1 strength rolls)' } },
+      { name: 'Brute', trait: { name: 'Strong', combatRoles: ['attack'],
+        description: 'Tuskarin Brutes can use their strength to overpower, lift, break, or smash through obstacles. (Large: Close and Reach treated as same; -1 agility rolls.) +1 to attack rolls leveraging raw strength and to rolls breaking or shoving.' } },
+      { name: 'Wit',   trait: { name: 'Smart',  combatRoles: ['utility'],
+        description: 'Tuskarin Wits can solve problems, recall knowledge, or use strategy or logic in tense situations. (Medium.) +1 to rolls planning, deducing, or out-thinking an opponent.' } },
+      { name: 'Runt',  trait: { name: 'Fast',   combatRoles: ['attack', 'defense'],
+        description: 'Tuskarin Runts can dodge, escape, move quickly, or act before others can react. (Small: +1 agility rolls, -1 strength rolls.) +1 to attack rolls striking first and to defense rolls dodging.' } },
     ],
   },
   Grimborn: {
     description: 'Ambitious and cunning, marked by gray skin, pointed ears, and no hair. They value power and individual achievement, forming complex networks of alliances and rivalries.',
     tags: 'Natural (+1 to rolls for non-magical Travel and Rest) · Medium',
-    speciesTrait: { name: 'Undeath Mantle', description: 'Grimborn can be in the presence of Undead whose damage die is a d6 or less without being targeted by them — unless they make a hostile action.' },
+    speciesTrait: { name: 'Undeath Mantle', combatRoles: ['defense'],
+      description: 'Grimborn can be in the presence of Undead whose damage die is a d6 or less without being targeted by them — unless they make a hostile action. +1 to defense rolls against small-die Undead while unprovoked.' },
     variants: [
-      { name: 'Silverblood', trait: { name: 'Influence',  description: 'Silverblood Grimborn influence others through charm, subtle suggestion, and strategic flattery.' } },
-      { name: 'Coalblood',   trait: { name: 'Dominance',  description: 'Coalblood Grimborn know how to get what they want through presence, intimidation, or force of will.' } },
+      { name: 'Silverblood', trait: { name: 'Influence',  combatRoles: ['general'],
+        description: 'Silverblood Grimborn influence others through charm, subtle suggestion, and strategic flattery. +1 to rolls coaxing, persuading, or coercing through smooth diplomacy.' } },
+      { name: 'Coalblood',   trait: { name: 'Dominance',  combatRoles: ['general'],
+        description: 'Coalblood Grimborn know how to get what they want through presence, intimidation, or force of will. +1 to rolls dominating a room, intimidating, or breaking a foe\'s resolve.' } },
     ],
   },
   Golem: {
     description: 'Mechanical humanoid constructs ranging from hulking iron brutes to sleek articulated figures. Though artificial, they possess the spark of sentience.',
     tags: 'Construct (immune to poison, sleep, and mind-altering effects) · Choose size: Small / Medium / Large',
-    speciesTrait: { name: 'Sleepless', description: 'Golems do not need to sleep, but instead enter a state of conscious restfulness to recharge.' },
+    speciesTrait: { name: 'Sleepless', combatRoles: ['utility'],
+      description: 'Golems do not need to sleep, but instead enter a state of conscious restfulness to recharge. +1 to rolls maintaining vigilance, standing watch, or operating through the night.' },
     variants: [
-      { name: 'Copper', trait: { name: 'Science',        description: 'Copper Golems were created to be researchers and possess an extensive library of information on various scientific topics.' } },
-      { name: 'Golden', trait: { name: 'Communications', description: 'Golden Golems can speak, write, and understand any language, and can navigate social situations with ease.' } },
-      { name: 'Iron',   trait: { name: 'Security',       description: 'Iron Golems were built to protect, with a reinforced frame and tactical awareness.' } },
+      { name: 'Copper', trait: { name: 'Science',        combatRoles: ['utility'],
+        description: 'Copper Golems were created to be researchers and possess an extensive library of information on various scientific topics. +1 to rolls recalling scientific knowledge or analyzing data.' } },
+      { name: 'Golden', trait: { name: 'Communications', combatRoles: ['general'],
+        description: 'Golden Golems can speak, write, and understand any language, and can navigate social situations with ease. +1 to rolls translating, communicating, or smoothing social friction.' } },
+      { name: 'Iron',   trait: { name: 'Security',       combatRoles: ['defense'],
+        description: 'Iron Golems were built to protect, with a reinforced frame and tactical awareness. +1 to defense rolls guarding allies and to rolls assessing threats or fortifying a position.' } },
     ],
   },
   Dwymir: {
     description: 'Short subterranean humanoids standing about three feet tall, with dark hair, dark eyes, and bluish-gray to teal skin. Their love for gems rivals even the Tuskarin\'s reverence for gold.',
     tags: 'Magical (+1 to rolls involving magical knowledge or handling magic) · Small (+1 agility rolls, -1 strength rolls)',
-    speciesTrait: { name: 'Nightvision', description: 'Adapted for life without light, Dwymir can see clearly in complete darkness.' },
+    speciesTrait: { name: 'Nightvision', combatRoles: ['attack', 'defense'],
+      description: 'Adapted for life without light, Dwymir can see clearly in complete darkness. +1 to attack and defense rolls when fighting in darkness or dim conditions, and to rolls perceiving in the dark.' },
     variants: [
-      { name: 'Deep Trove',   trait: { name: 'Miner',     description: 'Deep Dwymir are adept at mining and extracting valuable ores from the depths.' } },
-      { name: 'Echo Trove',   trait: { name: 'Scavenger', description: 'Echo Dwymir are adept at finding lost valuables in unlikely places.' } },
-      { name: 'Shadow Trove', trait: { name: 'Burglar',   description: 'Shadow Dwymir are adept in thievery and the art of taking what is not freely given.' } },
+      { name: 'Deep Trove',   trait: { name: 'Miner',     combatRoles: ['utility'],
+        description: 'Deep Dwymir are adept at mining and extracting valuable ores from the depths. +1 to rolls mining, breaking stone, or finding ore veins.' } },
+      { name: 'Echo Trove',   trait: { name: 'Scavenger', combatRoles: ['utility'],
+        description: 'Echo Dwymir are adept at finding lost valuables in unlikely places. +1 to rolls searching for hidden, lost, or overlooked items.' } },
+      { name: 'Shadow Trove', trait: { name: 'Burglar',   combatRoles: ['attack', 'utility'],
+        description: 'Shadow Dwymir are adept in thievery and the art of taking what is not freely given. +1 to rolls picking locks, palming items, or executing a sneak attack on an unaware target.' } },
     ],
   },
   Enderling: {
     description: 'Beings irreversibly altered by prolonged exposure to the Void. Most are bound to the Ender Dragon\'s will, but some have escaped her grasp to walk free across all realms. They do not age.',
     tags: 'Aberrant (+1 to rolls resisting a Status Effect) · Medium',
-    speciesTrait: { name: 'Teleportation', description: 'An Enderling may teleport to a visible, unoccupied space within Far range. Items worn or carried are transported. Other creatures cannot be transported.' },
+    speciesTrait: { name: 'Teleportation', combatRoles: ['attack', 'defense'],
+      description: 'An Enderling may teleport to a visible, unoccupied space within Far range. Items worn or carried are transported. Other creatures cannot be transported. +1 to attack rolls closing distance for a strike and to defense rolls dodging out of reach.' },
     variants: [
-      { name: 'Unbound',     trait: { name: 'Ender Gaze', description: 'An Unbound\'s gaze holds remnants of the Ender Dragon\'s power. Prolonged eye contact may cause discomfort, confusion, or unease in others.' } },
-      { name: 'Voidtouched', trait: { name: 'Lineage',    description: 'Voidtouched Enderlings retain elements of their previous species. Choose one Trait from another playable Species.' } },
+      { name: 'Unbound',     trait: { name: 'Ender Gaze', combatRoles: ['general'],
+        description: 'An Unbound\'s gaze holds remnants of the Ender Dragon\'s power. Prolonged eye contact may cause discomfort, confusion, or unease in others. +1 to rolls intimidating, unsettling, or breaking concentration via direct stare.' } },
+      { name: 'Voidtouched', trait: { name: 'Lineage',    combatRoles: ['utility'],
+        description: 'Voidtouched Enderlings retain elements of their previous species. Choose one Trait from another playable Species. (The chosen trait carries its own combat applicability.)' } },
     ],
   },
 }

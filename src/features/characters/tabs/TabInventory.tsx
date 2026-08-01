@@ -10,25 +10,25 @@ const EQUIPMENT_PACKS: { name: string; items: { name: string; quantity: number }
   {
     name: 'Wilderness',
     rations: 10,
-    currency: { emerald: 25 },
+    currency: { emeralds: 25 },
     items: [{ name: 'Bed', quantity: 1 }, { name: 'Lantern', quantity: 1 }, { name: 'Spyglass', quantity: 1 }, { name: 'Compass', quantity: 1 }],
   },
   {
     name: 'Miner\'s',
     rations: 10,
-    currency: { emerald: 25 },
+    currency: { emeralds: 25 },
     items: [{ name: 'Iron Pickaxe', quantity: 1 }, { name: 'Lantern', quantity: 1 }, { name: 'Coal', quantity: 20 }, { name: 'Compass', quantity: 1 }],
   },
   {
     name: 'Scholar\'s',
     rations: 10,
-    currency: { emerald: 50 },
+    currency: { emeralds: 50 },
     items: [{ name: 'Journal', quantity: 1 }, { name: 'Quill and Ink', quantity: 1 }, { name: 'Torch', quantity: 10 }, { name: 'Compass', quantity: 1 }, { name: 'Amethyst Shard', quantity: 1 }, { name: 'Sealing Wax', quantity: 1 }],
   },
   {
     name: 'Soldier\'s',
     rations: 10,
-    currency: { emerald: 50 },
+    currency: { emeralds: 50 },
     items: [{ name: 'Bed', quantity: 1 }, { name: 'Compass', quantity: 1 }, { name: 'Iron Dagger', quantity: 1 }],
   },
 ]

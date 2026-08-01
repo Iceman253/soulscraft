@@ -11,7 +11,7 @@ export function TabAbilities({ character: c }: TabAbilitiesProps) {
   const { addAbility, updateAbility, deleteAbility, adjustSd } = useCharacterStore()
   const [usedFeedback, setUsedFeedback] = useState<string | null>(null)
 
-  const useAbility = (abId: string, name: string, sdCost: number) => {
+  const useAbility = (_abId: string, name: string, sdCost: number) => {
     if (c.currentSd < sdCost) return
     adjustSd(c.id, -sdCost)
     const msg = `✨ ${c.name} used ${name} (${sdCost} SD). ${c.currentSd - sdCost} SD remaining.`

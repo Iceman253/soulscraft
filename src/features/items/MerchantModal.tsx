@@ -3,7 +3,7 @@ import { X, ShoppingCart } from 'lucide-react'
 import { useItemStore } from './store'
 import { useCharacterStore } from '../characters/store'
 import { log } from '../log/store'
-import { CURRENCY_OPTIONS } from '../../lib/currency'
+import { CURRENCY_OPTIONS, COIN_VALUE, toCopper, fromCopper, formatCopper } from '../../lib/currency'
 import type { CurrencyKey } from '../../lib/currency'
 
 const WEAPONS_CATALOG = [
@@ -31,27 +31,35 @@ export function MerchantModal({ onClose }: Props) {
   const [currency, setCurrencyKey] = useState<CurrencyKey>('gold')
   const [charId, setCharId] = useState<string>('')
 
+  const [forceShort, setForceShort] = useState(false)
+
   const selectedChar = characters.find(c => c.id === charId) ?? null
+
+  // Real coin math: the price is in the chosen denomination, the wallet pays
+  // across ALL tiers (10:1 ladder) and change is re-coined automatically.
+  const priceCopper = price * COIN_VALUE[currency]
+  const walletCopper = selectedChar ? toCopper(selectedChar.currency) : 0
+  const insufficient = !!selectedChar && walletCopper < priceCopper
 
   const handlePurchase = () => {
     if (!selectedItem || !charId || !selectedChar) return
+    if (insufficient && !forceShort) return
 
-    const currentAmount = selectedChar.currency[currency]
-    const deducted = Math.max(0, currentAmount - price)
-    setCurrency(charId, { [currency]: deducted })
-
+    setCurrency(charId, fromCopper(Math.max(0, walletCopper - priceCopper)))
     addOnHandItem(charId, { name: selectedItem, quantity, isBlock: false })
 
     const currLabel = CURRENCY_OPTIONS.find(c => c.key === currency)?.label ?? currency
-    log('item-purchase', `🛒 ${selectedChar.name} purchased ${quantity}× ${selectedItem} for ${price} ${currLabel}.`)
+    const shortNote = insufficient ? ' (purse emptied — GM waived the shortfall)' : ''
+    log('item-purchase', `🛒 ${selectedChar.name} purchased ${quantity}× ${selectedItem} for ${price} ${currLabel}${shortNote}.`)
 
     // Reset item selection but keep form open
     setSelectedItem('')
     setQuantity(1)
     setPrice(0)
+    setForceShort(false)
   }
 
-  const canPurchase = !!selectedItem && !!charId
+  const canPurchase = !!selectedItem && !!charId && (!insufficient || forceShort)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75">
@@ -274,14 +282,26 @@ export function MerchantModal({ onClose }: Props) {
                     ))}
                   </div>
                   {price > 0 && (
-                    <div className="mt-2 text-xs text-stone-500">
-                      After purchase:{' '}
-                      <span className={selectedChar.currency[currency] - price < 0 ? 'text-red-400' : 'text-stone-300'}>
-                        {Math.max(0, selectedChar.currency[currency] - price)}{' '}
-                        {CURRENCY_OPTIONS.find(o => o.key === currency)?.label}
-                      </span>
-                      {selectedChar.currency[currency] - price < 0 && (
-                        <span className="text-amber-500 ml-2">(insufficient — will be set to 0)</span>
+                    <div className="mt-2 text-xs text-stone-500 space-y-1">
+                      <div>
+                        After purchase:{' '}
+                        <span className={insufficient ? 'text-red-400' : 'text-stone-300'}>
+                          {insufficient
+                            ? `short ${formatCopper(priceCopper - walletCopper)}`
+                            : formatCopper(walletCopper - priceCopper)}
+                        </span>
+                        <span className="text-stone-600 ml-1.5">(coins convert automatically)</span>
+                      </div>
+                      {insufficient && (
+                        <label className="flex items-start gap-1.5 text-amber-400/90 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={forceShort}
+                            onChange={e => setForceShort(e.target.checked)}
+                            className="mt-0.5 accent-amber-600"
+                          />
+                          <span>GM override: complete anyway — purse is emptied, the rest is forgiven.</span>
+                        </label>
                       )}
                     </div>
                   )}

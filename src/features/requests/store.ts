@@ -14,7 +14,10 @@ export type RequestType =
   | 'level-up'       // level up character
   | 'effect-remove'  // remove an active effect
   | 'currency'       // grant currency
+  | 'buy-item'       // buy from a market at the engine's (GM-overridable) price
+  | 'sell-item'      // sell an on-hand item to a market
   | 'reveal-area'    // reveal area on player map
+  | 'skill-approval' // level up + new custom skill awaiting GM approval
   | 'custom'         // free-text request
 
 export interface PlayerRequest {
@@ -35,6 +38,8 @@ interface RequestStore {
   denyRequest: (id: string) => void
   clearRequest: (id: string) => void
   clearAll: () => void
+  /** GM tweaks to a pending request before approving (e.g. final price). */
+  updateRequestPayload: (id: string, patch: Record<string, unknown>) => void
 }
 
 export const useRequestStore = create<RequestStore>((set, get) => ({
@@ -64,5 +69,13 @@ export const useRequestStore = create<RequestStore>((set, get) => ({
 
   clearAll() {
     set({ requests: [] })
+  },
+
+  updateRequestPayload(id, patch) {
+    set({
+      requests: get().requests.map(r =>
+        r.id === id ? { ...r, payload: { ...r.payload, ...patch } } : r
+      ),
+    })
   },
 }))

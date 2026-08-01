@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type {
   Character, ArmorSlot, ArmorMaterial,
   Weapon, ActiveEffect, GearEnchantment, ClassFeatureState,
-  Skill, Trait, Ability, CharacterItem, XpEvent,
+  Skill, Trait, Ability, CharacterItem, XpEvent, CombatRole,
 } from '../../types'
 import { newId } from '../../lib/id'
 import { useCampaignStore } from '../campaigns/store'
@@ -10,6 +10,100 @@ import { useWorldStore } from '../map/store'
 import { log } from '../log/store'
 import { getBaseDef, fullSetLoadout } from '../../lib/armor'
 import { WARRIOR_MANEUVERS, DELVER_EVASIONS, VINDICATOR_VOICES, CLASS_DAMAGE_DICE, CLASS_DISCIPLINES, DISCIPLINE_EDGES, DEFAULT_CLASS_SKILLS, SPECIES_DATA, calcMaxHp } from '../../lib/constants'
+import type { DefaultSkill } from '../../lib/classes'
+import { CLASS_ABILITIES } from '../../lib/classAbilities'
+
+// ── One-time hydration migration ───────────────────────────────────────
+// Re-syncs combatRoles and appliedEffects on stored abilities + the Discipline
+// Edge against the live master tables (CLASS_ABILITIES, DISCIPLINE_EDGES).
+// Characters created before the strict-role refactor have stale tags like
+// `combatRole: 'general'` that now resolve to "dice-roller only" — without
+// this pass those abilities never surface in attack/defense panels.
+//
+// Matching: ability by `name`, edge by `name`. Anything we can't find is
+// left as-is (probably a custom ability the GM added by hand).
+function migrateCharacter(c: Character): Character {
+  // Build a name → master-ability map across every class.
+  const byName = new Map<string, typeof CLASS_ABILITIES[string][number]>()
+  Object.values(CLASS_ABILITIES).forEach(list => {
+    list.forEach(a => byName.set(a.name, a))
+  })
+
+  const abilities = c.abilities.map(a => {
+    const master = byName.get(a.name)
+    if (!master) {
+      // Custom ability the GM added by hand. If it has no role tags at all,
+      // give it sensible defaults so it still appears somewhere — assume
+      // SD-cost abilities are combat-applicable when in doubt.
+      if (!a.combatRoles && !a.combatRole) {
+        return { ...a, combatRoles: ['attack', 'defense', 'general'] as ('attack'|'defense'|'general'|'utility')[] }
+      }
+      return a
+    }
+    return {
+      ...a,
+      combatRole: master.combatRole,         // keep legacy field in sync for safety
+      combatRoles: master.combatRoles ?? (master.combatRole ? [master.combatRole] : undefined),
+      appliedEffects: master.appliedEffects ?? a.appliedEffects,
+    }
+  })
+
+  // Skills — backfill from DEFAULT_CLASS_SKILLS where the name matches a
+  // class-default skill. This gives existing characters rulebook-grounded
+  // descriptions and correct role tags. Unknown / custom skills get a broad
+  // fallback so they still appear in combat panels.
+  const defaultSkillByName = new Map<string, DefaultSkill>()
+  Object.values(DEFAULT_CLASS_SKILLS).forEach(list => {
+    list.forEach(s => defaultSkillByName.set(s.name, s))
+  })
+  const skills = c.skills.map(s => {
+    const master = defaultSkillByName.get(s.name)
+    if (master) {
+      return {
+        ...s,
+        // Only overwrite description if the character's skill has no description.
+        description: s.description && s.description.trim() ? s.description : master.description,
+        combatRoles: s.combatRoles && s.combatRoles.length > 0 ? s.combatRoles : master.combatRoles,
+      }
+    }
+    if (s.combatRoles && s.combatRoles.length > 0) return s
+    return { ...s, combatRoles: ['attack', 'defense', 'general'] as ('attack'|'defense'|'general'|'utility')[] }
+  })
+
+  // Traits — backfill from SPECIES_DATA where the name matches a species
+  // or variant trait. Existing custom personal traits are left untouched.
+  const traitMaster = new Map<string, { description: string; combatRoles: CombatRole[] }>()
+  Object.values(SPECIES_DATA).forEach(sd => {
+    traitMaster.set(sd.speciesTrait.name, { description: sd.speciesTrait.description, combatRoles: sd.speciesTrait.combatRoles })
+    sd.variants.forEach(v => traitMaster.set(v.trait.name, { description: v.trait.description, combatRoles: v.trait.combatRoles }))
+  })
+  const traits = c.traits.map(t => {
+    const master = traitMaster.get(t.name)
+    if (master) {
+      return {
+        ...t,
+        description: t.description && t.description.trim() ? t.description : master.description,
+        combatRoles: t.combatRoles && t.combatRoles.length > 0 ? t.combatRoles : master.combatRoles,
+      }
+    }
+    return t  // custom personal trait — leave as-is
+  })
+
+  // Discipline Edge — re-sync from master.
+  let disciplineEdge = c.disciplineEdge
+  if (disciplineEdge && disciplineEdge.name) {
+    const edgeMaster = Object.values(DISCIPLINE_EDGES).find(e => e.name === disciplineEdge.name)
+    if (edgeMaster) {
+      disciplineEdge = {
+        ...disciplineEdge,
+        combatRoles: edgeMaster.combatRoles,
+        appliedEffects: edgeMaster.appliedEffects,
+      }
+    }
+  }
+
+  return { ...c, abilities, skills, traits, disciplineEdge }
+}
 
 interface CharacterStore {
   characters: Character[]
@@ -251,7 +345,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   characters: [],
   xpLog: [],
 
-  hydrate(characters, xpLog) { set({ characters, xpLog }) },
+  hydrate(characters, xpLog) {
+    // Migrate stale ability/edge combatRoles tags from any pre-refactor saves.
+    const migrated = characters.map(migrateCharacter)
+    set({ characters: migrated, xpLog })
+    // Persist the migrated shape so we don't repeat work on every page load.
+    if (migrated.length > 0) save(migrated, xpLog)
+  },
 
   addCharacter(c) {
     const id = newId()
@@ -279,7 +379,11 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const firstDiscipline = CLASS_DISCIPLINES[newClass]?.[0] ?? ''
     const edge = DISCIPLINE_EDGES[firstDiscipline]
     const newSkills = (DEFAULT_CLASS_SKILLS[newClass] ?? []).map(s => ({
-      id: newId(), name: s, bonus: 1 as const, description: '',
+      id: newId(),
+      name: s.name,
+      bonus: 1 as const,
+      description: s.description,
+      combatRoles: s.combatRoles,
     }))
     const characters = mapChar(get().characters, id, c => ({
       ...c,
@@ -288,7 +392,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       classFeatureState: defaultClassFeatureState(newClass),
       discipline: firstDiscipline,
       disciplineEdge: edge
-        ? { name: edge.name, description: edge.description, used: false }
+        ? { name: edge.name, description: edge.description, combatRoles: edge.combatRoles, appliedEffects: edge.appliedEffects, used: false }
         : { name: '', description: '', used: false },
       skills: newSkills,
     }))
@@ -301,7 +405,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       ...c,
       discipline,
       disciplineEdge: edge
-        ? { name: edge.name, description: edge.description, used: false }
+        ? { name: edge.name, description: edge.description, combatRoles: edge.combatRoles, appliedEffects: edge.appliedEffects, used: false }
         : { name: '', description: '', used: false },
     }))
     set({ characters }); save(characters, get().xpLog)
@@ -317,8 +421,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const speciesInfo = SPECIES_DATA[species]
     const variantData = speciesInfo?.variants.find(v => v.name === variant) ?? speciesInfo?.variants[0]
     const newSpeciesTraits = [
-      ...(speciesInfo ? [{ id: newId(), name: speciesInfo.speciesTrait.name, description: speciesInfo.speciesTrait.description }] : []),
-      ...(variantData ? [{ id: newId(), name: variantData.trait.name, description: variantData.trait.description }] : []),
+      ...(speciesInfo ? [{ id: newId(), name: speciesInfo.speciesTrait.name, description: speciesInfo.speciesTrait.description, combatRoles: speciesInfo.speciesTrait.combatRoles }] : []),
+      ...(variantData ? [{ id: newId(), name: variantData.trait.name, description: variantData.trait.description, combatRoles: variantData.trait.combatRoles }] : []),
     ]
     const characters = mapChar(get().characters, id, c => ({
       ...c,

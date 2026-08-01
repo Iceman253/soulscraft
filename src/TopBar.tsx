@@ -2,12 +2,13 @@ import { LogOut, Sword, Dice6, Eye, Bell, Trophy } from 'lucide-react'
 import { useCampaignStore } from './features/campaigns/store'
 import { useCharacterStore } from './features/characters/store'
 import { useRequestStore } from './features/requests/store'
+import { useEconomyStore } from './features/economy/store'
 import { GMRequestsPanel } from './features/requests/GMRequestsPanel'
 import { SessionMilestoneModal } from './features/characters/SessionMilestoneModal'
 import { useState } from 'react'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 
-type Tab = 'map' | 'characters' | 'quests' | 'bestiary' | 'rest' | 'items' | 'reference'
+type Tab = 'map' | 'characters' | 'quests' | 'bestiary' | 'rest' | 'items' | 'economy' | 'reference'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'map',        label: 'Map' },
@@ -16,6 +17,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'bestiary',   label: 'Bestiary' },
   { id: 'rest',       label: 'Rest' },
   { id: 'items',      label: 'Items' },
+  { id: 'economy',    label: 'Economy' },
   { id: 'reference',  label: 'Reference' },
 ]
 
@@ -48,6 +50,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
     advanceArmorEnchantmentTime('days')
     advanceWeaponEnchantmentTime('days')
     resetMagicCirclesOnDayEnd()
+    useEconomyStore.getState().endDayTick()
   }
 
   return (
@@ -189,7 +192,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
       {confirm === 'day' && (
         <ConfirmDialog
           title="End Day"
-          message="This will decrement all day-duration effects and enchantments. Remember to deduct rations after confirming."
+          message="This will decrement all day-duration effects and enchantments, tick down economic events, and let market stock and prices drift. Remember to deduct rations after confirming."
           confirmLabel="End Day"
           onConfirm={endDay}
           onClose={() => setConfirm(null)}

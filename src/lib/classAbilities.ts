@@ -1,3 +1,5 @@
+import type { AppliedStatusEffectSpec } from '../types'
+
 /** Where an ability is contextually relevant in combat.
  *  - 'attack' : ONLY appears in the attacker panel (boosts/enables attacks, damage mods).
  *  - 'defense': ONLY appears in the defender panel (DEF buffs, evasion, damage mitigation).
@@ -13,8 +15,13 @@ export interface ClassAbility {
   description: string
   tier: 'level1' | 'levelUp'  // level1 = starting abilities; levelUp = choose on level-up
   requiresRoll?: boolean  // true if the ability says "Roll to succeed"
-  /** When this ability is relevant in combat. Defaults to 'utility' if omitted. */
+  /** @deprecated Use combatRoles. Kept for legacy data. */
   combatRole?: CombatRole
+  /** Where this ability surfaces. Strict filtering — see Ability.combatRoles for semantics.
+   *  Defaults to ['utility'] if both fields omitted. */
+  combatRoles?: CombatRole[]
+  /** Status effects this ability auto-applies on commit. */
+  appliedEffects?: AppliedStatusEffectSpec[]
 }
 
 export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
@@ -68,14 +75,14 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'When you target a single foe, you can spend 1 SD to keep them focused on you for a round.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack'],
     },
     {
       name: 'Battlefield Instinct',
       sdCost: 1,
       description: 'While facing a hostile creature, you can spend 1 SD to get a yes or no answer to one of these questions: Is this creature expecting reinforcements? Does this creature have a trick up their sleeve? Is this creature trying to escape?',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['utility'],
     },
     {
       name: 'Exploit Opening',
@@ -89,7 +96,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to ask the GM one of the following, and get a clear answer: What is the biggest threat right now? What enemy is vulnerable or exposed? How can I gain the advantage?',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['utility'],
     },
     {
       name: 'Anti-magic Strike',
@@ -166,7 +173,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'When a creature attempts to flee from you, you may spend 1 SD to quickly catch up to them. Roll to succeed. 10+ You catch up to the creature with no issue. 7-9 You catch up to the creature, but there is an unexpected complication. 2-6 The creature evades you.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack'],
       requiresRoll: true,
     },
     {
@@ -213,7 +220,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to grant +1 to you and your allies\' action rolls for a scene, as long as they can see you.',
       tier: 'level1',
-      combatRole: 'general',
+      combatRoles: ['attack', 'defense'],
     },
     {
       name: 'Strengthen',
@@ -228,7 +235,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to intimidate enemies engaging you in combat. For the rest of the scene, as long as they can see you, they will try to move farther away from you. They may still make ranged attacks against you.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['defense'],
     },
     {
       name: 'Stand Strong',
@@ -242,7 +249,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'When you hit with an attack, you may spend 1 SD to inspire a nearby ally. That ally regains 1 spent SD.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack'],
     },
     {
       name: 'Vengeful Smite',
@@ -263,14 +270,14 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'During combat, spend 1 SD and let out a mighty shout. For the rest of the scene, allies who fight within Nearby range of you gain +1 to damage rolls and cannot be moved unwillingly.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack'],
     },
     {
       name: 'Foil',
       sdCost: 1,
       description: 'Spend 1 SD to cause a creature you can see to falter as they attempt an action. Roll to succeed. 10+ Their attempt fails. 7-9 They partially succeed, but not to the extent they wished. 2-6 They succeed in their attempt, and you are at a disadvantage against them.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['defense'],
       requiresRoll: true,
     },
     {
@@ -279,6 +286,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       description: 'When you spend 1 SD to bind yourself to a Cause, you may build a shrine out of materials in your possession or use the symbol of your devotion and spend 2 SD to dedicate it to your Cause. Until your next rest, as long as the shrine remains standing, you have the Clarity effect. If you act against your Cause, the effect ends.',
       tier: 'levelUp',
       combatRole: 'utility',
+      appliedEffects: [{ effectName: 'Clarity', target: 'self', durationType: 'until-rest' }],
     },
     {
       name: 'Dedicated Weapon',
@@ -340,7 +348,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to attempt to deactivate an enchantment or curse you are aware of. Roll to succeed: 10+ You succeed. 7-9 The targeted enchantment or curse is weakened, but remains. 2-6 Your attempt fails and the targeted enchantment or curse flares with a burst of extra potency for one scene.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack', 'defense'],
       requiresRoll: true,
     },
     {
@@ -355,14 +363,14 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to recite an enchantment or curse from your Tome, targeting yourself or a creature or object you can see. The effect is instantaneous and fades immediately.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack', 'defense'],
     },
     {
       name: 'Runethief',
       sdCost: 1,
       description: 'If you can see a Rune you did not etch, you may spend 1 SD to try to gain control over it. Roll to succeed. 10+ The Rune becomes yours to control. 7-9 You gain a little control over the Rune, but it lasts for a few minutes. 2-6 You fail to control the Rune.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['utility'],
       requiresRoll: true,
     },
     {
@@ -417,7 +425,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to negate the effect of an ancient Rite in your area you are aware of. Roll to succeed. 10+ The Rite dissipates. 7-9 The Rite weakens or fades away for one round. 2-6 The Rite resists and flares up, possibly altering its behavior. The GM describes how.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack', 'defense'],
       requiresRoll: true,
     },
     {
@@ -425,7 +433,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to pass safely through the vicinity of a hazardous Rite you are aware of. This allows you to bypass the effect once, and only applies to you.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['defense'],
     },
     {
       name: 'Clean Getaway',
@@ -486,7 +494,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to make a simple request of a Tethered Force to affect a target or local area you can see - except for requests that directly harm a creature (doing so fails and breaks your Tether). Roll to succeed. 10+ Your request is granted. 7-9 Your request is granted, but in an indirect way with unintended consequences. 2-6 Your request is misunderstood, and something else happens instead.',
       tier: 'level1',
-      combatRole: 'general',
+      combatRoles: ['general'],
       requiresRoll: true,
     },
     {
@@ -510,6 +518,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       description: 'While Tethered to Water, you can spend 1 SD to gain the Water Breathing effect for as long as you are submerged, up to the next rest. Any creatures you have extended this Tether to can also spend 1 SD to use this ability.',
       tier: 'levelUp',
       combatRole: 'utility',
+      appliedEffects: [{ effectName: 'Water Breathing', target: 'self', durationType: 'until-rest' }],
     },
     {
       name: 'Frostblood',
@@ -572,7 +581,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       hpCostAlt: 5,
       description: 'Spend 1 SD or 5 HP to summon up to four Vex: small, flying spirits that attack enemies. You can summon them in any available space within Nearby range. They can pass through walls and obstacles, and follow your commands. The Vex persist until destroyed (1 HP) or dismissed.',
       tier: 'level1',
-      combatRole: 'general',
+      combatRoles: ['attack'],
     },
     {
       name: 'Summon Fangs',
@@ -580,14 +589,14 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       hpCostAlt: 5,
       description: 'Spend 1 SD or 5 HP to summon up to four Fangs: huge snapping maws that burst from solid surfaces. You can summon them in any available space within Nearby range. You may summon them in any formation as long as each one is attached to a solid surface. The Fangs cannot move but will obey your commands. They persist until dismissed or destroyed (1 HP).',
       tier: 'level1',
-      combatRole: 'general',
+      combatRoles: ['attack'],
     },
     {
       name: 'Soul Transfer',
       sdCost: 0,
       description: 'You may transfer any amount of HP or SD from yourself to a creature you touch. This ability has no cost other than what you give, but it cannot reduce you to 0 HP.',
       tier: 'level1',
-      combatRole: 'general',
+      combatRoles: ['attack', 'defense'],
     },
     // Level Up
     {
@@ -652,8 +661,9 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       hpCostAlt: 5,
       description: 'Spend 1 SD or 5 HP to instill a creature you can see with the dread of death. Roll to succeed. 10+ The creature has the Fear effect for the rest of the scene: they will not willingly move closer to you, target you, or stay in melee range. 7–9 They flinch, hesitate, or back off briefly. 2-6 The creature resists the fear.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack'],
       requiresRoll: true,
+      appliedEffects: [{ effectName: 'Fear', target: 'target', durationType: 'scenes', remaining: 1, onSuccess: true }],
     },
     {
       name: 'Death\'s Memory',
@@ -695,7 +705,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to predict the actions of everything you can currently see for the next few moments. Roll to succeed. 10+ The GM summarizes the exact actions of everything you can see for the next few moments, and you can react to change the events. 7-9 The GM provides a general idea of what is about to happen. 2-6 You don\'t know what is going to happen.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['general'],
       requiresRoll: true,
     },
     {
@@ -703,14 +713,14 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'When studying a creature, spend 1 SD to learn its DEF, current HP, Tags, and damage die.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['utility'],
     },
     {
       name: 'Counterpoise',
       sdCost: 1,
       description: 'Spend 1 SD to observe the flow of combat and adjust to the rhythm of each attack. For the rest of the scene, if attacked by a creature whose damage die is larger than yours, you temporarily gain its damage die.',
       tier: 'levelUp',
-      combatRole: 'attack',
+      combatRoles: ['attack', 'defense'],
     },
     {
       name: 'Discipline of the Body',
@@ -724,7 +734,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to use strikes or pressure points to disrupt a magical effect on an object or creature within Close range for the rest of the scene. This includes magically inflicted Status Effects, enchantments, and curses. Roll to succeed. 10+ The effect collapses harmlessly. 7–9 The effect is disrupted for one round. 2–6 You misjudge the effect\'s strength and take 1d4 damage from backlash. The effect persists.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack', 'defense'],
       requiresRoll: true,
     },
     {
@@ -732,7 +742,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD to align focus with another creature within Nearby range, sharing a unified clarity of thought and purpose. Skill Bonuses are doubled for you and this creature until the end of the scene.',
       tier: 'levelUp',
-      combatRole: 'utility',
+      combatRoles: ['attack', 'defense'],
     },
     {
       name: 'Fulcrum Strike',
@@ -746,7 +756,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Once per rest, you may spend 1 SD to roll twice on any action roll and take the higher result.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack', 'defense', 'general'],
     },
     {
       name: 'Work of Wonder',
@@ -802,6 +812,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       tier: 'levelUp',
       combatRole: 'attack',
       requiresRoll: true,
+      appliedEffects: [{ effectName: 'Blindness', target: 'target', durationType: 'scenes', remaining: 1, onSuccess: true }],
     },
     {
       name: 'Homunculus Agent',
@@ -815,7 +826,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD and 1 Essence of Element to compel an Elemental creature you can see to follow one simple command for a scene. Roll to succeed: 10+ The Elemental obeys without resistance and acts to fulfill your command. 7–9 The Elemental obeys, but only briefly or imperfectly. It may twist your command or stop if harmed. 2–6 The Elemental resists and turns hostile toward you.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack'],
       requiresRoll: true,
     },
     {
@@ -830,14 +841,14 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       sdCost: 1,
       description: 'Spend 1 SD, 1 Essence of Element, and 1 Essence of Decay to inscribe a circular barrier upon the ground. For one scene, the area inside becomes an anti-magic field: magical effects and enchanted items are suppressed, and Magical creatures within gain Fatigue. Breaking the circle ends the seal.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['attack', 'defense'],
     },
     {
       name: 'Artegried\'s Abjuration',
       sdCost: 1,
       description: 'Spend 1 SD, and draw a line or circle of 1 Essence of Decay, 1 Essence of Transformation, and 1 Essence of Element upon the ground. Undead, Aberration, and Elemental creatures cannot cross the line for a scene. The line holds until your next rest or the line is dissolved with salt water.',
       tier: 'levelUp',
-      combatRole: 'general',
+      combatRoles: ['defense'],
     },
     {
       name: 'Alchemical Bread',

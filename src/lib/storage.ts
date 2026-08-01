@@ -1,4 +1,5 @@
 import type { CampaignData, CampaignMeta } from '../types'
+import { emptyEconomy } from './economyEngine'
 
 const CAMPAIGNS_KEY = 'soulscraft_campaigns'
 const ACTIVE_KEY = 'soulscraft_active_campaign'
@@ -56,8 +57,9 @@ export function setActiveCampaignId(id: string | null) {
 }
 
 function migrate(data: CampaignData): CampaignData {
-  // Future migrations go here based on data.schemaVersion
-  return { ...data, schemaVersion: CURRENT_SCHEMA }
+  // Campaigns saved before the economy feature lack the field entirely.
+  const economy = data.economy ?? emptyEconomy()
+  return { ...data, economy, schemaVersion: CURRENT_SCHEMA }
 }
 
 export function getCampaignSizeBytes(id: string): number {
