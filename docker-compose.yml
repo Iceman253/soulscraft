@@ -1,0 +1,12 @@
+# Soulscraft — single static container.
+# Usage:
+#   docker compose up -d --build
+#   (override the published port with:  HOST_PORT=9000 docker compose up -d --build)
+services:
+  soulscraft:
+    build: .
+    image: soulscraft:latest
+    container_name: soulscraft
+    ports:
+      - "${HOST_PORT:-8080}:80"
+    restart: unless-stopped

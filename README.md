@@ -123,6 +123,52 @@ npm run preview # preview the production build
 
 ---
 
+## Self-Hosting (Docker / Proxmox)
+
+Soulscraft is a static site with no backend, so it deploys as a single nginx container. Three ways to run it, easiest first.
+
+### 1. Docker (any host)
+
+```bash
+docker compose up -d --build
+```
+
+Then open `http://<host>:8080`. Change the port with `HOST_PORT=80 docker compose up -d --build`.
+
+### 2. Proxmox — one command on the host
+
+Run this **on the Proxmox VE host** (as root). It creates a Debian 12 LXC, installs Docker, deploys the app, and prints the URL:
+
+```bash
+bash deploy/proxmox-lxc-setup.sh
+```
+
+Tune it with environment variables, e.g. give it more RAM and publish on port 80:
+
+```bash
+RAM_MB=1024 HOST_PORT=80 bash deploy/proxmox-lxc-setup.sh
+```
+
+Configurable: `CTID`, `CT_HOSTNAME`, `DISK_GB`, `CORES`, `RAM_MB`, `BRIDGE`, `STORAGE`, `TEMPLATE_STORE`, `HOST_PORT`, `REPO_URL`. The container is set to start on boot; update later with:
+
+```bash
+pct exec <CTID> -- bash -c 'cd /opt/soulscraft && git pull && docker compose up -d --build'
+```
+
+### 3. Proxmox — into a container you already made
+
+Create a Debian/Ubuntu LXC (or VM) in the Proxmox web UI, then run inside it as root:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Iceman253/soulscraft/master/deploy/install.sh)"
+```
+
+> **LXC note:** Docker needs nesting enabled. The one-command host script sets `nesting=1,keyctl=1` automatically. If you created the container yourself, enable **Options → Features → Nesting** (or `pct set <CTID> --features nesting=1,keyctl=1`) before running the installer.
+
+Because all state lives in each browser's `localStorage`, the container itself is stateless — you can rebuild or move it freely without losing campaigns. Use the in-app **Export** button to back up campaign data.
+
+---
+
 ## Notes
 - Tested in Chrome and Firefox. Safari should work but is untested.
 - localStorage has a ~5 MB limit per origin. A size warning appears in the campaign switcher if data approaches this limit. Image uploads are the main culprit; the map background is stored under a separate key so it can be cleared independently.

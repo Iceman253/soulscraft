@@ -1,0 +1,27 @@
+# Dependencies & build output (rebuilt inside the image)
+node_modules
+dist
+dist-ssr
+
+# Version control & tooling
+.git
+.gitignore
+.claude
+.vscode
+.idea
+
+# Deploy tooling (not needed in the image build context)
+deploy
+scripts
+
+# Docs & rulebook extraction artifacts (not part of the app bundle)
+*.md
+*.pdf
+*.txt
+*.log
+*.bak
+
+# Local env files
+*.local
+.env
+.env.*

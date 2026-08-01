@@ -1,0 +1,8 @@
+# Deployment files run on Linux — force LF so they work when cloned there.
+# (CRLF in a shell script breaks the shebang: "bash\r: No such file or directory".)
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+nginx.conf      text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+.dockerignore   text eol=lf
