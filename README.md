@@ -169,7 +169,19 @@ Create a Debian/Ubuntu LXC (or VM) in the Proxmox web UI, then run inside it as 
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Iceman253/soulscraft/master/deploy/install.sh)"
 ```
 
-> **LXC note:** Docker needs nesting enabled. The one-command host script sets `nesting=1,keyctl=1` automatically. If you created the container yourself, enable **Options → Features → Nesting** (or `pct set <CTID> --features nesting=1,keyctl=1`) before running the installer.
+> **LXC note:** Docker needs nesting enabled. The one-command host script sets `nesting=1,keyctl=1` automatically. If you created the container yourself, enable **Options → Features → Nesting** (or `pct set <CTID> --features nesting=1,keyctl=1`) before running the installer. Docker inside an LXC also needs `lxc.apparmor.profile: unconfined` in `/etc/pve/lxc/<CTID>.conf` (the host script adds this for you).
+
+### 4. Proxmox — native, no Docker (simplest for an LXC)
+
+Because the app is a static site, you don't need Docker at all. Create a plain **unprivileged** Debian/Ubuntu LXC (no nesting, no AppArmor changes needed), give it ≥1 GB RAM, and run inside it as root:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Iceman253/soulscraft/master/deploy/install-native.sh)"
+```
+
+This installs nginx directly, builds the app, serves it over HTTPS, and advertises a `<hostname>.local` name via mDNS — so you can reach it at `https://soulscraft.local` (rename the container to change that). It avoids the whole Docker-in-LXC nesting/AppArmor dance. Re-run the same command to update.
+
+**Local hostname options:** the native installer gives you `<hostname>.local` via mDNS out of the box. For a name that resolves on every device regardless of mDNS support, add an A-record (e.g. `soulscraft.lan → <container-ip>`) on your router or Pi-hole instead. Avoid pointing a real public domain at a LAN IP.
 
 Because all state lives in each browser's `localStorage`, the container itself is stateless — you can rebuild or move it freely without losing campaigns. Use the in-app **Export** button to back up campaign data.
 
