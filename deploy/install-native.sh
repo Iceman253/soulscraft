@@ -40,10 +40,21 @@ apt-get update -qq
 apt-get install -y -qq ca-certificates curl git openssl nginx avahi-daemon >/dev/null
 
 # Node 22 (via NodeSource) — needed only to build the static bundle.
-if ! command -v node >/dev/null 2>&1; then
-  msg "Installing Node.js 22…"
+# Vite requires Node >= 20.19; Debian's packaged Node (18) is too old, so we
+# check the MAJOR version, not just presence, and replace it if it's stale.
+NODE_MAJOR=0
+if command -v node >/dev/null 2>&1; then
+  NODE_MAJOR="$(node -v 2>/dev/null | sed 's/^v\([0-9]*\).*/\1/')"
+  [ -n "$NODE_MAJOR" ] || NODE_MAJOR=0
+fi
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  msg "Installing Node.js 22 (current: $(node -v 2>/dev/null || echo none))…"
+  # Remove any distro nodejs/npm first — they conflict with the NodeSource package.
+  apt-get purge -y -qq nodejs npm >/dev/null 2>&1 || true
+  apt-get autoremove -y -qq >/dev/null 2>&1 || true
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null 2>&1
   apt-get install -y -qq nodejs >/dev/null
+  msg "Node is now $(node -v)."
 fi
 
 # Fetch / update source.
