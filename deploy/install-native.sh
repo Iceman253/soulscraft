@@ -119,9 +119,10 @@ server {
     location / { return 301 https://\$host\$request_uri; }
 }
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    # Legacy "listen ... http2" form works on Debian's nginx 1.22 (the modern
+    # "http2 on;" directive needs nginx >= 1.25.1). Newer nginx accepts this too.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name ${SERVER_NAME} _;
 
     ssl_certificate     ${CERT_DIR}/selfsigned.crt;
