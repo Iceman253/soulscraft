@@ -1,12 +1,23 @@
-# Soulscraft — single static container.
+# Soulscraft — single static container, served over HTTPS.
 # Usage:
 #   docker compose up -d --build
-#   (override the published port with:  HOST_PORT=9000 docker compose up -d --build)
+#   → app at https://<host>   (HTTP on :80 redirects to HTTPS)
+#
+# Override the published ports if 80/443 are taken:
+#   HTTP_PORT=8080 HTTPS_PORT=8443 docker compose up -d --build
+#   (with non-standard ports, browse to the HTTPS URL directly, e.g. https://<host>:8443)
 services:
   soulscraft:
     build: .
     image: soulscraft:latest
     container_name: soulscraft
     ports:
-      - "${HOST_PORT:-8080}:80"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      # Persists the self-signed cert so it stays stable across restarts.
+      - soulscraft-certs:/etc/nginx/certs
     restart: unless-stopped
+
+volumes:
+  soulscraft-certs:

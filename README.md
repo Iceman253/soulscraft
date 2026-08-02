@@ -133,7 +133,13 @@ Soulscraft is a static site with no backend, so it deploys as a single nginx con
 docker compose up -d --build
 ```
 
-Then open `http://<host>:8080`. Change the port with `HOST_PORT=80 docker compose up -d --build`.
+Then open `https://<host>`. HTTP on port 80 auto-redirects to HTTPS on 443. The
+container generates a **self-signed certificate** on first boot, so your browser
+shows a one-time warning — choose *Advanced → Proceed*. HTTPS is required so the
+app runs in a browser "secure context" (needed for `crypto.randomUUID` when
+accessed by IP on a LAN). Override the ports if 80/443 are taken:
+`HTTP_PORT=8080 HTTPS_PORT=8443 docker compose up -d --build` (then browse to
+`https://<host>:8443`).
 
 ### 2. Proxmox — one command on the host
 

@@ -13,14 +13,16 @@
 #   bash deploy/install.sh
 #
 # Env overrides:
-#   REPO_URL   Git repo to deploy   [github.com/Iceman253/soulscraft]
-#   HOST_PORT  Published port       [8080]
-#   APP_DIR    Install directory    [/opt/soulscraft]
+#   REPO_URL    Git repo to deploy       [github.com/Iceman253/soulscraft]
+#   HTTP_PORT   Published HTTP port      [80]  (redirects to HTTPS)
+#   HTTPS_PORT  Published HTTPS port     [443]
+#   APP_DIR     Install directory        [/opt/soulscraft]
 #
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/Iceman253/soulscraft.git}"
-HOST_PORT="${HOST_PORT:-8080}"
+HTTP_PORT="${HTTP_PORT:-80}"
+HTTPS_PORT="${HTTPS_PORT:-443}"
 APP_DIR="${APP_DIR:-/opt/soulscraft}"
 
 msg() { echo -e "\e[1;32m[+]\e[0m $*"; }
@@ -50,8 +52,13 @@ fi
 
 msg "Building & starting the container…"
 cd "$APP_DIR"
-HOST_PORT="$HOST_PORT" docker compose up -d --build
+HTTP_PORT="$HTTP_PORT" HTTPS_PORT="$HTTPS_PORT" docker compose up -d --build
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+URL_HOST="${IP:-<this-host-ip>}"
+[ "$HTTPS_PORT" = "443" ] && URL="https://${URL_HOST}" || URL="https://${URL_HOST}:${HTTPS_PORT}"
 echo
-msg "Done! Open Soulscraft at:  http://${IP:-<this-host-ip>}:${HOST_PORT}"
+msg "Done! Open Soulscraft at:  ${URL}"
+echo "    It uses a self-signed certificate — your browser will warn once;"
+echo "    choose \"Advanced → Proceed\" to continue. HTTPS is required so the app"
+echo "    runs in a secure context (fixes crypto.randomUUID on a LAN IP)."

@@ -18,12 +18,13 @@
 #   STORAGE         Storage pool for the rootfs        [local-lvm]
 #   TEMPLATE_STORE  Storage pool holding CT templates  [local]
 #   REPO_URL        Git repo to deploy                 [github.com/Iceman253/soulscraft]
-#   HOST_PORT       Port the app is published on       [8080]
+#   HTTP_PORT       Published HTTP port (redirects)    [80]
+#   HTTPS_PORT      Published HTTPS port               [443]
 #   CT_PASSWORD     root password inside the container [random, printed at end]
 #   UNPRIVILEGED    1 = unprivileged container         [1]
 #
 # Example:
-#   CTID=250 RAM_MB=1024 HOST_PORT=80 bash deploy/proxmox-lxc-setup.sh
+#   CTID=250 RAM_MB=1024 HTTPS_PORT=8443 bash deploy/proxmox-lxc-setup.sh
 #
 set -euo pipefail
 
@@ -36,7 +37,8 @@ BRIDGE="${BRIDGE:-vmbr0}"
 STORAGE="${STORAGE:-local-lvm}"
 TEMPLATE_STORE="${TEMPLATE_STORE:-local}"
 REPO_URL="${REPO_URL:-https://github.com/Iceman253/soulscraft.git}"
-HOST_PORT="${HOST_PORT:-8080}"
+HTTP_PORT="${HTTP_PORT:-80}"
+HTTPS_PORT="${HTTPS_PORT:-443}"
 UNPRIVILEGED="${UNPRIVILEGED:-1}"
 CT_PASSWORD="${CT_PASSWORD:-$(openssl rand -base64 12 2>/dev/null || echo "soulscraft$(date +%s)")}"
 
@@ -86,6 +88,12 @@ pct create "$CTID" "$TEMPLATE_REF" \
   --password "$CT_PASSWORD" \
   --onboot 1
 
+# Docker's runtime (runc) writes a sysctl via a /proc magic-symlink that the
+# default LXC AppArmor profile blocks — this is required for Docker to start
+# containers inside the LXC (applies to privileged and unprivileged alike).
+msg "Applying AppArmor profile for Docker compatibility…"
+echo "lxc.apparmor.profile: unconfined" >> "/etc/pve/lxc/${CTID}.conf"
+
 msg "Starting container…"
 pct start "$CTID"
 
@@ -114,16 +122,18 @@ pct exec "$CTID" -- bash -euo pipefail -c "
   rm -rf /opt/soulscraft
   git clone --depth 1 '${REPO_URL}' /opt/soulscraft
   cd /opt/soulscraft
-  HOST_PORT='${HOST_PORT}' docker compose up -d --build
+  HTTP_PORT='${HTTP_PORT}' HTTPS_PORT='${HTTPS_PORT}' docker compose up -d --build
 "
 
 # ── Report ────────────────────────────────────────────────────────────────────
 IP="$(pct exec "$CTID" -- hostname -I 2>/dev/null | awk '{print $1}')"
+if [ "$HTTPS_PORT" = "443" ]; then URL="https://${IP:-<container-ip>}"; else URL="https://${IP:-<container-ip>}:${HTTPS_PORT}"; fi
 echo
 msg "Soulscraft is deployed! 🎲"
 echo "    Container : ${CTID} (${CT_HOSTNAME})"
-echo "    URL       : http://${IP:-<container-ip>}:${HOST_PORT}"
+echo "    URL       : ${URL}"
 echo "    root pw   : ${CT_PASSWORD}"
 echo
+echo "  Note: self-signed cert — accept the one-time browser warning."
 echo "  Update later with:"
-echo "    pct exec ${CTID} -- bash -c 'cd /opt/soulscraft && git pull && HOST_PORT=${HOST_PORT} docker compose up -d --build'"
+echo "    pct exec ${CTID} -- bash -c 'cd /opt/soulscraft && git pull && docker compose up -d --build'"
