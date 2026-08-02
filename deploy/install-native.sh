@@ -17,6 +17,8 @@
 #   SERVER_NAME  Hostname for nginx + the cert      [<container-hostname>.local]
 #   APP_DIR      Source checkout dir                [/opt/soulscraft]
 #   WEB_ROOT     Where the built files are served   [/var/www/soulscraft]
+#   AUDIT_FIX    Vulnerability repair before build: safe (default) | force | off
+#                'force' allows major-version bumps that may break the build.
 #
 # Tip: give the container >=1 GB RAM (2 GB comfortable) — the Vite build is the
 # heaviest step and can OOM on 512 MB.
@@ -67,10 +69,28 @@ else
   git clone --depth 1 "$REPO_URL" "$APP_DIR"
 fi
 
-# Build.
-msg "Building the app (npm ci && npm run build)…"
+# Install dependencies.
+msg "Installing dependencies (npm ci)…"
 cd "$APP_DIR"
 npm ci
+
+# Security: repair known vulnerabilities before building. Controlled by AUDIT_FIX:
+#   safe  (default) — non-breaking fixes only
+#   force           — allow major-version bumps that may break the build
+#   off             — skip entirely
+case "${AUDIT_FIX:-safe}" in
+  off)
+    msg "Skipping npm audit fix (AUDIT_FIX=off)." ;;
+  force)
+    msg "Running npm audit fix --force (may introduce breaking changes)…"
+    npm audit fix --force || true ;;
+  *)
+    msg "Running npm audit fix (non-breaking)…"
+    npm audit fix || true ;;
+esac
+
+# Build.
+msg "Building the app (npm run build)…"
 npm run build
 
 # Publish the static files.
