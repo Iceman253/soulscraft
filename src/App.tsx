@@ -54,7 +54,7 @@ export default function App() {
     const playerView = d.playerView
       ? { ...d.playerView, sessionNote: d.playerView.sessionNote ?? '' }   // fill missing sessionNote on old saves
       : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
-    useWorldStore.getState().hydrate(d.areas, d.edges, playerView)
+    useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials)
     useCharacterStore.getState().hydrate(d.characters, d.xpLog)
     useQuestStore.getState().hydrate(d.quests)
     useBestiaryStore.getState().hydrate(d.bestiary)
@@ -85,7 +85,7 @@ export default function App() {
         const playerView = d.playerView
           ? { sessionNote: '', ...d.playerView }
           : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
-        useWorldStore.getState().hydrate(d.areas, d.edges, playerView)
+        useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials)
         useCharacterStore.getState().hydrate(d.characters, d.xpLog)
         useQuestStore.getState().hydrate(d.quests)
         useBestiaryStore.getState().hydrate(d.bestiary)

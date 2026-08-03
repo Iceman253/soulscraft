@@ -1,7 +1,10 @@
 import { useState } from 'react'
-import { ArrowLeft, Camera, Trash2 } from 'lucide-react'
+import { ArrowLeft, Camera, Trash2, Plus, Check, Compass } from 'lucide-react'
 import { useCharacterStore } from './store'
+import { useWorldStore } from '../map/store'
 import { log } from '../log/store'
+
+const ECHO_COMPASS = 'Echo Compass'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 import { HpBar } from '../../ui/HpBar'
 import { SdDots } from '../../ui/SdDots'
@@ -36,7 +39,23 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmDeath, setConfirmDeath] = useState(false)
   const { adjustHp, adjustSd, updateCharacter, deleteCharacter, markDead, setGhost, resurrect, setInTower } = useCharacterStore()
+  const characters = useCharacterStore(s => s.characters)
+  const addOnHandItem = useCharacterStore(s => s.addOnHandItem)
+  const { towerTrials, beginTowerTrials, setTowerKeepersAgreed, addTowerFloor, toggleTowerFloor, removeTowerFloor, endTowerTrials } = useWorldStore()
   const def = computeDef(c.armorLoadout)
+  const [newFloor, setNewFloor] = useState('')
+
+  // Tower of Trials resurrection gating (party-level shared state)
+  const partyHasEchoCompass = characters.some(ch => ch.onHand.items.some(i => i.name.toLowerCase() === ECHO_COMPASS.toLowerCase()))
+  const floorsAllDone = towerTrials.floors.length > 0 && towerTrials.floors.every(f => f.done)
+  const resurrectionReady = towerTrials.active && towerTrials.keepersAgreed && floorsAllDone
+
+  const grantEchoCompass = () => {
+    const target = characters.find(ch => !ch.isDead) ?? characters[0]
+    if (!target) return
+    addOnHandItem(target.id, { name: ECHO_COMPASS, quantity: 1, description: 'Points the way to the Tower of Trials.' })
+    log('character-move', `🧭 ${target.name} received an Echo Compass.`)
+  }
 
   const handleDelete = () => {
     deleteCharacter(c.id)
@@ -119,22 +138,111 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                 {c.isGhost ? '👻 Ghost Mode' : '👻 Enter Ghost Mode'}
               </button>
               <button
-                onClick={() => resurrect(c.id)}
-                className="px-2.5 py-1 rounded text-xs border bg-emerald/10 border-emerald/40 text-emerald hover:bg-emerald/20 transition-colors"
+                onClick={() => { if (resurrectionReady) resurrect(c.id) }}
+                disabled={!resurrectionReady}
+                title={resurrectionReady ? 'The Tower is complete — restore this character to life' : 'Complete the Tower of Trials first (Keepers agree + all trials cleared)'}
+                className={`px-2.5 py-1 rounded text-xs border transition-colors ${
+                  resurrectionReady
+                    ? 'bg-emerald/10 border-emerald/40 text-emerald hover:bg-emerald/20'
+                    : 'border-stone-700 text-stone-600 cursor-not-allowed'
+                }`}
               >
-                ✨ Resurrect (Tower Complete)
+                ✨ Resurrect
               </button>
             </div>
           </div>
 
-          {/* Tower of Trials info box */}
-          <div className="bg-stone-900 border border-stone-700 rounded-lg px-3 py-2.5 text-xs text-stone-500 space-y-1.5">
-            <div className="text-stone-400 font-medium font-heading tracking-wide">Tower of Trials — Resurrection Process</div>
-            <div>1. Acquire an <span className="text-stone-300">Echo Compass</span> to locate the Tower.</div>
-            <div>2. The Tower Keepers must agree to help. Roleplay the appeal.</div>
-            <div>3. <span className="text-stone-300">{c.isGhost ? `${c.name} watches as a Ghost` : 'Fallen character observes as a Ghost'}</span> — can communicate, cannot interact physically.</div>
-            <div>4. Party completes the Tower's challenges. No one can die inside (dropped to 0 HP → transported out with 1 HP).</div>
-            <div>5. Upon completion, click <span className="text-stone-300">Resurrect</span> — full HP and SD are restored.</div>
+          {/* Tower of Trials tracker */}
+          <div className="bg-stone-900 border border-stone-700 rounded-lg px-3 py-2.5 text-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="text-stone-400 font-medium font-heading tracking-wide">Tower of Trials</div>
+              {towerTrials.active && (
+                <button onClick={endTowerTrials} className="text-stone-600 hover:text-red-400 transition-colors">End / reset</button>
+              )}
+            </div>
+
+            {/* Echo Compass status */}
+            <div className="flex items-center gap-2">
+              <Compass size={13} className={partyHasEchoCompass ? 'text-teal-400' : 'text-stone-600'} />
+              {partyHasEchoCompass ? (
+                <span className="text-teal-400">Echo Compass in the party's possession.</span>
+              ) : (
+                <>
+                  <span className="text-stone-500">No Echo Compass yet.</span>
+                  <button onClick={grantEchoCompass} className="text-teal-400 hover:text-teal-300 underline">Give one</button>
+                </>
+              )}
+            </div>
+
+            {!towerTrials.active ? (
+              <button
+                onClick={beginTowerTrials}
+                disabled={!partyHasEchoCompass}
+                title={partyHasEchoCompass ? 'Reveal the Tower of Trials on the map' : 'The party needs an Echo Compass first'}
+                className={`w-full py-1.5 rounded border text-xs font-medium transition-colors ${
+                  partyHasEchoCompass
+                    ? 'border-amber-600/50 text-amber-300 hover:bg-amber-900/20'
+                    : 'border-stone-700 text-stone-600 cursor-not-allowed'
+                }`}
+              >
+                🗼 Begin Tower of Trials (reveal on map)
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer text-stone-400 hover:text-stone-200">
+                  <input
+                    type="checkbox"
+                    checked={towerTrials.keepersAgreed}
+                    onChange={e => setTowerKeepersAgreed(e.target.checked)}
+                    className="accent-amber-500"
+                  />
+                  The Tower Keepers have agreed to help.
+                </label>
+
+                <div className="space-y-1">
+                  <div className="text-stone-500">
+                    Trials ({towerTrials.floors.filter(f => f.done).length}/{towerTrials.floors.length} cleared):
+                  </div>
+                  {towerTrials.floors.map(f => (
+                    <div key={f.id} className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleTowerFloor(f.id)}
+                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                          f.done ? 'bg-emerald/30 border-emerald/60 text-emerald' : 'border-stone-600 hover:border-stone-400'
+                        }`}
+                      >
+                        {f.done && <Check size={11} />}
+                      </button>
+                      <span className={`flex-1 ${f.done ? 'text-stone-500 line-through' : 'text-stone-300'}`}>{f.label}</span>
+                      <button onClick={() => removeTowerFloor(f.id)} className="text-stone-600 hover:text-red-400 transition-colors">
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    <input
+                      value={newFloor}
+                      onChange={e => setNewFloor(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && newFloor.trim()) { addTowerFloor(newFloor.trim()); setNewFloor('') } }}
+                      placeholder="Add a trial…"
+                      className="flex-1 bg-stone-800 border border-stone-600 rounded px-2 py-1 text-stone-200 outline-none focus:border-amber-500/50"
+                    />
+                    <button
+                      onClick={() => { if (newFloor.trim()) { addTowerFloor(newFloor.trim()); setNewFloor('') } }}
+                      className="p-1 text-stone-400 hover:text-amber-300"
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className={`text-center ${resurrectionReady ? 'text-emerald' : 'text-stone-500'}`}>
+                  {resurrectionReady
+                    ? '✅ The Tower is complete — Resurrect is unlocked.'
+                    : "Clear every trial and gain the Keepers' agreement to unlock Resurrect."}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

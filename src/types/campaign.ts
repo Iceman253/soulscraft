@@ -1,4 +1,4 @@
-import type { Area, AreaEdge, TravelingMarker } from './world'
+import type { Area, AreaEdge, TravelingMarker, TowerTrials } from './world'
 import type { Character } from './character'
 import type { BestiaryEntry } from './bestiary'
 import type { Quest } from './quest'
@@ -42,4 +42,6 @@ export interface CampaignData {
   economy: EconomyData
   schemaVersion: number
   playerView: PlayerViewData
+  /** Tower of Trials resurrection tracker. Optional for backward compatibility. */
+  towerTrials?: TowerTrials
 }
