@@ -11,12 +11,13 @@ import { useWorldStore } from './store'
 import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import { loadMapBg, saveMapBg, fileToDataUrl } from '../../lib/imageCache'
-import { AreaNodeComponent } from './AreaNode'
+import { AreaNodeComponent, CHAR_DND } from './AreaNode'
 import { AreaEdgeComponent } from './AreaEdgeComponent'
 import { NodePanel } from './NodePanel'
 import { SubMap } from './SubMap'
 import { AddNodeModal } from './AddNodeModal'
 import { ContextMenu } from '../../ui/ContextMenu'
+import { TokenAvatar } from '../../ui/TokenAvatar'
 import type { AreaEdge as AreaEdgeType } from '../../types'
 
 const nodeTypes = { area: AreaNodeComponent }
@@ -25,7 +26,7 @@ const edgeTypes = { area: AreaEdgeComponent }
 export function WorldMap() {
   const { areas, edges, fogEnabled, playerVisibleAreaIds, addArea, deleteArea, moveArea, addEdge: addWorldEdge, updateEdge, deleteEdge, toggleFog, revealArea, addPlayerVisibleArea, removePlayerVisibleArea } = useWorldStore()
   const { activeId } = useCampaignStore()
-  const { characters, setLocation, setSubLocation } = useCharacterStore()
+  const { characters, setLocation, setSubLocation, setInTower } = useCharacterStore()
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set())
   const [subMapAreaId, setSubMapAreaId] = useState<string | null>(null)
@@ -64,9 +65,16 @@ export function WorldMap() {
         setSubMapAreaId(area.id)
         setSubMapInitialSubNodeId(subLocationId)
       },
+      // Drag-to-place: dropping a party token here moves the character to this
+      // area (clearing any sub-location) and toggles Tower Mode if it's the Tower.
+      onDropCharacter: (charId: string) => {
+        setLocation(charId, area.id)
+        setSubLocation(charId, null)
+        setInTower(charId, !!area.isTower)
+      },
     },
     draggable: true,
-  })), [areas, fogEnabled, selectedAreaId, revealArea])
+  })), [areas, fogEnabled, selectedAreaId, revealArea, setLocation, setSubLocation, setInTower])
 
   // Local state for ReactFlow to apply smooth drag updates against without round-tripping the store.
   const [rfNodes, setRfNodes] = useState<Node[]>(baseNodes)
@@ -310,6 +318,51 @@ export function WorldMap() {
           <input type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
         </label>
       </div>
+
+      {/* Character token tray — drag a token onto a location to place; drop back here to remove */}
+      {characters.filter(c => !c.isDead).length > 0 && (
+        <div
+          className="absolute top-16 left-3 z-10 w-56 bg-stone-900/95 border border-stone-700 rounded-lg shadow-2xl p-2"
+          onDragOver={e => { if (e.dataTransfer.types.includes(CHAR_DND)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }}
+          onDrop={e => {
+            const charId = e.dataTransfer.getData(CHAR_DND)
+            if (charId) { e.preventDefault(); setLocation(charId, null); setSubLocation(charId, null); setInTower(charId, false) }
+          }}
+        >
+          <div className="text-xs text-stone-500 mb-1.5 px-1 flex items-center gap-1">
+            <Users size={11} /> Party — drag onto a location
+          </div>
+          <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
+            {characters.filter(c => !c.isDead).map(c => {
+              const loc = c.locationId ? areas.find(a => a.id === c.locationId) : null
+              return (
+                <div
+                  key={c.id}
+                  draggable
+                  onDragStart={e => { e.dataTransfer.setData(CHAR_DND, c.id); e.dataTransfer.effectAllowed = 'move' }}
+                  className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-stone-800 cursor-grab active:cursor-grabbing"
+                  title="Drag onto a location on the map"
+                >
+                  <TokenAvatar name={c.name} characterId={c.id} size={22} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-stone-200 truncate">{c.name}{c.inTower ? ' 🗼' : ''}</div>
+                    <div className="text-xs text-stone-500 truncate">{loc ? `📍 ${loc.name}` : 'Unplaced'}</div>
+                  </div>
+                  {loc && (
+                    <button
+                      onClick={() => { setLocation(c.id, null); setSubLocation(c.id, null); setInTower(c.id, false) }}
+                      title="Remove from map"
+                      className="text-stone-600 hover:text-red-400 shrink-0 px-1"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Node panel sidebar */}
       {selectedArea && (

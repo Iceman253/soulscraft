@@ -10,6 +10,7 @@ import { ArrowLeft, ChevronRight, ChevronDown, Plus, X } from 'lucide-react'
 import { useWorldStore } from './store'
 import { useCharacterStore } from '../characters/store'
 import { TokenAvatar } from '../../ui/TokenAvatar'
+import { CHAR_DND } from './AreaNode'
 import { PlaceCharactersModal } from '../../ui/PlaceCharactersModal'
 import type { Area, SubNode, SubEdge, Character } from '../../types'
 import { SUB_NODE_TYPES } from '../../lib/constants'
@@ -144,18 +145,33 @@ interface SubNodeData {
   canGoDeeper: boolean
   onOpenSubMap: () => void
   onCharNavigate: (subLocationId: string) => void
+  onDropCharacter?: (characterId: string) => void
 }
 
 function SubNodeComponent({ data }: { data: unknown }) {
   const d = data as SubNodeData
-  const { node, selected, onSelect, directChars, subtreeChars, hasChildren, canGoDeeper, onOpenSubMap, onCharNavigate } = d
+  const { node, selected, onSelect, directChars, subtreeChars, hasChildren, canGoDeeper, onOpenSubMap, onCharNavigate, onDropCharacter } = d
+  const [dragOver, setDragOver] = useState(false)
   const hc = '!bg-stone-500 !w-2 !h-2 !border-stone-400'
   return (
     <div
       onClick={onSelect}
+      onDragOver={e => {
+        if (onDropCharacter && e.dataTransfer.types.includes(CHAR_DND)) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+          if (!dragOver) setDragOver(true)
+        }
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={e => {
+        setDragOver(false)
+        const charId = e.dataTransfer.getData(CHAR_DND)
+        if (charId && onDropCharacter) { e.preventDefault(); e.stopPropagation(); onDropCharacter(charId) }
+      }}
       className={`relative min-w-28 bg-stone-800 border-2 rounded-lg p-2.5 cursor-pointer transition-all shadow-md ${
         selected ? 'border-gold ring-1 ring-gold/50' : 'border-stone-600 hover:border-stone-400'
-      }`}
+      } ${dragOver ? 'ring-2 ring-teal-400 brightness-125' : ''}`}
     >
       <Handle id="top"    type="source" position={Position.Top}    className={hc} />
       <Handle id="bottom" type="source" position={Position.Bottom} className={hc} />
@@ -342,10 +358,12 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
         canGoDeeper: navStack.length < MAX_DEPTH,
         onOpenSubMap: () => { setNavStack(prev => [...prev, { nodeId: node.id, nodeName: node.name }]); setSelectedNodeId(null) },
         onCharNavigate: navigateToChar,
+        // Drag-to-place into this sub-location.
+        onDropCharacter: (charId: string) => { setLocation(charId, area.id); setSubLocation(charId, node.id) },
       } satisfies SubNodeData,
       draggable: true,
     }
-  }), [currentNodes, selectedNodeId, characters, navStack.length, navigateToChar])
+  }), [currentNodes, selectedNodeId, characters, navStack.length, navigateToChar, area.id, setLocation, setSubLocation])
 
   // Local state so ReactFlow can apply mid-drag position changes without round-tripping the store.
   const [rfNodes, setRfNodes] = useState<Node[]>(baseNodes)
@@ -516,7 +534,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
 
       <div className="flex flex-1 min-h-0">
         {/* Canvas */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 relative">
           <ReactFlow
             nodes={rfNodes}
             edges={rfEdges}
@@ -538,6 +556,41 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
             <Background color="#666666" gap={24} size={2} />
             <Controls />
           </ReactFlow>
+
+          {/* Token tray — characters in this area. Drag onto a sub-location to nest;
+              drop back here to move them to the area root. */}
+          {characters.filter(c => c.locationId === area.id && !c.isDead).length > 0 && (
+            <div
+              className="absolute top-3 left-3 z-10 w-52 bg-stone-900/95 border border-stone-700 rounded-lg shadow-2xl p-2"
+              onDragOver={e => { if (e.dataTransfer.types.includes(CHAR_DND)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }}
+              onDrop={e => {
+                const charId = e.dataTransfer.getData(CHAR_DND)
+                if (charId) { e.preventDefault(); setSubLocation(charId, null) }
+              }}
+            >
+              <div className="text-xs text-stone-500 mb-1.5 px-1">Here — drag onto a sub-location</div>
+              <div className="flex flex-col gap-1 max-h-52 overflow-y-auto">
+                {characters.filter(c => c.locationId === area.id && !c.isDead).map(c => {
+                  const at = c.subLocationId ? (findSubNodePath(area.subNodes, c.subLocationId)?.slice(-1)[0]?.nodeName ?? 'sub-location') : null
+                  return (
+                    <div
+                      key={c.id}
+                      draggable
+                      onDragStart={e => { e.dataTransfer.setData(CHAR_DND, c.id); e.dataTransfer.effectAllowed = 'move' }}
+                      className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-stone-800 cursor-grab active:cursor-grabbing"
+                      title="Drag onto a sub-location"
+                    >
+                      <TokenAvatar name={c.name} characterId={c.id} size={20} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs text-stone-200 truncate">{c.name}</div>
+                        <div className="text-xs text-stone-500 truncate">{at ? `📍 ${at}` : 'Area root'}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Selected node side panel */}

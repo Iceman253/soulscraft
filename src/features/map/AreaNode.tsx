@@ -1,10 +1,13 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { Map, Lock, Eye, ChevronRight } from 'lucide-react'
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from './store'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 import type { Area } from '../../types'
+
+/** MIME type carried by a dragged character token (shared with WorldMap tray). */
+export const CHAR_DND = 'application/x-soulscraft-char'
 
 const REALM_COLORS = {
   overworld: 'border-overworld text-overworld',
@@ -25,11 +28,13 @@ interface AreaNodeData {
   onOpenSubMap: () => void
   onSelect: () => void
   onCharClick: (subLocationId: string | null) => void
+  onDropCharacter?: (characterId: string) => void
 }
 
 export function AreaNodeComponent({ data }: NodeProps) {
   const d = data as unknown as AreaNodeData
-  const { area, fogEnabled, selected, onReveal, onOpenSubMap, onSelect, onCharClick } = d
+  const { area, fogEnabled, selected, onReveal, onOpenSubMap, onSelect, onCharClick, onDropCharacter } = d
+  const [dragOver, setDragOver] = useState(false)
   const allCharacters = useCharacterStore(s => s.characters)
   const travelingMarkers = useWorldStore(s => s.travelingMarkers)
   // Hide tokens for characters currently in transit — they're "between places" on the map.
@@ -51,11 +56,24 @@ export function AreaNodeComponent({ data }: NodeProps) {
   return (
     <div
       onClick={onSelect}
+      onDragOver={e => {
+        if (onDropCharacter && e.dataTransfer.types.includes(CHAR_DND)) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+          if (!dragOver) setDragOver(true)
+        }
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={e => {
+        setDragOver(false)
+        const charId = e.dataTransfer.getData(CHAR_DND)
+        if (charId && onDropCharacter) { e.preventDefault(); onDropCharacter(charId) }
+      }}
       className={`relative min-w-32 rounded-lg border-2 cursor-pointer transition-all shadow-lg ${
         hidden
           ? 'bg-stone-950 border-stone-700 opacity-60'
           : `bg-stone-800 ${REALM_COLORS[area.realm] ?? 'border-stone-600'} hover:brightness-110`
-      } ${selected ? 'ring-2 ring-gold' : ''}`}
+      } ${selected ? 'ring-2 ring-gold' : ''} ${dragOver ? 'ring-2 ring-teal-400 brightness-125' : ''}`}
     >
       {/* Player-visible badge */}
       {isPlayerVisible && (
