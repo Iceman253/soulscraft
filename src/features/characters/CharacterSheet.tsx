@@ -35,7 +35,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
   const [tab, setTab] = useState<SheetTab>('stats')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmDeath, setConfirmDeath] = useState(false)
-  const { adjustHp, adjustSd, updateCharacter, deleteCharacter, markDead, setGhost, resurrect } = useCharacterStore()
+  const { adjustHp, adjustSd, updateCharacter, deleteCharacter, markDead, setGhost, resurrect, setInTower } = useCharacterStore()
   const def = computeDef(c.armorLoadout)
 
   const handleDelete = () => {
@@ -154,6 +154,21 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
             <ArrowLeft size={14} /> Characters
           </button>
           <div className="flex items-center gap-3">
+            {/* Tower of Trials mode — protects living characters from death inside. */}
+            {!c.isDead && (
+              <button
+                onClick={() => setInTower(c.id, !c.inTower)}
+                title={c.inTower ? 'In the Tower of Trials — cannot die (ejected at 0 HP)' : 'Enter the Tower of Trials (no death inside)'}
+                className={`px-2 py-0.5 rounded text-xs border transition-colors ${
+                  c.inTower
+                    ? 'bg-amber-900/40 border-amber-600/60 text-amber-300'
+                    : 'text-stone-600 hover:text-amber-300 border-transparent hover:border-amber-600/40'
+                }`}
+              >
+                🗼 {c.inTower ? 'In Tower' : 'Tower'}
+              </button>
+            )}
+
             {/* Mark Dead button — only shown while alive. Resurrect lives in the Deceased banner below. */}
             {!c.isDead && (confirmDeath ? (
               <div className="flex items-center gap-2">

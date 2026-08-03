@@ -211,4 +211,8 @@ export interface Character {
   // Death state (rulebook p.74)
   isDead?: boolean    // character has died (HP 0, SD 0)
   isGhost?: boolean   // in ghost mode during Tower of Trials attempt
+  /** Inside the Tower of Trials: cannot die — reaching 0 HP with no SD ejects
+   *  them with 1 HP instead. Auto-set when the GM drags their token onto the
+   *  Tower location; the player can still spend SD to keep going first. */
+  inTower?: boolean
 }

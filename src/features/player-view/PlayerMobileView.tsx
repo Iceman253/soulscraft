@@ -89,6 +89,14 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
 
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000) }
 
+  // Avoid Death — spend SD to regain HP while at 0 HP (rulebook: 1 SD → 1 HP).
+  const avoidDeath = (n: number) => {
+    if (!activeChar || n < 1 || n > activeChar.currentSd) return
+    adjustSd(activeChar.id, -n)
+    adjustHp(activeChar.id, n)
+    flash(`Held on — spent ${n} SD to regain ${n} HP.`)
+  }
+
   // ── Potion use (mirrors the desktop panel) ──────────────────────────────────
   function isPotionItem(item: CharacterItem): boolean {
     return POTION_RECIPES.some(r => r.name.toLowerCase() === item.name.toLowerCase())
@@ -199,6 +207,39 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
           </div>
         ) : activeChar ? (
           <div className="pb-6">
+            {/* ── Death's Door — Avoid Death by spending SD (1 SD → 1 HP) ── */}
+            {activeChar.currentHp === 0 && !activeChar.isDead && (
+              <div className="mx-4 mt-4 rounded-2xl bg-red-950 border border-red-800 p-4 space-y-3">
+                <div className="text-center">
+                  <div className="text-3xl">💀</div>
+                  <div className="text-xl font-bold text-red-200 mt-1">You're at 0 HP!</div>
+                  <div className="text-base text-red-400 mt-0.5">
+                    {activeChar.inTower
+                      ? 'The Tower protects you — spend SD to fight on, or be ejected with 1 HP.'
+                      : 'Spend Soul Dice to survive — each SD restores 1 HP.'}
+                  </div>
+                </div>
+                {activeChar.currentSd > 0 ? (
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {Array.from({ length: Math.min(activeChar.currentSd, 5) }, (_, i) => i + 1).map(n => (
+                      <button key={n} onClick={() => avoidDeath(n)}
+                        className="px-4 py-2.5 rounded-xl bg-red-800 active:bg-red-700 text-red-100 text-base font-bold border border-red-600">
+                        −{n} SD → +{n} HP
+                      </button>
+                    ))}
+                    {activeChar.currentSd >= 2 && (
+                      <button onClick={() => avoidDeath(activeChar.currentSd)}
+                        className="px-4 py-2.5 rounded-xl bg-red-700 active:bg-red-600 text-white text-base font-bold border-2 border-red-400">
+                        Sacrifice all ({activeChar.currentSd})
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center text-base text-red-300 font-medium">No Soul Dice left.</div>
+                )}
+              </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center gap-3.5 px-4 pt-4">
               <TokenAvatar name={activeChar.name} characterId={activeChar.id} size={60} />

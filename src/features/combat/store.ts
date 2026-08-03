@@ -3,6 +3,7 @@ import type { CombatSession, Combatant, ActiveEffect, Character, BestiaryEntry }
 import { newId } from '../../lib/id'
 import { log } from '../log/store'
 import { computeDef } from '../../lib/armor'
+import { useCharacterStore } from '../characters/store'
 
 // Rulebook p.101: Weak 1-4 HP, Average 5-10 HP, Strong 11-12 HP, Mighty 13+ HP.
 // Defaults sit at the midpoint / typical value of each tier.
@@ -154,21 +155,29 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
 
     set({ session: { ...session, combatants, activeIndex: nextIndex, round: newRound } })
+    // Mirror per-round damage onto a PC's sheet (triggers death / Tower-eject).
+    if (next.kind === 'character') {
+      const finalNext = combatants.find(c => c.id === next.id)
+      if (finalNext) useCharacterStore.getState().syncCombatHp(next.sourceId, finalNext.currentHp)
+    }
   },
 
   adjustCombatantHp(id, delta) {
     const session = get().session
     if (!session) return
-    set({
-      session: {
-        ...session,
-        combatants: session.combatants.map(c =>
-          c.id === id
-            ? { ...c, currentHp: Math.max(0, Math.min(c.maxHp, c.currentHp + delta)) }
-            : c
-        ),
-      },
-    })
+    const target = session.combatants.find(c => c.id === id)
+    const combatants = session.combatants.map(c =>
+      c.id === id
+        ? { ...c, currentHp: Math.max(0, Math.min(c.maxHp, c.currentHp + delta)) }
+        : c
+    )
+    set({ session: { ...session, combatants } })
+    // Mirror PC HP onto the character sheet so Avoid Death / death / Tower-eject
+    // all trigger from combat automatically.
+    if (target && target.kind === 'character') {
+      const updated = combatants.find(c => c.id === id)
+      if (updated) useCharacterStore.getState().syncCombatHp(target.sourceId, updated.currentHp)
+    }
   },
 
   overrideDef(id, def) {

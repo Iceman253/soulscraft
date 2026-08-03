@@ -121,12 +121,16 @@ interface CharacterStore {
   // HP / SD / XP
   adjustHp: (id: string, delta: number) => void
   adjustSd: (id: string, delta: number) => void
+  /** Set HP to an absolute value (used to mirror Combat Tracker damage to the
+   *  sheet). Triggers the same death / Tower-eject resolution as adjustHp. */
+  syncCombatHp: (id: string, currentHp: number) => void
   awardXp: (characterId: string, amount: number, source: XpEvent['source'], note?: string) => void
   levelUp: (id: string) => void
 
   // Death / resurrection (rulebook p.74)
   markDead: (id: string) => void
   setGhost: (id: string, isGhost: boolean) => void
+  setInTower: (id: string, inTower: boolean) => void
   resurrect: (id: string) => void
 
   // Location
@@ -204,6 +208,27 @@ function mapChar(
   fn: (c: Character) => Character
 ): Character[] {
   return chars.map(c => c.id === id ? fn(c) : c)
+}
+
+/** Resolve what happens when a character is at 0 HP with no SD left to spend.
+ *  - In the Tower of Trials: ejected with 1 HP (cannot die inside).
+ *  - Otherwise: dies (rulebook — HP 0 and no SD to Avoid Death).
+ *  Returns the (possibly updated) array and a log message when something changed.
+ *  A character with SD remaining is left untouched — the player may still choose
+ *  to Avoid Death by spending SD (1 SD → 1 HP). */
+function resolveDeathAtZero(chars: Character[], id: string): { characters: Character[]; message?: string } {
+  const c = chars.find(x => x.id === id)
+  if (!c || c.currentHp !== 0 || c.isDead || c.currentSd > 0) return { characters: chars }
+  if (c.inTower) {
+    return {
+      characters: mapChar(chars, id, x => ({ ...x, currentHp: 1, inTower: false })),
+      message: `🗼 ${c.name} was ejected from the Tower of Trials with 1 HP — the Tower does not permit death.`,
+    }
+  }
+  return {
+    characters: mapChar(chars, id, x => ({ ...x, isDead: true })),
+    message: `💀 ${c.name} has fallen — no HP and no SD remaining.`,
+  }
 }
 
 function defaultClassFeatureState(characterClass: string): ClassFeatureState {
@@ -439,24 +464,49 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   adjustHp(id, delta) {
     const before = get().characters.find(c => c.id === id)
-    const characters = mapChar(get().characters, id, c => ({
+    let characters = mapChar(get().characters, id, c => ({
       ...c,
       currentHp: Math.max(0, Math.min(c.maxHp, c.currentHp + delta)),
     }))
-    set({ characters })
-    save(characters, get().xpLog)
     const after = characters.find(c => c.id === id)
     if (before && after && before.currentHp > 0 && after.currentHp === 0) {
       if (before.name.toLowerCase() === 'infinite') {
         log('character-move', '∞ Infinite has been defeated... You have done the impossible.')
       }
-      // Auto-mark dead if HP hits 0 AND no SD left to spend (rulebook: "character dies")
-      if (after.currentSd === 0 && !after.isDead) {
-        const dead = mapChar(characters, id, c => ({ ...c, isDead: true }))
-        set({ characters: dead }); save(dead, get().xpLog)
-        log('character-move', `💀 ${after.name} has fallen — no HP and no SD remaining.`)
-      }
+      // Death or Tower-eject only when there's no SD left to Avoid Death.
+      const resolved = resolveDeathAtZero(characters, id)
+      characters = resolved.characters
+      set({ characters }); save(characters, get().xpLog)
+      if (resolved.message) log('character-move', resolved.message)
+      return
     }
+    set({ characters })
+    save(characters, get().xpLog)
+  },
+
+  // Mirror a Combat Tracker HP change onto the character sheet. Setting HP to 0
+  // this way runs the same Avoid Death / Tower-eject resolution as adjustHp, so a
+  // PC dropped in combat with SD left is NOT auto-killed — they may still spend SD.
+  syncCombatHp(id, currentHp) {
+    const before = get().characters.find(c => c.id === id)
+    if (!before) return
+    let characters = mapChar(get().characters, id, c => ({
+      ...c,
+      currentHp: Math.max(0, Math.min(c.maxHp, currentHp)),
+    }))
+    const after = characters.find(c => c.id === id)!
+    if (before.currentHp > 0 && after.currentHp === 0) {
+      if (before.name.toLowerCase() === 'infinite') {
+        log('character-move', '∞ Infinite has been defeated... You have done the impossible.')
+      }
+      const resolved = resolveDeathAtZero(characters, id)
+      characters = resolved.characters
+      set({ characters }); save(characters, get().xpLog)
+      if (resolved.message) log('character-move', resolved.message)
+      return
+    }
+    set({ characters })
+    save(characters, get().xpLog)
   },
 
   adjustSd(id, delta) {
@@ -532,6 +582,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     log('character-move', isGhost
       ? `👻 ${char.name} is now a Ghost — observing the Tower of Trials.`
       : `👻 ${char.name} is no longer in Ghost form.`)
+  },
+
+  setInTower(id, inTower) {
+    const char = get().characters.find(c => c.id === id)
+    if (!char || !!char.inTower === inTower) return
+    const characters = mapChar(get().characters, id, c => ({ ...c, inTower }))
+    set({ characters }); save(characters, get().xpLog)
+    log('character-move', inTower
+      ? `🗼 ${char.name} has entered the Tower of Trials — they cannot die within.`
+      : `🗼 ${char.name} has left the Tower of Trials.`)
   },
 
   resurrect(id) {

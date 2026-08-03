@@ -393,6 +393,33 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
       {activeChar && !activeChar.isDead && (
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
+          {/* Death's Door — Avoid Death by spending SD (own character only) */}
+          {isOwnChar && activeChar.currentHp === 0 && (
+            <div className="rounded-xl bg-red-950 border border-red-800 p-3 space-y-2">
+              <div className="text-center">
+                <div className="text-sm font-bold text-red-200">💀 {activeChar.name} is at 0 HP!</div>
+                <div className="text-xs text-red-400 mt-0.5">
+                  {activeChar.inTower
+                    ? 'The Tower protects you — spend SD to fight on, or be ejected with 1 HP.'
+                    : 'Spend Soul Dice to survive — each SD restores 1 HP.'}
+                </div>
+              </div>
+              {activeChar.currentSd > 0 ? (
+                <div className="flex flex-wrap gap-1.5 justify-center">
+                  {Array.from({ length: Math.min(activeChar.currentSd, 6) }, (_, i) => i + 1).map(n => (
+                    <button key={n}
+                      onClick={() => { adjustSd(activeChar.id, -n); adjustHp(activeChar.id, n) }}
+                      className="px-2 py-1 rounded bg-red-800 hover:bg-red-700 text-red-100 text-xs font-bold border border-red-600 transition-colors">
+                      −{n} SD → +{n} HP
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-xs text-red-300 font-medium">No Soul Dice left.</div>
+              )}
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center gap-3">
             <TokenAvatar name={activeChar.name} characterId={activeChar.id} size={48} />
