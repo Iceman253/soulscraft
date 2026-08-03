@@ -17,7 +17,7 @@ const CLASS_SKILL_BONUS: Record<string, 1|2|3> = {
   Delver: 3, Wildspeaker: 3, Enchanter: 3, Tecton: 3, Alchemist: 3,
 }
 
-function buildNewCharacter(name: string, species: string, variantName: string, characterClass: string, discipline: string): Omit<Character, 'id'> {
+export function buildNewCharacter(name: string, species: string, variantName: string, characterClass: string, discipline: string): Omit<Character, 'id'> {
   const skillBonus = CLASS_SKILL_BONUS[characterClass] ?? 1
   const defaultSkills: Skill[] = (DEFAULT_CLASS_SKILLS[characterClass] ?? []).map(s => ({
     id: newId(),

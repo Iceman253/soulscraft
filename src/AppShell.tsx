@@ -19,9 +19,11 @@ type Tab = 'map' | 'characters' | 'quests' | 'bestiary' | 'rest' | 'items' | 'ec
 interface Props {
   /** null = GM mode; string (possibly empty) = player mode with optional characterId */
   playerCharacterId: string | null
+  /** Bind this device to a character (mobile "create/adopt character" flow). */
+  onAdoptCharacter?: (characterId: string) => void
 }
 
-export function AppShell({ playerCharacterId }: Props) {
+export function AppShell({ playerCharacterId, onAdoptCharacter }: Props) {
   const isPlayerMode = playerCharacterId !== null
   const [tab, setTab] = useState<Tab>('map')
   const [showCombat, setShowCombat] = useState(false)
@@ -71,6 +73,7 @@ export function AppShell({ playerCharacterId }: Props) {
             onClose={() => setShowPlayerView(false)}
             isPlayerMode={isPlayerMode}
             focusedCharacterId={playerCharacterId || undefined}
+            onAdoptCharacter={onAdoptCharacter}
           />
         </div>
       )}

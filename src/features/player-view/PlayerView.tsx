@@ -12,9 +12,10 @@ interface PlayerViewProps {
   onClose: () => void
   isPlayerMode?: boolean
   focusedCharacterId?: string
+  onAdoptCharacter?: (characterId: string) => void
 }
 
-export function PlayerView({ onClose, isPlayerMode, focusedCharacterId }: PlayerViewProps) {
+export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptCharacter }: PlayerViewProps) {
   const isPhone = useIsPhone()
   const combatActive = useCombatStore(s => s.session !== null && !s.session.ended)
   const { sessionNote, setSessionNote } = useWorldStore()
@@ -41,6 +42,7 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId }: Player
         onClose={onClose}
         isPlayerMode={isPlayerMode}
         focusedCharacterId={focusedCharacterId}
+        onAdoptCharacter={onAdoptCharacter}
       />
     )
   }

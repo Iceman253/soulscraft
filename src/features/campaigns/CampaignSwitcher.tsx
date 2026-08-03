@@ -7,9 +7,11 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 
 interface Props {
   onPlay: (campaignId: string, characterId: string | null) => void
+  /** Players (phones) can't create/delete campaigns and skip the GM role choice. */
+  playerOnly?: boolean
 }
 
-export function CampaignSwitcher({ onPlay }: Props) {
+export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
   const { index, createCampaign, deleteCampaign, exportCampaign, importCampaign, getSizeBytes } = useCampaignStore()
   const [showNew, setShowNew] = useState(false)
   const [newName, setNewName] = useState('')
@@ -23,7 +25,16 @@ export function CampaignSwitcher({ onPlay }: Props) {
     [pendingId],
   )
 
-  const openRolePicker = (id: string) => { setPendingId(id); setRoleStep('pick-role') }
+  const openRolePicker = (id: string) => {
+    // Players skip the GM/Player choice and go straight to character selection.
+    if (playerOnly) {
+      const chars = loadCampaign(id)?.characters ?? []
+      if (chars.length === 0) { onPlay(id, ''); return }   // player, no character yet → create flow
+      setPendingId(id); setRoleStep('pick-character')
+    } else {
+      setPendingId(id); setRoleStep('pick-role')
+    }
+  }
   const closeRolePicker = () => setPendingId(null)
 
   const handleCreate = () => {
@@ -76,23 +87,25 @@ export function CampaignSwitcher({ onPlay }: Props) {
 
       <div className="w-full max-w-xl">
 
-        {/* Action row */}
-        <div className="flex gap-2 mb-5">
-          <button
-            onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm border border-gold/50 text-gold hover:bg-gold/10 hover:border-gold transition-all rounded font-heading tracking-wide"
-            style={{ fontSize: '12px', letterSpacing: '0.08em' }}
-          >
-            <Plus size={14} /> New Campaign
-          </button>
-          <button
-            onClick={handleImport}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200 transition-all rounded font-heading"
-            style={{ fontSize: '12px', letterSpacing: '0.08em' }}
-          >
-            <Upload size={13} /> Import
-          </button>
-        </div>
+        {/* Action row — campaign creation is GM-only (hidden for players) */}
+        {!playerOnly && (
+          <div className="flex gap-2 mb-5">
+            <button
+              onClick={() => setShowNew(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm border border-gold/50 text-gold hover:bg-gold/10 hover:border-gold transition-all rounded font-heading tracking-wide"
+              style={{ fontSize: '12px', letterSpacing: '0.08em' }}
+            >
+              <Plus size={14} /> New Campaign
+            </button>
+            <button
+              onClick={handleImport}
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200 transition-all rounded font-heading"
+              style={{ fontSize: '12px', letterSpacing: '0.08em' }}
+            >
+              <Upload size={13} /> Import
+            </button>
+          </div>
+        )}
 
         {/* Empty state */}
         {index.length === 0 && (
@@ -127,23 +140,25 @@ export function CampaignSwitcher({ onPlay }: Props) {
                   </div>
                 </div>
 
-                {/* Actions — appear on hover */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => exportCampaign(meta.id)}
-                    title="Export"
-                    className="p-1.5 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700 transition-colors"
-                  >
-                    <Download size={14} />
-                  </button>
-                  <button
-                    onClick={() => setDeleteId(meta.id)}
-                    title="Delete"
-                    className="p-1.5 rounded text-stone-500 hover:text-red-400 hover:bg-stone-700 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+                {/* Actions — GM-only (export/delete); hidden for players */}
+                {!playerOnly && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => exportCampaign(meta.id)}
+                      title="Export"
+                      className="p-1.5 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700 transition-colors"
+                    >
+                      <Download size={14} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteId(meta.id)}
+                      title="Delete"
+                      className="p-1.5 rounded text-stone-500 hover:text-red-400 hover:bg-stone-700 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
 
                 {/* Enter button */}
                 <button
@@ -277,6 +292,20 @@ export function CampaignSwitcher({ onPlay }: Props) {
                 </h2>
                 <p className="text-stone-500 text-sm text-center mb-4 italic">Select your character for this session.</p>
                 <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto">
+                  {playerOnly && (
+                    <button
+                      onClick={() => { onPlay(pendingId, ''); closeRolePicker() }}
+                      className="flex items-center gap-3 p-3 rounded border border-dashed border-gold/40 hover:border-gold/70 hover:bg-gold/5 text-left transition-all"
+                    >
+                      <span className="w-8 h-8 rounded-full bg-gold/10 border border-gold/40 flex items-center justify-center text-gold shrink-0">
+                        <User size={16} />
+                      </span>
+                      <div>
+                        <div className="font-heading text-gold tracking-wide" style={{ fontSize: '13px' }}>Create a new character</div>
+                        <div className="text-xs text-stone-500">Make your own hero for this campaign.</div>
+                      </div>
+                    </button>
+                  )}
                   {pendingCharacters.filter(c => !c.isDead).map(c => (
                     <button
                       key={c.id}
@@ -306,10 +335,10 @@ export function CampaignSwitcher({ onPlay }: Props) {
                   )}
                 </div>
                 <button
-                  onClick={() => setRoleStep('pick-role')}
+                  onClick={() => playerOnly ? closeRolePicker() : setRoleStep('pick-role')}
                   className="mt-4 w-full text-center text-xs text-stone-600 hover:text-stone-400 transition-colors"
                 >
-                  ← Back
+                  {playerOnly ? 'Cancel' : '← Back'}
                 </button>
               </>
             )}

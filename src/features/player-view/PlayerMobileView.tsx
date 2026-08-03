@@ -11,6 +11,7 @@ import { LevelUpModal, type LevelUpInitialState } from '../characters/LevelUpMod
 import { PlayerRequestModal } from './PlayerRequestModal'
 import { PlayerMap } from './PlayerMap'
 import { PlayerCombatView } from './PlayerCombatView'
+import { MobileCharacterCreate } from './MobileCharacterCreate'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 import { computeDef } from '../../lib/armor'
 import { CURRENCY_OPTIONS } from '../../lib/currency'
@@ -21,6 +22,7 @@ interface Props {
   onClose: () => void
   isPlayerMode?: boolean
   focusedCharacterId?: string
+  onAdoptCharacter?: (characterId: string) => void
 }
 
 type Pane = 'character' | 'world'
@@ -29,7 +31,7 @@ function rollD6()  { return Math.floor(Math.random() * 6)  + 1 }
 function rollD12() { return Math.floor(Math.random() * 12) + 1 }
 function roll2d6() { return rollD6() + rollD6() }
 
-export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId }: Props) {
+export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, onAdoptCharacter }: Props) {
   const {
     characters, adjustHp, adjustSd, addEffect, removeEffect,
     updateOnHandItem, removeOnHandItem, updateCharacter,
@@ -52,8 +54,13 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId }: 
   const [pendingPotion, setPendingPotion] = useState<{ item: CharacterItem } | null>(null)
   const [toast, setToast] = useState<string | null>(null)
 
-  const activeChar = characters.find(c => c.id === activeTab) ?? characters[0]
-  const isOwnChar = !focusedCharacterId || focusedCharacterId === activeTab
+  // Phone players are bound to one character. If they have none — or theirs has
+  // died — surface the create/adopt flow instead of a character sheet.
+  const boundChar = focusedCharacterId ? characters.find(c => c.id === focusedCharacterId) : undefined
+  const needsCharacter = !!isPlayerMode && (!boundChar || !!boundChar.isDead)
+  const livingOthers = characters.filter(c => !c.isDead && c.id !== boundChar?.id)
+  const activeChar = boundChar ?? characters.find(c => c.id === activeTab) ?? characters[0]
+  const isOwnChar = !focusedCharacterId || focusedCharacterId === activeChar?.id
 
   // ── Skill-approval request state (pending / denied) ─────────────────────────
   const requests = useRequestStore(s => s.requests)
@@ -128,14 +135,6 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId }: 
     setPendingPotion(null)
   }
 
-  if (characters.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center bg-stone-950 text-stone-400 text-base px-6 text-center">
-        No characters in this campaign yet.
-      </div>
-    )
-  }
-
   const def = activeChar ? computeDef(activeChar.armorLoadout) : 0
 
   return (
@@ -160,28 +159,46 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId }: 
           <div className="h-full">
             {combatActive ? <PlayerCombatView /> : <PlayerMap />}
           </div>
-        ) : activeChar ? (
+        ) : needsCharacter ? (
           <div className="pb-6">
-            {/* Character switcher — only if more than one character */}
-            {characters.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto px-4 pt-4 pb-1">
-                {characters.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => setActiveTab(c.id)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-full whitespace-nowrap text-base transition-colors ${
-                      activeTab === c.id
-                        ? 'bg-gold/20 border border-gold/60 text-gold'
-                        : 'bg-stone-800 border border-stone-700 text-stone-300'
-                    }`}
-                  >
-                    <TokenAvatar name={c.name} characterId={c.id} size={22} />
-                    {c.name}
-                  </button>
-                ))}
+            {/* After-death notice */}
+            {boundChar?.isDead && (
+              <div className="mx-4 mt-4 rounded-2xl bg-stone-900 border border-stone-700 p-5 text-center">
+                <div className="text-4xl">💀</div>
+                <div className="text-xl font-bold text-stone-200 mt-1">{boundChar.name} has fallen.</div>
+                <div className="text-base text-stone-500 mt-1">Create a new hero to keep playing.</div>
               </div>
             )}
 
+            {/* Adopt an existing living character instead of creating */}
+            {onAdoptCharacter && livingOthers.length > 0 && (
+              <div className="px-4 mt-4">
+                <div className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">Or take over an existing hero</div>
+                <div className="space-y-2">
+                  {livingOthers.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => { onAdoptCharacter(c.id); setActiveTab(c.id) }}
+                      className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-stone-900 border border-stone-700 active:border-gold/50 text-left"
+                    >
+                      <TokenAvatar name={c.name} characterId={c.id} size={40} />
+                      <div>
+                        <div className="text-base font-semibold text-stone-100">{c.name}</div>
+                        <div className="text-sm text-stone-500">{c.class} · Level {c.level}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <MobileCharacterCreate
+              title={boundChar?.isDead ? 'Create a new character' : 'Create your character'}
+              onCreated={id => { onAdoptCharacter?.(id); setActiveTab(id) }}
+            />
+          </div>
+        ) : activeChar ? (
+          <div className="pb-6">
             {/* Header */}
             <div className="flex items-center gap-3.5 px-4 pt-4">
               <TokenAvatar name={activeChar.name} characterId={activeChar.id} size={60} />

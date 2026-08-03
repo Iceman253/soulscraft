@@ -11,6 +11,7 @@ import { useNotesStore } from './features/notes/store'
 import { useEconomyStore } from './features/economy/store'
 import { CampaignSwitcher } from './features/campaigns/CampaignSwitcher'
 import { AppShell } from './AppShell'
+import { useIsPhone } from './lib/useIsPhone'
 
 const PLAYER_ROLE_KEY = 'soulscraft_player_role'
 
@@ -32,6 +33,14 @@ export default function App() {
   const { activeId, activeCampaign, init, flushCurrent, switchCampaign } = useCampaignStore()
   // null = GM, non-empty string = player's characterId, '' = player but no character selected
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(loadPlayerRole)
+  // Phones are always players — never the GM interface.
+  const isPhone = useIsPhone()
+
+  // Bind this device to a character (used by the mobile "create character" flow).
+  const adoptCharacter = (characterId: string) => {
+    setPlayerCharacterId(characterId)
+    savePlayerRole(characterId)
+  }
 
   useEffect(() => {
     init()
@@ -56,7 +65,7 @@ export default function App() {
     useEconomyStore.getState().hydrate(d.economy)
   }, [activeId]) // re-hydrate on campaign switch
 
-  const isPlayerMode = playerCharacterId !== null
+  const isPlayerMode = playerCharacterId !== null || isPhone
 
   // Save before tab close — skip on player tab (player never writes, and flushing stale data would overwrite the GM's changes)
   useEffect(() => {
@@ -100,6 +109,7 @@ export default function App() {
   if (!activeId || !activeCampaign) {
     return (
       <CampaignSwitcher
+        playerOnly={isPhone}
         onPlay={(campaignId, characterId) => {
           setPlayerCharacterId(characterId)
           savePlayerRole(characterId)
@@ -109,5 +119,8 @@ export default function App() {
     )
   }
 
-  return <AppShell playerCharacterId={playerCharacterId} />
+  // Phones are forced into player mode ('' = player without a character yet).
+  const effectivePlayerId = isPhone ? (playerCharacterId ?? '') : playerCharacterId
+
+  return <AppShell playerCharacterId={effectivePlayerId} onAdoptCharacter={adoptCharacter} />
 }
