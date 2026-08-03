@@ -12,6 +12,20 @@ import { setImageSyncContext, hydrateImages } from '../../lib/imageCache'
 export interface CampaignListItem { id: string; name: string; updatedAt: number }
 
 const ACTIVE_KEY = 'soulscraft_active'   // sessionStorage: { id, code } to re-enter on reload
+const CODES_KEY = 'soulscraft_codes'     // localStorage: { [campaignId]: code } remembered on this device
+
+// Remembered codes: set when you create a campaign or successfully enter one, so
+// the GM (and returning players) don't re-type the code on this device.
+function loadCodes(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(CODES_KEY) || '{}') } catch { return {} }
+}
+function rememberCode(id: string, code: string) {
+  const codes = loadCodes(); codes[id] = code
+  localStorage.setItem(CODES_KEY, JSON.stringify(codes))
+}
+export function getRememberedCode(id: string): string | null {
+  return loadCodes()[id] ?? null
+}
 
 function emptyData(id: string, name: string): CampaignData {
   return {
@@ -100,6 +114,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     const id = newId()
     try {
       await createCampaignOnServer(id, name, code, emptyData(id, name))
+      rememberCode(id, code)
       await get().refreshList()
       return id
     } catch { return null }
@@ -108,6 +123,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   async stageCampaign(id, code) {
     try {
       const res = await apiEnter(id, code)
+      rememberCode(id, code)
       set({ staged: { id, code, data: res.data } })
       return true
     } catch (e) {

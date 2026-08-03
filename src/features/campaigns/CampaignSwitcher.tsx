@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Upload, Trash2, Download, ChevronRight, Shield, User, Lock } from 'lucide-react'
-import { useCampaignStore } from './store'
+import { useCampaignStore, getRememberedCode } from './store'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 
 interface Props {
@@ -35,15 +35,8 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
   const [deletePrompt, setDeletePrompt] = useState<{ id: string; name: string } | null>(null)
   const [deleteCode, setDeleteCode] = useState('')
 
-  const openEnter = (id: string, name: string) => { setCode(''); setCodeError(null); setCodePrompt({ id, name }) }
-
-  const submitCode = async () => {
-    if (!codePrompt || busy) return
-    setBusy(true); setCodeError(null)
-    const ok = await stageCampaign(codePrompt.id, code)
-    setBusy(false)
-    if (!ok) { setCodeError('Wrong code, or the campaign is unavailable.'); return }
-    const id = codePrompt.id
+  // After a successful stage, route to the role / character picker.
+  const proceed = (id: string) => {
     setCodePrompt(null)
     if (playerOnly) {
       const chars = useCampaignStore.getState().staged?.data.characters ?? []
@@ -52,6 +45,23 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
     } else {
       setPendingId(id); setRoleStep('pick-role')
     }
+  }
+
+  const openEnter = async (id: string, name: string) => {
+    // If this device already knows the code (created it, or entered before),
+    // enter without prompting — the GM never re-types their own code.
+    const known = getRememberedCode(id)
+    if (known && await stageCampaign(id, known)) { proceed(id); return }
+    setCode(''); setCodeError(null); setCodePrompt({ id, name })
+  }
+
+  const submitCode = async () => {
+    if (!codePrompt || busy) return
+    setBusy(true); setCodeError(null)
+    const ok = await stageCampaign(codePrompt.id, code)
+    setBusy(false)
+    if (!ok) { setCodeError('Wrong code, or the campaign is unavailable.'); return }
+    proceed(codePrompt.id)
   }
 
   const handleCreate = async () => {
