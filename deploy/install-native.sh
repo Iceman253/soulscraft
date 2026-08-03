@@ -37,9 +37,10 @@ die() { echo -e "\e[1;31m[x]\e[0m $*" >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || die "Please run as root."
 
 export DEBIAN_FRONTEND=noninteractive
-msg "Installing nginx, git, openssl, Node, and avahi (.local names)…"
+msg "Installing nginx, git, openssl, Node, avahi, and build tools…"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl git openssl nginx avahi-daemon >/dev/null
+# build-essential + python3 let better-sqlite3 compile if no prebuilt binary exists.
+apt-get install -y -qq ca-certificates curl git openssl nginx avahi-daemon build-essential python3 >/dev/null
 
 # Node 22 (via NodeSource) — needed only to build the static bundle.
 # Vite requires Node >= 20.19; Debian's packaged Node (18) is too old, so we
@@ -99,6 +100,38 @@ rm -rf "$WEB_ROOT"
 mkdir -p "$WEB_ROOT"
 cp -r dist/* "$WEB_ROOT/"
 
+# ── Backend service (shared campaigns: REST + WebSocket + SQLite) ──────────────
+msg "Installing backend server dependencies…"
+( cd "$APP_DIR/server" && npm install --omit=dev )
+
+SRV_DATA_DIR="/var/lib/soulscraft"
+mkdir -p "$SRV_DATA_DIR"
+
+msg "Installing systemd service (soulscraft-server)…"
+NODE_BIN="$(command -v node)"
+cat > /etc/systemd/system/soulscraft-server.service <<UNIT
+[Unit]
+Description=Soulscraft shared-campaign server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=${APP_DIR}/server
+Environment=PORT=8787
+Environment=DATA_DIR=${SRV_DATA_DIR}
+ExecStart=${NODE_BIN} ${APP_DIR}/server/server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable soulscraft-server >/dev/null 2>&1 || true
+systemctl restart soulscraft-server
+cd "$APP_DIR"
+
 # Self-signed cert (so the app is a secure context → crypto.randomUUID works).
 if [ ! -s "$CERT_DIR/selfsigned.crt" ] || [ ! -s "$CERT_DIR/selfsigned.key" ]; then
   msg "Generating self-signed certificate for ${SERVER_NAME}…"
@@ -143,6 +176,23 @@ server {
         add_header Cache-Control "public, immutable";
         try_files \$uri =404;
     }
+
+    # Backend REST API → Node service.
+    location /api/ {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host \$host;
+        client_max_body_size 32m;
+    }
+    # Live-sync WebSocket → Node service (needs HTTP/1.1 upgrade headers).
+    location /ws {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_read_timeout 3600s;
+    }
+
     location / {
         try_files \$uri \$uri/ /index.html;
     }
@@ -160,9 +210,11 @@ systemctl enable nginx >/dev/null 2>&1 || true
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo
-msg "Done — Soulscraft is served WITHOUT Docker. 🎲"
+msg "Done — Soulscraft (with shared server-side campaigns) is live. 🎲"
 echo "    https://${SERVER_NAME}      (via mDNS — works on devices that support .local)"
 echo "    https://${IP:-<host-ip>}    (always works)"
 echo
+echo "    Campaigns are now stored on the server and shared across devices."
+echo "    Backend: systemctl status soulscraft-server   (data: ${SRV_DATA_DIR})"
 echo "    Self-signed cert — accept the one-time browser warning (Advanced → Proceed)."
 echo "    Update later with:  bash ${APP_DIR}/deploy/install-native.sh"

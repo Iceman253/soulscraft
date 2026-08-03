@@ -24,7 +24,14 @@ db.exec(`
     code      TEXT NOT NULL,
     data      TEXT NOT NULL,
     updatedAt INTEGER NOT NULL
-  )
+  );
+  CREATE TABLE IF NOT EXISTS images (
+    campaignId TEXT NOT NULL,
+    key        TEXT NOT NULL,
+    data       TEXT NOT NULL,
+    updatedAt  INTEGER NOT NULL,
+    PRIMARY KEY (campaignId, key)
+  );
 `)
 
 // ── Prepared statements ───────────────────────────────────────────────────────
@@ -34,6 +41,11 @@ const qCode   = db.prepare('SELECT code FROM campaigns WHERE id = ?')
 const qInsert = db.prepare('INSERT INTO campaigns (id, name, code, data, updatedAt) VALUES (?,?,?,?,?)')
 const qUpdate = db.prepare('UPDATE campaigns SET name = ?, data = ?, updatedAt = ? WHERE id = ?')
 const qDelete = db.prepare('DELETE FROM campaigns WHERE id = ?')
+
+const qImages    = db.prepare('SELECT key, data FROM images WHERE campaignId = ?')
+const qImgPut    = db.prepare('INSERT OR REPLACE INTO images (campaignId, key, data, updatedAt) VALUES (?,?,?,?)')
+const qImgDel    = db.prepare('DELETE FROM images WHERE campaignId = ? AND key = ?')
+const qImgDelAll = db.prepare('DELETE FROM images WHERE campaignId = ?')
 
 // ── REST API ──────────────────────────────────────────────────────────────────
 const app = express()
@@ -71,17 +83,47 @@ app.put('/api/campaigns/:id', (req, res) => {
   if (row.code !== (code ?? '')) return res.status(403).json({ error: 'bad code' })
   const updatedAt = Date.now()
   qUpdate.run(data?.name ?? 'Campaign', JSON.stringify(data), updatedAt, req.params.id)
-  broadcast(req.params.id, data, updatedAt, req.get('x-client-id') || '')
+  send(req.params.id, { type: 'update', campaignId: req.params.id, data, updatedAt }, req.get('x-client-id') || '')
   res.json({ updatedAt })
 })
 
-// Delete — validate the code.
+// Delete — validate the code. Cascades to the campaign's images.
 app.delete('/api/campaigns/:id', (req, res) => {
   const row = qCode.get(req.params.id)
   if (!row) return res.status(404).json({ error: 'not found' })
   if (row.code !== (req.body?.code ?? '')) return res.status(403).json({ error: 'bad code' })
   qDelete.run(req.params.id)
-  broadcast(req.params.id, null, Date.now(), '')
+  qImgDelAll.run(req.params.id)
+  send(req.params.id, { type: 'update', campaignId: req.params.id, data: null, updatedAt: Date.now() }, '')
+  res.json({ ok: true })
+})
+
+// ── Images (portraits, gear art, map backgrounds) ─────────────────────────────
+// All images for a campaign, as { key: dataUrl }. No code needed to read
+// (you already need the code to load the campaign that references these keys).
+app.get('/api/campaigns/:id/images', (req, res) => {
+  const out = {}
+  for (const row of qImages.all(req.params.id)) out[row.key] = row.data
+  res.json(out)
+})
+
+// Store one image (code-gated). Broadcasts so other devices refetch it.
+app.put('/api/campaigns/:id/images/:key', (req, res) => {
+  const { code, data } = req.body || {}
+  const row = qCode.get(req.params.id)
+  if (!row) return res.status(404).json({ error: 'not found' })
+  if (row.code !== (code ?? '')) return res.status(403).json({ error: 'bad code' })
+  qImgPut.run(req.params.id, req.params.key, String(data ?? ''), Date.now())
+  send(req.params.id, { type: 'image', campaignId: req.params.id, key: req.params.key }, req.get('x-client-id') || '')
+  res.json({ ok: true })
+})
+
+app.delete('/api/campaigns/:id/images/:key', (req, res) => {
+  const row = qCode.get(req.params.id)
+  if (!row) return res.status(404).json({ error: 'not found' })
+  if (row.code !== (req.body?.code ?? '')) return res.status(403).json({ error: 'bad code' })
+  qImgDel.run(req.params.id, req.params.key)
+  send(req.params.id, { type: 'image', campaignId: req.params.id, key: req.params.key, deleted: true }, req.get('x-client-id') || '')
   res.json({ ok: true })
 })
 
@@ -105,9 +147,9 @@ wss.on('connection', (ws) => {
   ws.on('close', () => subs.delete(ws))
 })
 
-// Push a change to every socket watching this campaign except the one that made it.
-function broadcast(campaignId, data, updatedAt, senderClientId) {
-  const payload = JSON.stringify({ type: 'update', campaignId, data, updatedAt })
+// Push a message to every socket watching this campaign except its originator.
+function send(campaignId, message, senderClientId) {
+  const payload = JSON.stringify(message)
   for (const [ws, sub] of subs) {
     if (sub.campaignId === campaignId && sub.clientId !== senderClientId && ws.readyState === 1) {
       ws.send(payload)

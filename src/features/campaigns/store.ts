@@ -1,14 +1,17 @@
 import { create } from 'zustand'
-import type { CampaignMeta, CampaignData } from '../../types'
-import {
-  loadCampaignIndex, saveCampaignIndex,
-  loadCampaign, saveCampaign, deleteCampaignData,
-  getActiveCampaignId, setActiveCampaignId,
-  getCampaignSizeBytes,
-} from '../../lib/storage'
+import type { CampaignData } from '../../types'
 import { downloadJson, deserializeCampaign } from '../../lib/export'
 import { newId } from '../../lib/id'
 import { emptyEconomy } from '../../lib/economyEngine'
+import {
+  listCampaigns, createCampaignOnServer, enterCampaign as apiEnter,
+  putCampaign, deleteCampaignOnServer, ApiError,
+} from '../../lib/api'
+import { setImageSyncContext, hydrateImages } from '../../lib/imageCache'
+
+export interface CampaignListItem { id: string; name: string; updatedAt: number }
+
+const ACTIVE_KEY = 'soulscraft_active'   // sessionStorage: { id, code } to re-enter on reload
 
 function emptyData(id: string, name: string): CampaignData {
   return {
@@ -20,133 +23,149 @@ function emptyData(id: string, name: string): CampaignData {
     pinnedNotes: [], xpLog: [],
     economy: emptyEconomy(),
     playerView: { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' },
+    towerTrials: { active: false, towerAreaId: null, keepersAgreed: false, floors: [] },
     schemaVersion: 1,
   }
 }
 
 interface CampaignStore {
-  index: CampaignMeta[]
+  index: CampaignListItem[]
   activeId: string | null
+  activeCode: string | null
   activeCampaign: CampaignData | null
-  dirty: boolean
+  // Staged: code validated, data loaded, but not yet activated (character picker
+  // runs against this before we commit and swap the UI to the app).
+  staged: { id: string; code: string; data: CampaignData } | null
+  loading: boolean
 
-  // Boot
-  init: () => void
-
-  // CRUD
-  createCampaign: (name: string, description?: string) => string
-  deleteCampaign: (id: string) => void
-  switchCampaign: (id: string) => void
+  init: () => Promise<void>
+  refreshList: () => Promise<void>
+  createCampaign: (name: string, code: string) => Promise<string | null>
+  stageCampaign: (id: string, code: string) => Promise<boolean>   // false = bad code / not found
+  commitStaged: () => Promise<void>
+  deleteCampaign: (id: string, code: string) => Promise<void>
   exitToSwitcher: () => void
 
-  // Persist
-  flushCurrent: () => void
   updateCampaignData: (patch: Partial<CampaignData>) => void
+  applyRemote: (data: CampaignData) => void   // called by the WS sync handler
+  flushCurrent: () => void
 
-  // Export / Import
   exportCampaign: (id: string) => void
-  importCampaign: (json: string) => string | null
+  importCampaign: (json: string, code: string) => Promise<string | null>
+}
 
-  // Helpers
-  getSizeBytes: (id: string) => number
+// ── Debounced server save ──────────────────────────────────────────────────────
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleSave(get: () => CampaignStore) {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => { saveTimer = null; flush(get) }, 400)
+}
+function flush(get: () => CampaignStore) {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
+  const { activeId, activeCode, activeCampaign } = get()
+  if (activeId && activeCode != null && activeCampaign) {
+    void putCampaign(activeId, activeCode, activeCampaign).catch(() => { /* offline — retried on next change */ })
+  }
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
   index: [],
   activeId: null,
+  activeCode: null,
   activeCampaign: null,
-  dirty: false,
+  staged: null,
+  loading: false,
 
-  init() {
-    const index = loadCampaignIndex()
-    const activeId = getActiveCampaignId()
-    const activeCampaign = activeId ? loadCampaign(activeId) : null
-    set({ index, activeId: activeCampaign ? activeId : null, activeCampaign, dirty: false })
+  async init() {
+    set({ loading: true })
+    await get().refreshList()
+    // Restore the previous session (re-enter with the saved code) if present.
+    try {
+      const saved = sessionStorage.getItem(ACTIVE_KEY)
+      if (saved) {
+        const { id, code } = JSON.parse(saved)
+        const ok = await get().stageCampaign(id, code)
+        if (ok) await get().commitStaged()
+        else sessionStorage.removeItem(ACTIVE_KEY)
+      }
+    } catch { sessionStorage.removeItem(ACTIVE_KEY) }
+    set({ loading: false })
   },
 
-  createCampaign(name, description) {
+  async refreshList() {
+    try { set({ index: await listCampaigns() }) } catch { /* offline */ }
+  },
+
+  async createCampaign(name, code) {
     const id = newId()
-    const now = Date.now()
-    const meta: CampaignMeta = {
-      id, name, description,
-      createdAt: now, lastPlayedAt: now,
-      sessionCount: 0, playerCount: 0,
-    }
-    const data = emptyData(id, name)
-    const index = [...get().index, meta]
-    saveCampaignIndex(index)
-    saveCampaign(data)
-    set({ index })
-    return id
+    try {
+      await createCampaignOnServer(id, name, code, emptyData(id, name))
+      await get().refreshList()
+      return id
+    } catch { return null }
   },
 
-  deleteCampaign(id) {
-    deleteCampaignData(id)
-    const index = get().index.filter(m => m.id !== id)
-    saveCampaignIndex(index)
-    if (get().activeId === id) {
-      setActiveCampaignId(null)
-      set({ index, activeId: null, activeCampaign: null })
-    } else {
-      set({ index })
+  async stageCampaign(id, code) {
+    try {
+      const res = await apiEnter(id, code)
+      set({ staged: { id, code, data: res.data } })
+      return true
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 403 || e.status === 404)) return false
+      return false
     }
   },
 
-  switchCampaign(id) {
-    get().flushCurrent()
-    const data = loadCampaign(id)
-    if (!data) return
-    setActiveCampaignId(id)
-    // Update lastPlayedAt in index
-    const index = get().index.map(m =>
-      m.id === id ? { ...m, lastPlayedAt: Date.now() } : m
-    )
-    saveCampaignIndex(index)
-    set({ activeId: id, activeCampaign: data, index, dirty: false })
+  async commitStaged() {
+    const s = get().staged
+    if (!s) return
+    setImageSyncContext({ campaignId: s.id, code: s.code })
+    await hydrateImages(s.id)   // seed the image cache before the app renders
+    sessionStorage.setItem(ACTIVE_KEY, JSON.stringify({ id: s.id, code: s.code }))
+    set({ activeId: s.id, activeCode: s.code, activeCampaign: s.data, staged: null })
+  },
+
+  async deleteCampaign(id, code) {
+    try { await deleteCampaignOnServer(id, code) } catch { /* ignore */ }
+    if (get().activeId === id) get().exitToSwitcher()
+    await get().refreshList()
   },
 
   exitToSwitcher() {
-    get().flushCurrent()
-    setActiveCampaignId(null)
-    set({ activeId: null, activeCampaign: null, dirty: false })
-  },
-
-  flushCurrent() {
-    const { activeCampaign } = get()
-    if (activeCampaign) saveCampaign(activeCampaign)
+    flush(get)
+    setImageSyncContext(null)
+    sessionStorage.removeItem(ACTIVE_KEY)
+    set({ activeId: null, activeCode: null, activeCampaign: null, staged: null })
+    void get().refreshList()
   },
 
   updateCampaignData(patch) {
     const current = get().activeCampaign
     if (!current) return
-    const updated = { ...current, ...patch }
-    saveCampaign(updated)
-    set({ activeCampaign: updated, dirty: false })
+    set({ activeCampaign: { ...current, ...patch } })
+    scheduleSave(get)
   },
+
+  applyRemote(data) {
+    // A change arrived from another device — adopt it without re-broadcasting.
+    set({ activeCampaign: data })
+  },
+
+  flushCurrent() { flush(get) },
 
   exportCampaign(id) {
-    const data = id === get().activeId ? get().activeCampaign : loadCampaign(id)
-    if (data) downloadJson(data)
+    const { activeId, activeCampaign } = get()
+    if (id === activeId && activeCampaign) downloadJson(activeCampaign)
   },
 
-  importCampaign(json) {
+  async importCampaign(json, code) {
     const data = deserializeCampaign(json)
     if (!data) return null
-    const now = Date.now()
-    const meta: CampaignMeta = {
-      id: data.id,
-      name: data.name,
-      createdAt: now,
-      lastPlayedAt: now,
-      sessionCount: 0,
-      playerCount: 0,
-    }
-    saveCampaign(data)
-    const index = [...get().index, meta]
-    saveCampaignIndex(index)
-    set({ index })
-    return data.id
+    const id = data.id || newId()
+    try {
+      await createCampaignOnServer(id, data.name, code, { ...data, id })
+      await get().refreshList()
+      return id
+    } catch { return null }
   },
-
-  getSizeBytes: (id) => getCampaignSizeBytes(id),
 }))

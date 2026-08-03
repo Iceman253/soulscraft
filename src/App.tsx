@@ -12,108 +12,97 @@ import { useEconomyStore } from './features/economy/store'
 import { CampaignSwitcher } from './features/campaigns/CampaignSwitcher'
 import { AppShell } from './AppShell'
 import { useIsPhone } from './lib/useIsPhone'
+import { connectSync, disconnectSync } from './lib/sync'
+import { hydrateImages } from './lib/imageCache'
+import type { CampaignData } from './types'
 
 const PLAYER_ROLE_KEY = 'soulscraft_player_role'
 
 function savePlayerRole(characterId: string | null) {
-  if (characterId !== null) {
-    sessionStorage.setItem(PLAYER_ROLE_KEY, characterId)
-  } else {
-    sessionStorage.removeItem(PLAYER_ROLE_KEY)
-  }
+  if (characterId !== null) sessionStorage.setItem(PLAYER_ROLE_KEY, characterId)
+  else sessionStorage.removeItem(PLAYER_ROLE_KEY)
 }
-
 function loadPlayerRole(): string | null {
   const val = sessionStorage.getItem(PLAYER_ROLE_KEY)
-  // Item present (even empty string) means player mode
   return val !== null ? val : null
 }
 
+/** Push a full campaign blob into every feature store. */
+function hydrateAll(d: CampaignData) {
+  const playerView = d.playerView
+    ? { ...d.playerView, sessionNote: d.playerView.sessionNote ?? '' }
+    : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
+  useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials)
+  useCharacterStore.getState().hydrate(d.characters, d.xpLog)
+  useQuestStore.getState().hydrate(d.quests)
+  useBestiaryStore.getState().hydrate(d.bestiary)
+  useRestStore.getState().hydrate(d.restEvents)
+  useItemStore.getState().hydrate(d.items)
+  useLogStore.getState().hydrate(d.logEntries)
+  useNotesStore.getState().hydrate(d.pinnedNotes)
+  useEconomyStore.getState().hydrate(d.economy)
+}
+
 export default function App() {
-  const { activeId, activeCampaign, init, flushCurrent, switchCampaign } = useCampaignStore()
-  // null = GM, non-empty string = player's characterId, '' = player but no character selected
+  const { activeId, activeCampaign, loading, init, flushCurrent, commitStaged, applyRemote, exitToSwitcher } = useCampaignStore()
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(loadPlayerRole)
-  // Phones are always players — never the GM interface.
   const isPhone = useIsPhone()
 
-  // Bind this device to a character (used by the mobile "create character" flow).
   const adoptCharacter = (characterId: string) => {
     setPlayerCharacterId(characterId)
     savePlayerRole(characterId)
   }
 
-  useEffect(() => {
-    init()
-  }, [init])
+  // Boot: load the campaign list (and re-enter a saved session if there is one).
+  useEffect(() => { void init() }, [init])
 
-  // Hydrate all feature stores when campaign loads
+  // Hydrate feature stores when a campaign becomes active (on enter).
   useEffect(() => {
-    if (!activeCampaign) return
-    const d = activeCampaign
-    // Migration guard: add playerView default for campaigns created before this feature
-    const playerView = d.playerView
-      ? { ...d.playerView, sessionNote: d.playerView.sessionNote ?? '' }   // fill missing sessionNote on old saves
-      : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
-    useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials)
-    useCharacterStore.getState().hydrate(d.characters, d.xpLog)
-    useQuestStore.getState().hydrate(d.quests)
-    useBestiaryStore.getState().hydrate(d.bestiary)
-    useRestStore.getState().hydrate(d.restEvents)
-    useItemStore.getState().hydrate(d.items)
-    useLogStore.getState().hydrate(d.logEntries)
-    useNotesStore.getState().hydrate(d.pinnedNotes)
-    useEconomyStore.getState().hydrate(d.economy)
-  }, [activeId]) // re-hydrate on campaign switch
+    if (activeCampaign) hydrateAll(activeCampaign)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId])
 
-  const isPlayerMode = playerCharacterId !== null || isPhone
-
-  // Save before tab close — skip on player tab (player never writes, and flushing stale data would overwrite the GM's changes)
+  // Live sync: subscribe to this campaign; adopt changes from other devices.
   useEffect(() => {
-    if (isPlayerMode) return
+    if (!activeId) return
+    connectSync(activeId, async (msg) => {
+      if (msg.type === 'update') {
+        if (!msg.data) { exitToSwitcher(); return }   // campaign was deleted elsewhere
+        applyRemote(msg.data)
+        hydrateAll(msg.data)
+      } else if (msg.type === 'image') {
+        await hydrateImages(activeId)
+        const d = useCampaignStore.getState().activeCampaign
+        if (d) hydrateAll(d)   // nudge a re-render so the new image shows
+      }
+    })
+    return () => disconnectSync()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId])
+
+  // Flush any pending save on tab close.
+  useEffect(() => {
     const onUnload = () => flushCurrent()
     window.addEventListener('beforeunload', onUnload)
     return () => window.removeEventListener('beforeunload', onUnload)
-  }, [flushCurrent, isPlayerMode])
+  }, [flushCurrent])
 
-  // Sync player tab: re-hydrate when the GM writes to localStorage from another tab
-  useEffect(() => {
-    if (!activeId) return
-    const campaignKey = `soulscraft_campaign_${activeId}`
-    const hydrate = (raw: string) => {
-      try {
-        const d = JSON.parse(raw)
-        const playerView = d.playerView
-          ? { sessionNote: '', ...d.playerView }
-          : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
-        useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials)
-        useCharacterStore.getState().hydrate(d.characters, d.xpLog)
-        useQuestStore.getState().hydrate(d.quests)
-        useBestiaryStore.getState().hydrate(d.bestiary)
-        useRestStore.getState().hydrate(d.restEvents)
-        useItemStore.getState().hydrate(d.items)
-        useLogStore.getState().hydrate(d.logEntries)
-        useNotesStore.getState().hydrate(d.pinnedNotes)
-        useEconomyStore.getState().hydrate(d.economy)
-        // Keep campaign store in sync so flushCurrent (GM only) never saves stale data
-        useCampaignStore.getState().updateCampaignData(d)
-      } catch { /* malformed data — ignore */ }
-    }
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== campaignKey || !e.newValue) return
-      hydrate(e.newValue)
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [activeId])
+  if (loading && !activeCampaign) {
+    return (
+      <div className="min-h-screen bg-stone-900 flex items-center justify-center text-stone-500 text-sm">
+        Loading campaigns…
+      </div>
+    )
+  }
 
   if (!activeId || !activeCampaign) {
     return (
       <CampaignSwitcher
         playerOnly={isPhone}
-        onPlay={(campaignId, characterId) => {
+        onPlay={async (_campaignId, characterId) => {
+          await commitStaged()
           setPlayerCharacterId(characterId)
           savePlayerRole(characterId)
-          switchCampaign(campaignId)
         }}
       />
     )

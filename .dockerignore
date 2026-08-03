@@ -10,9 +10,10 @@ dist-ssr
 .vscode
 .idea
 
-# Deploy tooling (not needed in the image build context)
+# Deploy tooling + backend (not part of the static image build)
 deploy
 scripts
+server
 
 # Docs & rulebook extraction artifacts (not part of the app bundle)
 *.md
