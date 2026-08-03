@@ -1,12 +1,13 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import {
   User, Map as MapIcon, Swords, Send, Sparkles, Hourglass, RotateCcw,
-  ChevronDown, ChevronRight, Trash2, Package, Coins, Heart, Zap, Shield,
+  ChevronDown, ChevronRight, Trash2, Package, Coins, Heart, Zap, Shield, LogOut,
 } from 'lucide-react'
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
 import { useCombatStore } from '../combat/store'
 import { useRequestStore } from '../requests/store'
+import { useCampaignStore } from '../campaigns/store'
 import { LevelUpModal, type LevelUpInitialState } from '../characters/LevelUpModal'
 import { PlayerRequestModal } from './PlayerRequestModal'
 import { PlayerMap } from './PlayerMap'
@@ -38,6 +39,7 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
   } = useCharacterStore()
   const sessionNote = useWorldStore(s => s.sessionNote)
   const combatActive = useCombatStore(s => s.session !== null && !s.session.ended)
+  const exitToSwitcher = useCampaignStore(s => s.exitToSwitcher)
 
   const [pane, setPane] = useState<Pane>('character')
   useEffect(() => { if (combatActive) setPane('world') }, [combatActive])
@@ -146,7 +148,7 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
   const def = activeChar ? computeDef(activeChar.armorLoadout) : 0
 
   return (
-    <div className="h-full flex flex-col bg-stone-950 text-stone-100">
+    <div className="h-full flex flex-col bg-stone-950 text-stone-100 pt-[env(safe-area-inset-top)]">
       {/* Session note banner */}
       {sessionNote && (
         <div className="shrink-0 bg-teal-950/60 border-b border-teal-800/40 px-4 py-2.5 text-base text-teal-200 text-center">
@@ -485,6 +487,7 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
           label={combatActive ? 'Combat' : 'Map'}
           alert={combatActive}
         />
+        <NavButton active={false} onClick={exitToSwitcher} icon={<LogOut size={22} />} label="Campaigns" />
         {!isPlayerMode && (
           <NavButton active={false} onClick={onClose} icon={<ChevronRight size={22} />} label="GM View" />
         )}

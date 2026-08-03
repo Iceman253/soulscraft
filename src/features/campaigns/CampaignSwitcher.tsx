@@ -59,7 +59,10 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-8">
+    <div
+      className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-8"
+      style={{ paddingTop: 'max(2rem, env(safe-area-inset-top))', paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
+    >
 
       {/* Header */}
       <div className="mb-10 text-center select-none">
