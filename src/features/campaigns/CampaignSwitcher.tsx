@@ -11,7 +11,11 @@ interface Props {
 
 export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
   const { index, createCampaign, deleteCampaign, exportCampaign, importCampaign, stageCampaign } = useCampaignStore()
-  const stagedCharacters = useCampaignStore(s => s.staged?.data.characters ?? [])
+  // Select the stable `staged` ref and derive the array OUTSIDE the selector — a
+  // selector returning a fresh `[]` each render triggers an infinite loop under
+  // Zustand v5 / useSyncExternalStore.
+  const staged = useCampaignStore(s => s.staged)
+  const stagedCharacters = staged?.data.characters ?? []
 
   const [showNew, setShowNew] = useState(false)
   const [newName, setNewName] = useState('')
