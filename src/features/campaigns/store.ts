@@ -27,6 +27,21 @@ export function getRememberedCode(id: string): string | null {
   return loadCodes()[id] ?? null
 }
 
+// Campaigns CREATED on this device — only these reveal their code in the UI.
+// Entering someone else's campaign remembers the code (to skip the prompt) but
+// does NOT mark it created, so a different GM's device never shows the code.
+const CREATED_KEY = 'soulscraft_created'
+function loadCreated(): string[] {
+  try { return JSON.parse(localStorage.getItem(CREATED_KEY) || '[]') } catch { return [] }
+}
+function markCreated(id: string) {
+  const ids = loadCreated()
+  if (!ids.includes(id)) { ids.push(id); localStorage.setItem(CREATED_KEY, JSON.stringify(ids)) }
+}
+export function wasCreatedHere(id: string): boolean {
+  return loadCreated().includes(id)
+}
+
 function emptyData(id: string, name: string): CampaignData {
   return {
     id, name,
@@ -115,6 +130,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     try {
       await createCampaignOnServer(id, name, code, emptyData(id, name))
       rememberCode(id, code)
+      markCreated(id)
       await get().refreshList()
       return id
     } catch { return null }
@@ -180,6 +196,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     const id = data.id || newId()
     try {
       await createCampaignOnServer(id, data.name, code, { ...data, id })
+      rememberCode(id, code)
+      markCreated(id)
       await get().refreshList()
       return id
     } catch { return null }

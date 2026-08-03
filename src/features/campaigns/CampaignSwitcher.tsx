@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Plus, Upload, Trash2, Download, ChevronRight, Shield, User, Lock } from 'lucide-react'
-import { useCampaignStore, getRememberedCode } from './store'
+import { Plus, Upload, Trash2, Download, ChevronRight, Shield, User, Lock, KeyRound } from 'lucide-react'
+import { useCampaignStore, getRememberedCode, wasCreatedHere } from './store'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 
 interface Props {
@@ -155,6 +155,14 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
               <div className="flex-1 min-w-0">
                 <div className="font-heading text-stone-100 tracking-wide mb-0.5" style={{ fontSize: '14px' }}>{meta.name}</div>
                 <div className="text-xs text-stone-500 mt-1 font-mono">{new Date(meta.updatedAt).toLocaleString()}</div>
+                {/* Code is shown ONLY on the device that created this campaign. */}
+                {!playerOnly && wasCreatedHere(meta.id) && getRememberedCode(meta.id) && (
+                  <div className="text-xs mt-1 flex items-center gap-1 text-stone-400">
+                    <KeyRound size={11} className="text-gold/70" />
+                    <span className="text-stone-500">Code:</span>
+                    <span className="font-mono text-gold/90 select-all">{getRememberedCode(meta.id)}</span>
+                  </div>
+                )}
               </div>
 
               {!playerOnly && (
