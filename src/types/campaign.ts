@@ -8,6 +8,7 @@ import type { PinnedNote } from './notes'
 import type { XpEvent } from './xp'
 import type { Item } from './items'
 import type { EconomyData } from './economy'
+import type { CombatSession } from './combat'
 
 // ── Campaign ───────────────────────────────────────────────────────────
 export interface CampaignMeta {
@@ -47,4 +48,7 @@ export interface CampaignData {
   /** Map background placement (flow coords). The image is in the image cache
    *  under soulscraft_mapbg_{id}. Optional for backward compatibility. */
   mapBackground?: MapBackground
+  /** Active combat session, synced across devices so players see the fight.
+   *  Optional for backward compatibility. */
+  combat?: CombatSession | null
 }

@@ -4,6 +4,7 @@ import { newId } from '../../lib/id'
 import { log } from '../log/store'
 import { computeDef } from '../../lib/armor'
 import { useCharacterStore } from '../characters/store'
+import { useCampaignStore } from '../campaigns/store'
 
 // Rulebook p.101: Weak 1-4 HP, Average 5-10 HP, Strong 11-12 HP, Mighty 13+ HP.
 // Defaults sit at the midpoint / typical value of each tier.
@@ -17,6 +18,8 @@ export const HP_TIER: Record<BestiaryEntry['hpTier'], number> = {
 interface CombatStore {
   session: CombatSession | null
 
+  /** Adopt a synced session from campaign data (remote change / initial load). */
+  hydrate: (session: CombatSession | null) => void
   startCombat: () => void
   addCharacterCombatant: (character: Character) => void
   addCreatureCombatant: (creature: BestiaryEntry, label?: string, customHp?: number, customDef?: number, customDamageDie?: string) => void
@@ -37,6 +40,10 @@ interface CombatStore {
 
 export const useCombatStore = create<CombatStore>((set, get) => ({
   session: null,
+
+  hydrate(session) {
+    set({ session })
+  },
 
   startCombat() {
     const session: CombatSession = {
@@ -305,3 +312,10 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     log('combat-end', `⚔️ Combat ended. Round ${session.round}. Alive: ${alive.map(c => c.name).join(', ') || 'none'}. Defeated: ${dead.map(c => c.name).join(', ') || 'none'}.`)
   },
 }))
+
+// Persist the combat session into the shared campaign data on every change, so it
+// syncs across devices (players see the fight). App wraps hydration in
+// runWithoutSave, so adopting a remote session never echoes back to the server.
+useCombatStore.subscribe((state) => {
+  useCampaignStore.getState().updateCampaignData({ combat: state.session })
+})
