@@ -207,7 +207,8 @@ export function WorldMap() {
     saveMapBg(activeId, url)
     setBgUrl(url)
     // Place it centered over the current node spread and open scaling mode.
-    const img = new Image()
+    // (window.Image — the lucide `Image` icon import shadows the global here.)
+    const img = new window.Image()
     img.onload = () => {
       let cx = 0, cy = 0, span = 800
       if (areas.length > 0) {
