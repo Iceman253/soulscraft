@@ -138,6 +138,9 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
     const id = newId()
     const areas = [...get().areas, { ...area, id, subNodes: [], subEdges: [], revealed: true }]
     updAreas(areas, get().edges, set)
+    // New areas are visible to players by default so they appear on the player
+    // map immediately (the GM can hide any area via right-click → Hide from Players).
+    get().addPlayerVisibleArea(id)
     return id
   },
 
@@ -200,6 +203,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
       { id: newId(), sourceId: newId_, targetId: edge.targetId },
     ]
     updAreas(areas, edges, set)
+    get().addPlayerVisibleArea(newId_)
   },
 
   toggleFog() { set(s => ({ fogEnabled: !s.fogEnabled })) },

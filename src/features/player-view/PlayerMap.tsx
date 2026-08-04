@@ -9,7 +9,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { useWorldStore } from '../map/store'
 import { useCharacterStore } from '../characters/store'
 import { TokenAvatar } from '../../ui/TokenAvatar'
-import type { Area } from '../../types'
+import type { Area, Character } from '../../types'
 
 // ── Realm colors (same as GM map) ────────────────────────────────────────
 const REALM_COLORS: Record<string, string> = {
@@ -105,10 +105,24 @@ function GhostDestNode(_: NodeProps) {
   )
 }
 
+// ── Free-floating character token (mirrors the GM's map tokens) ──────────────
+function PlayerTokenNode({ data }: NodeProps) {
+  const c = (data as unknown as { char: Character }).char
+  return (
+    <div className="flex flex-col items-center gap-0.5" title={c.name}>
+      <div className="rounded-full ring-2 ring-gold/70 shadow-lg">
+        <TokenAvatar name={c.name} characterId={c.id} size={28} className={c.isGhost ? 'opacity-50 grayscale' : ''} />
+      </div>
+      <span className="text-[10px] text-stone-100 bg-stone-900/85 px-1 rounded whitespace-nowrap max-w-24 truncate">{c.name}</span>
+    </div>
+  )
+}
+
 const nodeTypes = {
   playerArea:  PlayerAreaNode,
   unknownDest: UnknownDestinationNode,
   ghostDest:   GhostDestNode,
+  playerToken: PlayerTokenNode,
 }
 
 // ── Inner canvas (needs ReactFlowProvider context for useReactFlow) ──────────
@@ -243,7 +257,20 @@ function PlayerMapCanvas() {
       }
     }
 
-    const rfNodes = [...areaNodes, ...placeholderNodes, ...ghostNodes]
+    // Free-floating character tokens (GM dropped them on empty canvas) — shown to
+    // players regardless of area visibility, since the GM placed them deliberately.
+    const tokenNodes: Node[] = characters
+      .filter(c => c.mapPos && !c.isDead)
+      .map(c => ({
+        id: 'tok:' + c.id,
+        type: 'playerToken',
+        position: c.mapPos!,
+        data: { char: c },
+        draggable: false,
+        selectable: false,
+      }))
+
+    const rfNodes = [...areaNodes, ...placeholderNodes, ...ghostNodes, ...tokenNodes]
 
     // Build edges
     const shownNodeIds = new Set(rfNodes.map(n => n.id))
@@ -315,7 +342,8 @@ function PlayerMapCanvas() {
     }
   }, [rfNodes.length, fitView])
 
-  if (playerVisibleAreaIds.length === 0 && travelingMarkers.length === 0) {
+  const hasFreeTokens = characters.some(c => c.mapPos && !c.isDead)
+  if (playerVisibleAreaIds.length === 0 && travelingMarkers.length === 0 && !hasFreeTokens) {
     return (
       <div className="h-full flex items-center justify-center bg-stone-950 text-stone-500 text-sm">
         <div className="text-center">
