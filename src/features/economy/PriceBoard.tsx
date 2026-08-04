@@ -125,7 +125,7 @@ export function PriceBoard({ market }: Props) {
       </div>
 
       {/* Column headers */}
-      <div className="shrink-0 grid grid-cols-[1fr_90px_110px_110px_100px_120px] gap-2 px-4 py-1.5 border-b border-stone-700/40 text-[10px] text-stone-600 uppercase tracking-wider font-heading">
+      <div className="shrink-0 grid grid-cols-[1fr_90px_110px_110px_100px_120px] gap-2 px-4 py-2 border-b border-stone-700/40 text-xs text-stone-500 uppercase tracking-wider font-heading">
         <div>Ware</div>
         <div className="text-center">Stock</div>
         <div className="text-right" title="The engine's price from this market's profile — click a row's price to see why">Suggested</div>

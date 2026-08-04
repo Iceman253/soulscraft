@@ -135,6 +135,7 @@ interface CharacterStore {
 
   // Location
   setLocation: (id: string, locationId: string | null) => void
+  setMapPos: (id: string, pos: { x: number; y: number } | null) => void
   setSubLocation: (id: string, subLocationId: string | null) => void
 
   // Skills / Traits / Abilities
@@ -604,8 +605,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     log('character-move', `✨ ${char.name} has been resurrected by the Tower Keepers! Full HP and SD restored.`)
   },
 
+  setMapPos(id, pos) {
+    // Free placement on the map — clears any area/sub-location so a character is
+    // either inside a location OR free on the canvas, never both.
+    const characters = mapChar(get().characters, id, c => ({
+      ...c, mapPos: pos ?? undefined, locationId: pos ? null : c.locationId, subLocationId: pos ? null : c.subLocationId,
+    }))
+    set({ characters })
+    save(characters, get().xpLog)
+  },
+
   setLocation(id, locationId) {
-    const characters = mapChar(get().characters, id, c => ({ ...c, locationId }))
+    const characters = mapChar(get().characters, id, c => ({ ...c, locationId, mapPos: undefined }))
     set({ characters })
     save(characters, get().xpLog)
     // Auto-reveal the area to players when a character arrives there

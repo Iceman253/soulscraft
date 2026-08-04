@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { UserPlus } from 'lucide-react'
 import { useCharacterStore } from '../characters/store'
 import { buildNewCharacter } from '../characters/CharacterPanel'
-import { SPECIES, CLASSES, CLASS_DISCIPLINES, SPECIES_DATA } from '../../lib/constants'
+import { SPECIES, CLASSES, CLASS_DISCIPLINES, SPECIES_DATA, DISCIPLINE_EDGES } from '../../lib/constants'
 
 interface Props {
   title?: string
@@ -24,6 +24,7 @@ export function MobileCharacterCreate({ title = 'Create your character', onCreat
   const disciplines = CLASS_DISCIPLINES[cls] ?? []
   const speciesTrait = SPECIES_DATA[species]?.speciesTrait
   const variantTrait = variants.find(v => v.name === variant)?.trait
+  const disciplineEdge = DISCIPLINE_EDGES[discipline]
 
   const pickSpecies = (s: string) => {
     setSpecies(s)
@@ -69,8 +70,14 @@ export function MobileCharacterCreate({ title = 'Create your character', onCreat
 
       {/* Discipline */}
       {disciplines.length > 0 && (
-        <Field label="Discipline">
+        <Field label="Discipline (subclass)">
           <Chips options={disciplines} value={discipline} onPick={setDiscipline} />
+          {disciplineEdge && (
+            <div className="mt-2 rounded-xl bg-stone-900 border border-stone-700 p-3.5 text-base leading-relaxed">
+              <span className="text-gold font-semibold">{disciplineEdge.name}: </span>
+              <span className="text-stone-400">{disciplineEdge.description}</span>
+            </div>
+          )}
         </Field>
       )}
 

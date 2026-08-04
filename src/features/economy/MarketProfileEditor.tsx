@@ -23,16 +23,16 @@ function ScaleInput({ label, field, value, onChange, hint }: {
   return (
     <div>
       <div className="flex items-baseline justify-between mb-1.5">
-        <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">{label}</label>
-        <span className="text-xs text-stone-400">{SCALE_LABELS[field][value - 1]}</span>
+        <label className="text-sm font-semibold text-stone-400 uppercase tracking-wider font-heading">{label}</label>
+        <span className="text-sm text-stone-300">{SCALE_LABELS[field][value - 1]}</span>
       </div>
-      <div className="flex gap-1">
+      <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map(n => (
           <button
             key={n}
             onClick={() => onChange(n)}
             title={SCALE_LABELS[field][n - 1]}
-            className={`flex-1 py-1.5 rounded text-xs font-mono transition-colors ${
+            className={`flex-1 py-2 rounded text-sm font-mono transition-colors ${
               n === value
                 ? 'bg-amber-800/60 text-amber-100 border border-amber-600'
                 : n < value
@@ -44,7 +44,7 @@ function ScaleInput({ label, field, value, onChange, hint }: {
           </button>
         ))}
       </div>
-      <div className="text-[10px] text-stone-600 mt-1 leading-snug">{hint}</div>
+      <div className="text-xs text-stone-500 mt-1.5 leading-snug">{hint}</div>
     </div>
   )
 }
@@ -79,8 +79,8 @@ export function MarketProfileEditor({ market }: Props) {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-5">
-      <div className="max-w-2xl space-y-5">
+    <div className="h-full overflow-y-auto p-6">
+      <div className="max-w-5xl space-y-6">
 
         {/* Identity */}
         <div className="grid grid-cols-2 gap-3">

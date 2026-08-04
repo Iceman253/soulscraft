@@ -67,7 +67,7 @@ export function AreaNodeComponent({ data }: NodeProps) {
       onDrop={e => {
         setDragOver(false)
         const charId = e.dataTransfer.getData(CHAR_DND)
-        if (charId && onDropCharacter) { e.preventDefault(); onDropCharacter(charId) }
+        if (charId && onDropCharacter) { e.preventDefault(); e.stopPropagation(); onDropCharacter(charId) }
       }}
       className={`relative min-w-32 rounded-lg border-2 cursor-pointer transition-all shadow-lg ${
         hidden

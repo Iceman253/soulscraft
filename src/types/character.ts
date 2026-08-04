@@ -203,6 +203,9 @@ export interface Character {
   missedRests: number
   locationId: string | null
   subLocationId: string | null
+  /** Free position on the world map (dropped on empty canvas, not inside an
+   *  area). Mutually exclusive with locationId — set one clears the other. */
+  mapPos?: { x: number; y: number }
   currency: Currency
   onHand: InventorySection
   storage: InventorySection

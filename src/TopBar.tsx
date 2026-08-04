@@ -54,7 +54,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
   }
 
   return (
-    <div className="shrink-0 h-12 bg-stone-800 border-b border-stone-600 flex items-stretch px-3 gap-0">
+    <div className="shrink-0 h-[calc(3rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-stone-800 border-b border-stone-600 flex items-stretch px-3 gap-0">
 
       {/* Campaign name — Press Start 2P gives it identity */}
       <div className="flex items-center pr-3 shrink-0 max-w-[200px]">

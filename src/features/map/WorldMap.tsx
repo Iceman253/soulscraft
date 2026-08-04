@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap, ConnectionMode,
   applyNodeChanges,
   type Node, type Edge, type NodeChange, type EdgeChange,
-  type Connection,
+  type Connection, type NodeProps, type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Plus, Image, Eye, EyeOff, Users, ChevronDown } from 'lucide-react'
@@ -18,15 +18,29 @@ import { SubMap } from './SubMap'
 import { AddNodeModal } from './AddNodeModal'
 import { ContextMenu } from '../../ui/ContextMenu'
 import { TokenAvatar } from '../../ui/TokenAvatar'
-import type { AreaEdge as AreaEdgeType } from '../../types'
+import type { AreaEdge as AreaEdgeType, Character } from '../../types'
 
-const nodeTypes = { area: AreaNodeComponent }
+/** A free-floating character token on the world map (dropped on empty canvas). */
+function TokenNode({ data }: NodeProps) {
+  const c = (data as { char: Character }).char
+  return (
+    <div className="flex flex-col items-center gap-0.5" title={c.name}>
+      <div className="rounded-full ring-2 ring-gold/70 shadow-lg">
+        <TokenAvatar name={c.name} characterId={c.id} size={34} />
+      </div>
+      <span className="text-[10px] text-stone-100 bg-stone-900/85 px-1 rounded whitespace-nowrap max-w-24 truncate">{c.name}</span>
+    </div>
+  )
+}
+
+const nodeTypes = { area: AreaNodeComponent, token: TokenNode }
 const edgeTypes = { area: AreaEdgeComponent }
 
 export function WorldMap() {
   const { areas, edges, fogEnabled, playerVisibleAreaIds, addArea, deleteArea, moveArea, addEdge: addWorldEdge, updateEdge, deleteEdge, toggleFog, revealArea, addPlayerVisibleArea, removePlayerVisibleArea } = useWorldStore()
   const { activeId } = useCampaignStore()
-  const { characters, setLocation, setSubLocation, setInTower } = useCharacterStore()
+  const { characters, setLocation, setSubLocation, setInTower, setMapPos } = useCharacterStore()
+  const rfRef = useRef<ReactFlowInstance | null>(null)
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set())
   const [subMapAreaId, setSubMapAreaId] = useState<string | null>(null)
@@ -76,13 +90,24 @@ export function WorldMap() {
     draggable: true,
   })), [areas, fogEnabled, selectedAreaId, revealArea, setLocation, setSubLocation, setInTower])
 
+  // Free-floating character tokens (dropped on empty canvas, not inside an area).
+  const tokenNodes: Node[] = useMemo(() => characters
+    .filter(c => c.mapPos && !c.isDead)
+    .map(c => ({
+      id: 'tok:' + c.id,
+      type: 'token',
+      position: c.mapPos!,
+      data: { char: c },
+      draggable: true,
+    })), [characters])
+
   // Local state for ReactFlow to apply smooth drag updates against without round-tripping the store.
-  const [rfNodes, setRfNodes] = useState<Node[]>(baseNodes)
+  const [rfNodes, setRfNodes] = useState<Node[]>([...baseNodes, ...tokenNodes])
 
   // Sync local node state when the base (store-derived) nodes change — new areas, selection changes, etc.
   // During a drag, we write to the local state via applyNodeChanges; the store isn't touched until drag end,
   // so baseNodes won't change mid-drag and this won't clobber the in-progress movement.
-  useEffect(() => { setRfNodes(baseNodes) }, [baseNodes])
+  useEffect(() => { setRfNodes([...baseNodes, ...tokenNodes]) }, [baseNodes, tokenNodes])
 
   const rfEdges: Edge[] = useMemo(() => edges.map(e => ({
     id: e.id,
@@ -106,10 +131,11 @@ export function WorldMap() {
     // Persist only the final drag position to the store. Updating mid-drag causes re-render loops.
     for (const change of changes) {
       if (change.type === 'position' && change.position && change.dragging === false) {
-        moveArea(change.id, change.position)
+        if (change.id.startsWith('tok:')) setMapPos(change.id.slice(4), change.position)
+        else moveArea(change.id, change.position)
       }
     }
-  }, [moveArea])
+  }, [moveArea, setMapPos])
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     setSelectedEdgeIds(prev => {
@@ -164,12 +190,25 @@ export function WorldMap() {
   }
 
   return (
-    <div className="w-full h-full relative">
+    <div
+      className="w-full h-full relative"
+      onDragOver={e => { if (e.dataTransfer.types.includes(CHAR_DND)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }}
+      onDrop={e => {
+        // Reached here only if the drop missed an area node and the tray
+        // (both stopPropagation) → free-place the token at the cursor.
+        const charId = e.dataTransfer.getData(CHAR_DND)
+        if (!charId || !rfRef.current) return
+        e.preventDefault()
+        const pos = rfRef.current.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+        setMapPos(charId, pos)
+      }}
+    >
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        onInit={inst => { rfRef.current = inst }}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -326,11 +365,11 @@ export function WorldMap() {
           onDragOver={e => { if (e.dataTransfer.types.includes(CHAR_DND)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }}
           onDrop={e => {
             const charId = e.dataTransfer.getData(CHAR_DND)
-            if (charId) { e.preventDefault(); setLocation(charId, null); setSubLocation(charId, null); setInTower(charId, false) }
+            if (charId) { e.preventDefault(); e.stopPropagation(); setLocation(charId, null); setSubLocation(charId, null); setInTower(charId, false); setMapPos(charId, null) }
           }}
         >
           <div className="text-xs text-stone-500 mb-1.5 px-1 flex items-center gap-1">
-            <Users size={11} /> Party — drag onto a location
+            <Users size={11} /> Party — drag onto a location or the map
           </div>
           <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
             {characters.filter(c => !c.isDead).map(c => {
@@ -346,11 +385,11 @@ export function WorldMap() {
                   <TokenAvatar name={c.name} characterId={c.id} size={22} />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-stone-200 truncate">{c.name}{c.inTower ? ' 🗼' : ''}</div>
-                    <div className="text-xs text-stone-500 truncate">{loc ? `📍 ${loc.name}` : 'Unplaced'}</div>
+                    <div className="text-xs text-stone-500 truncate">{loc ? `📍 ${loc.name}` : c.mapPos ? '🗺️ On map' : 'Unplaced'}</div>
                   </div>
-                  {loc && (
+                  {(loc || c.mapPos) && (
                     <button
-                      onClick={() => { setLocation(c.id, null); setSubLocation(c.id, null); setInTower(c.id, false) }}
+                      onClick={() => { setLocation(c.id, null); setSubLocation(c.id, null); setInTower(c.id, false); setMapPos(c.id, null) }}
                       title="Remove from map"
                       className="text-stone-600 hover:text-red-400 shrink-0 px-1"
                     >
