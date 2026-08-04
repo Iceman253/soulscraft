@@ -8,7 +8,7 @@ export function PlayerCombatView() {
 
   if (!session || session.ended) {
     return (
-      <div className="flex items-center justify-center h-full text-stone-500 text-sm">
+      <div className="flex items-center justify-center h-full text-stone-500 text-base md:text-sm">
         <div className="text-center">
           <Swords size={32} className="mx-auto mb-3 opacity-30" />
           No active combat.
@@ -37,16 +37,16 @@ export function PlayerCombatView() {
       {/* Combat header */}
       <div className="shrink-0 px-4 py-3 bg-stone-800 border-b border-stone-700">
         <div className="flex items-center gap-3">
-          <Swords size={16} className="text-redstone" />
-          <span className="font-bold text-stone-100 font-heading tracking-wide">Round <span className="font-mono tabular-nums">{session.round}</span></span>
+          <Swords size={18} className="text-redstone md:w-4 md:h-4" />
+          <span className="font-bold text-stone-100 font-heading tracking-wide text-lg md:text-base">Round <span className="font-mono tabular-nums">{session.round}</span></span>
           {activeCombatant && (
-            <span className="ml-auto text-sm text-gold font-semibold font-heading tracking-wide">
+            <span className="ml-auto text-base md:text-sm text-gold font-semibold font-heading tracking-wide">
               ⚡ {activeCombatant.name}
             </span>
           )}
         </div>
         {nextCombatant && (
-          <div className="text-xs text-stone-500 mt-0.5 text-right">
+          <div className="text-sm md:text-xs text-stone-500 mt-0.5 text-right">
             Next up: <span className="text-stone-400">{nextCombatant.name}</span>
           </div>
         )}
@@ -54,13 +54,13 @@ export function PlayerCombatView() {
 
       {/* Initiative list */}
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-2">
+        <div className="space-y-2.5 md:space-y-2">
           {session.combatants.map((c, i) => {
             const isActive = i === session.activeIndex
             const isNext = i === nextIndex
             const isDefeated = c.currentHp <= 0
             return (
-              <div key={c.id} className={`rounded-xl border p-3 transition-all ${
+              <div key={c.id} className={`rounded-xl border p-3.5 md:p-3 transition-all ${
                 isDefeated
                   ? 'border-stone-800 opacity-40 bg-stone-900'
                   : isActive
@@ -71,7 +71,7 @@ export function PlayerCombatView() {
               }`}>
                 <div className="flex items-center gap-3 mb-2">
                   {/* Turn indicator dot */}
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                  <div className={`w-3 h-3 md:w-2 md:h-2 rounded-full shrink-0 ${
                     isDefeated ? 'bg-stone-700'
                     : isActive ? 'bg-gold animate-pulse'
                     : isNext ? 'bg-stone-400'
@@ -80,27 +80,27 @@ export function PlayerCombatView() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`font-medium text-sm ${isDefeated ? 'text-stone-500' : 'text-stone-100'}`}>
+                      <span className={`font-medium text-base md:text-sm ${isDefeated ? 'text-stone-500' : 'text-stone-100'}`}>
                         {c.name}
                       </span>
                       {isActive && !isDefeated && (
-                        <span className="text-xs bg-gold/20 border border-gold/40 text-gold px-1.5 py-0.5 rounded font-medium">
+                        <span className="text-sm md:text-xs bg-gold/20 border border-gold/40 text-gold px-2 py-0.5 md:px-1.5 rounded font-medium">
                           ⚡ Active
                         </span>
                       )}
                       {isNext && !isDefeated && !isActive && (
-                        <span className="text-xs bg-stone-700 border border-stone-600 text-stone-400 px-1.5 py-0.5 rounded">
+                        <span className="text-sm md:text-xs bg-stone-700 border border-stone-600 text-stone-400 px-2 py-0.5 md:px-1.5 rounded">
                           Up next
                         </span>
                       )}
                       <Badge variant={c.kind === 'character' ? 'blue' : 'red'}>{c.kind}</Badge>
-                      {isDefeated && <span className="text-xs text-stone-500">💀 Defeated</span>}
+                      {isDefeated && <span className="text-sm md:text-xs text-stone-500">💀 Defeated</span>}
                     </div>
                   </div>
 
                   {/* HP fraction */}
                   {!isDefeated && (
-                    <span className="text-xs text-stone-400 font-mono shrink-0">
+                    <span className="text-sm md:text-xs text-stone-400 font-mono shrink-0">
                       {c.currentHp}/{c.maxHp} HP
                     </span>
                   )}
@@ -113,9 +113,9 @@ export function PlayerCombatView() {
 
                 {/* Active effects */}
                 {c.activeEffects.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5 md:gap-1">
                     {c.activeEffects.map(e => (
-                      <span key={e.id} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${
+                      <span key={e.id} className={`inline-flex items-center gap-1 px-2 py-1 md:px-1.5 md:py-0.5 rounded text-sm md:text-xs border ${
                         e.damagePerRound
                           ? 'bg-red-900/30 border-red-800/50 text-red-300'
                           : 'bg-purple-900/30 border-purple-700/40 text-purple-300'
