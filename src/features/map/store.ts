@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Area, AreaEdge, SubNode, SubEdge, TravelingMarker, TowerTrials } from '../../types'
+import type { Area, AreaEdge, SubNode, SubEdge, TravelingMarker, TowerTrials, MapBackground } from '../../types'
 import { emptyTowerTrials } from '../../types'
 import { newId } from '../../lib/id'
 import { useCampaignStore } from '../campaigns/store'
@@ -44,7 +44,8 @@ interface WorldStore {
   travelingMarkers: TravelingMarker[]
   sessionNote: string
   towerTrials: TowerTrials
-  hydrate: (areas: Area[], edges: AreaEdge[], playerView?: { visibleAreaIds: string[]; travelingMarkers: TravelingMarker[]; sessionNote?: string }, towerTrials?: TowerTrials) => void
+  mapBackground: MapBackground | null
+  hydrate: (areas: Area[], edges: AreaEdge[], playerView?: { visibleAreaIds: string[]; travelingMarkers: TravelingMarker[]; sessionNote?: string }, towerTrials?: TowerTrials, mapBackground?: MapBackground | null) => void
 
   // Areas
   addArea: (area: Omit<Area, 'id' | 'subNodes' | 'subEdges' | 'revealed'>) => string
@@ -72,6 +73,9 @@ interface WorldStore {
 
   // Session note
   setSessionNote: (note: string) => void
+
+  // Map background placement
+  setMapBackground: (bg: MapBackground | null) => void
 
   // Tower of Trials (resurrection tracker, rulebook p.74)
   beginTowerTrials: () => void
@@ -119,8 +123,9 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
   travelingMarkers: [],
   sessionNote: '',
   towerTrials: emptyTowerTrials(),
+  mapBackground: null,
 
-  hydrate(areas, edges, playerView?, towerTrials?) {
+  hydrate(areas, edges, playerView?, towerTrials?, mapBackground?) {
     const areaIds = new Set(areas.map(a => a.id))
     // Drop any visible-area IDs that no longer exist (area was deleted but ID wasn't cleaned up)
     const playerVisibleAreaIds = (playerView?.visibleAreaIds ?? []).filter(id => areaIds.has(id))
@@ -131,6 +136,7 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
       travelingMarkers: playerView?.travelingMarkers ?? [],
       sessionNote: playerView?.sessionNote ?? '',
       towerTrials: towerTrials ?? emptyTowerTrials(),
+      mapBackground: mapBackground ?? null,
     })
   },
 
@@ -254,6 +260,11 @@ export const useWorldStore = create<WorldStore>((set, get) => ({
         sessionNote: note,
       },
     })
+  },
+
+  setMapBackground(bg) {
+    set({ mapBackground: bg })
+    useCampaignStore.getState().updateCampaignData({ mapBackground: bg ?? undefined })
   },
 
   // ── Tower of Trials ──────────────────────────────────────────────────────────

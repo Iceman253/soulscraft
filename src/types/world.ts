@@ -76,3 +76,12 @@ export interface TowerTrials {
 export function emptyTowerTrials(): TowerTrials {
   return { active: false, towerAreaId: null, keepersAgreed: false, floors: [] }
 }
+
+/** Map background placement in FLOW coordinates (top-left x/y + width/height), so
+ *  it pans and zooms with the nodes. The image itself lives in the image cache. */
+export interface MapBackground {
+  x: number
+  y: number
+  w: number
+  h: number
+}

@@ -8,6 +8,8 @@ import '@xyflow/react/dist/style.css'
 import { useShallow } from 'zustand/react/shallow'
 import { useWorldStore } from '../map/store'
 import { useCharacterStore } from '../characters/store'
+import { useCampaignStore } from '../campaigns/store'
+import { loadMapBg } from '../../lib/imageCache'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 import type { Area, Character } from '../../types'
 
@@ -118,17 +120,28 @@ function PlayerTokenNode({ data }: NodeProps) {
   )
 }
 
+// ── Map background (flow-space, read-only) ────────────────────────────────────
+function PlayerBgNode({ data }: NodeProps) {
+  const { url, w, h } = data as unknown as { url: string; w: number; h: number }
+  return (
+    <div style={{ width: w, height: h, backgroundImage: `url(${url})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', opacity: 0.5, borderRadius: 4 }} />
+  )
+}
+
 const nodeTypes = {
   playerArea:  PlayerAreaNode,
   unknownDest: UnknownDestinationNode,
   ghostDest:   GhostDestNode,
   playerToken: PlayerTokenNode,
+  mapBackground: PlayerBgNode,
 }
 
 // ── Inner canvas (needs ReactFlowProvider context for useReactFlow) ──────────
 function PlayerMapCanvas() {
-  const { areas, edges, playerVisibleAreaIds, travelingMarkers } = useWorldStore()
+  const { areas, edges, playerVisibleAreaIds, travelingMarkers, mapBackground } = useWorldStore()
   const characters = useCharacterStore(s => s.characters)
+  const activeId = useCampaignStore(s => s.activeId)
+  const bgUrl = activeId ? loadMapBg(activeId) : null
   const { fitView } = useReactFlow()
 
   const { rfNodes, rfEdges } = useMemo(() => {
@@ -270,7 +283,19 @@ function PlayerMapCanvas() {
         selectable: false,
       }))
 
-    const rfNodes = [...areaNodes, ...placeholderNodes, ...ghostNodes, ...tokenNodes]
+    // Map background (flow-space, behind everything) — same placement as the GM map.
+    const bgNodes: Node[] = (bgUrl && mapBackground) ? [{
+      id: 'mapbg',
+      type: 'mapBackground',
+      position: { x: mapBackground.x, y: mapBackground.y },
+      data: { url: bgUrl, w: mapBackground.w, h: mapBackground.h },
+      draggable: false,
+      selectable: false,
+      zIndex: -1,
+      style: { pointerEvents: 'none' },
+    }] : []
+
+    const rfNodes = [...bgNodes, ...areaNodes, ...placeholderNodes, ...ghostNodes, ...tokenNodes]
 
     // Build edges
     const shownNodeIds = new Set(rfNodes.map(n => n.id))
@@ -332,7 +357,7 @@ function PlayerMapCanvas() {
     }
 
     return { rfNodes, rfEdges: [...areaEdges, ...ghostEdges, ...travelEdges] }
-  }, [areas, edges, playerVisibleAreaIds, travelingMarkers, characters])
+  }, [areas, edges, playerVisibleAreaIds, travelingMarkers, characters, bgUrl, mapBackground])
 
   // Re-fit whenever the set of visible nodes changes so newly revealed areas
   // are always in view rather than appearing off-screen.
@@ -343,7 +368,8 @@ function PlayerMapCanvas() {
   }, [rfNodes.length, fitView])
 
   const hasFreeTokens = characters.some(c => c.mapPos && !c.isDead)
-  if (playerVisibleAreaIds.length === 0 && travelingMarkers.length === 0 && !hasFreeTokens) {
+  const hasBg = !!(bgUrl && mapBackground)
+  if (playerVisibleAreaIds.length === 0 && travelingMarkers.length === 0 && !hasFreeTokens && !hasBg) {
     return (
       <div className="h-full flex items-center justify-center bg-stone-950 text-stone-500 text-sm">
         <div className="text-center">

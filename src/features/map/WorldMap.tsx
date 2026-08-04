@@ -33,11 +33,19 @@ function TokenNode({ data }: NodeProps) {
   )
 }
 
-const nodeTypes = { area: AreaNodeComponent, token: TokenNode }
+/** Map background rendered in flow space, so it pans/zooms with the nodes. */
+function MapBackgroundNode({ data }: NodeProps) {
+  const { url, w, h } = data as unknown as { url: string; w: number; h: number }
+  return (
+    <div style={{ width: w, height: h, backgroundImage: `url(${url})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', opacity: 0.5, borderRadius: 4 }} />
+  )
+}
+
+const nodeTypes = { area: AreaNodeComponent, token: TokenNode, mapBackground: MapBackgroundNode }
 const edgeTypes = { area: AreaEdgeComponent }
 
 export function WorldMap() {
-  const { areas, edges, fogEnabled, playerVisibleAreaIds, addArea, deleteArea, moveArea, addEdge: addWorldEdge, updateEdge, deleteEdge, toggleFog, revealArea, addPlayerVisibleArea, removePlayerVisibleArea } = useWorldStore()
+  const { areas, edges, fogEnabled, playerVisibleAreaIds, mapBackground, setMapBackground, addArea, deleteArea, moveArea, addEdge: addWorldEdge, updateEdge, deleteEdge, toggleFog, revealArea, addPlayerVisibleArea, removePlayerVisibleArea } = useWorldStore()
   const { activeId } = useCampaignStore()
   const { characters, setLocation, setSubLocation, setInTower, setMapPos } = useCharacterStore()
   const rfRef = useRef<ReactFlowInstance | null>(null)
@@ -49,6 +57,7 @@ export function WorldMap() {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; areaId: string | null } | null>(null)
   const [subMapInitialSubNodeId, setSubMapInitialSubNodeId] = useState<string | null>(null)
   const [showRevealDropdown, setShowRevealDropdown] = useState(false)
+  const [scaleMode, setScaleMode] = useState(false)
 
   const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
     e.preventDefault()
@@ -101,13 +110,31 @@ export function WorldMap() {
       draggable: true,
     })), [characters])
 
+  // Background as a flow-space node (pans/zooms with the nodes). Draggable only
+  // while scaling; otherwise pointer-events off so panning works over it.
+  const bgNode = useMemo<Node | null>(() => (bgUrl && mapBackground) ? {
+    id: 'mapbg',
+    type: 'mapBackground',
+    position: { x: mapBackground.x, y: mapBackground.y },
+    data: { url: bgUrl, w: mapBackground.w, h: mapBackground.h },
+    draggable: scaleMode,
+    selectable: false,
+    zIndex: -1,
+    style: scaleMode ? { cursor: 'move' } : { pointerEvents: 'none' },
+  } : null, [bgUrl, mapBackground, scaleMode])
+
+  const allNodes = useMemo(
+    () => [bgNode, ...baseNodes, ...tokenNodes].filter(Boolean) as Node[],
+    [bgNode, baseNodes, tokenNodes],
+  )
+
   // Local state for ReactFlow to apply smooth drag updates against without round-tripping the store.
-  const [rfNodes, setRfNodes] = useState<Node[]>([...baseNodes, ...tokenNodes])
+  const [rfNodes, setRfNodes] = useState<Node[]>(allNodes)
 
   // Sync local node state when the base (store-derived) nodes change — new areas, selection changes, etc.
   // During a drag, we write to the local state via applyNodeChanges; the store isn't touched until drag end,
-  // so baseNodes won't change mid-drag and this won't clobber the in-progress movement.
-  useEffect(() => { setRfNodes([...baseNodes, ...tokenNodes]) }, [baseNodes, tokenNodes])
+  // so this won't clobber the in-progress movement.
+  useEffect(() => { setRfNodes(allNodes) }, [allNodes])
 
   const rfEdges: Edge[] = useMemo(() => edges.map(e => ({
     id: e.id,
@@ -131,11 +158,13 @@ export function WorldMap() {
     // Persist only the final drag position to the store. Updating mid-drag causes re-render loops.
     for (const change of changes) {
       if (change.type === 'position' && change.position && change.dragging === false) {
-        if (change.id.startsWith('tok:')) setMapPos(change.id.slice(4), change.position)
+        if (change.id === 'mapbg') {
+          if (mapBackground) setMapBackground({ ...mapBackground, x: change.position.x, y: change.position.y })
+        } else if (change.id.startsWith('tok:')) setMapPos(change.id.slice(4), change.position)
         else moveArea(change.id, change.position)
       }
     }
-  }, [moveArea, setMapPos])
+  }, [moveArea, setMapPos, mapBackground, setMapBackground])
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     setSelectedEdgeIds(prev => {
@@ -174,10 +203,46 @@ export function WorldMap() {
   const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !activeId) return
-    const url = await fileToDataUrl(file, 1200)
+    const url = await fileToDataUrl(file, 1600)
     saveMapBg(activeId, url)
     setBgUrl(url)
+    // Place it centered over the current node spread and open scaling mode.
+    const img = new Image()
+    img.onload = () => {
+      let cx = 0, cy = 0, span = 800
+      if (areas.length > 0) {
+        const xs = areas.map(a => a.position.x), ys = areas.map(a => a.position.y)
+        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys)
+        cx = (minX + maxX) / 2; cy = (minY + maxY) / 2
+        span = Math.max(maxX - minX, 300) * 1.6
+      }
+      const w = span
+      const h = w * (img.naturalHeight / Math.max(1, img.naturalWidth))
+      setMapBackground({ x: cx - w / 2, y: cy - h / 2, w, h })
+      setScaleMode(true)
+    }
+    img.src = url
   }
+
+  // Resize the background around its center (keeps aspect ratio).
+  const scaleBg = (factor: number) => {
+    if (!mapBackground) return
+    const { x, y, w, h } = mapBackground
+    const nw = Math.max(80, w * factor), nh = Math.max(80, h * factor)
+    setMapBackground({ x: x - (nw - w) / 2, y: y - (nh - h) / 2, w: nw, h: nh })
+  }
+
+  // While scaling, Enter finishes (locks the background to zoom/pan with the nodes).
+  useEffect(() => {
+    if (!scaleMode) return
+    const onKey = (ev: KeyboardEvent) => {
+      const el = ev.target as HTMLElement
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return
+      if (ev.key === 'Enter') { ev.preventDefault(); setScaleMode(false) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [scaleMode])
 
   if (subMapArea) {
     return (
@@ -222,16 +287,6 @@ export function WorldMap() {
         proOptions={{ hideAttribution: true }}
         style={{ background: '#1a1a1a' }}
       >
-        {bgUrl && (
-          <div
-            style={{
-              position: 'absolute', inset: 0, zIndex: 0,
-              backgroundImage: `url(${bgUrl})`,
-              backgroundSize: 'cover', backgroundPosition: 'center',
-              opacity: 0.3,
-            }}
-          />
-        )}
         <Background color="#666666" gap={28} size={2} />
         <Controls />
         <MiniMap nodeColor={n => {
@@ -356,7 +411,31 @@ export function WorldMap() {
           <Image size={14} /> Map BG
           <input type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
         </label>
+        {bgUrl && mapBackground && !scaleMode && (
+          <button
+            onClick={() => setScaleMode(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-800 border border-stone-600 text-stone-400 hover:text-gold hover:border-gold/50 text-sm shadow-lg"
+          >
+            <Image size={14} /> Scale BG
+          </button>
+        )}
       </div>
+
+      {/* Background scaling controls */}
+      {scaleMode && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-stone-900/95 border border-gold/40 rounded-lg shadow-2xl px-3 py-2">
+          <span className="text-xs text-stone-300 font-medium">Scale background</span>
+          <button onClick={() => scaleBg(1 / 1.1)} title="Smaller" className="w-7 h-7 rounded bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-base leading-none">−</button>
+          <button onClick={() => scaleBg(1.1)} title="Larger" className="w-7 h-7 rounded bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-base leading-none">+</button>
+          <span className="text-[10px] text-stone-500 mx-1">drag the image to position it</span>
+          <button
+            onClick={() => setScaleMode(false)}
+            className="px-2.5 py-1 rounded bg-gold text-stone-900 text-xs font-semibold hover:bg-yellow-400"
+          >
+            Finished Scaling ⏎
+          </button>
+        </div>
+      )}
 
       {/* Character token tray — drag a token onto a location to place; drop back here to remove */}
       {characters.filter(c => !c.isDead).length > 0 && (

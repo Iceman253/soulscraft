@@ -34,7 +34,7 @@ function hydrateAll(d: CampaignData) {
     const playerView = d.playerView
       ? { ...d.playerView, sessionNote: d.playerView.sessionNote ?? '' }
       : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
-    useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials)
+    useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials, d.mapBackground ?? null)
     useCharacterStore.getState().hydrate(d.characters, d.xpLog)
     useQuestStore.getState().hydrate(d.quests)
     useBestiaryStore.getState().hydrate(d.bestiary)

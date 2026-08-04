@@ -188,6 +188,12 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
         </div>
       </div>
 
+      {/* Credit */}
+      <div className="mt-10 text-center text-xs text-stone-600">
+        Soulscraft is a tabletop RPG created by <span className="text-stone-400">rebeljayd</span>.
+        This is a fan-made companion app.
+      </div>
+
       {/* Code prompt */}
       {codePrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
