@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useCampaignStore } from './features/campaigns/store'
+import { useCampaignStore, runWithoutSave } from './features/campaigns/store'
 import { useCharacterStore } from './features/characters/store'
 import { useWorldStore } from './features/map/store'
 import { useQuestStore } from './features/quests/store'
@@ -27,20 +27,23 @@ function loadPlayerRole(): string | null {
   return val !== null ? val : null
 }
 
-/** Push a full campaign blob into every feature store. */
+/** Push a full campaign blob into every feature store. Wrapped so store-internal
+ *  saves during hydration don't echo back to the server (prevents sync loops). */
 function hydrateAll(d: CampaignData) {
-  const playerView = d.playerView
-    ? { ...d.playerView, sessionNote: d.playerView.sessionNote ?? '' }
-    : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
-  useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials)
-  useCharacterStore.getState().hydrate(d.characters, d.xpLog)
-  useQuestStore.getState().hydrate(d.quests)
-  useBestiaryStore.getState().hydrate(d.bestiary)
-  useRestStore.getState().hydrate(d.restEvents)
-  useItemStore.getState().hydrate(d.items)
-  useLogStore.getState().hydrate(d.logEntries)
-  useNotesStore.getState().hydrate(d.pinnedNotes)
-  useEconomyStore.getState().hydrate(d.economy)
+  runWithoutSave(() => {
+    const playerView = d.playerView
+      ? { ...d.playerView, sessionNote: d.playerView.sessionNote ?? '' }
+      : { visibleAreaIds: [], travelingMarkers: [], sessionNote: '' }
+    useWorldStore.getState().hydrate(d.areas, d.edges, playerView, d.towerTrials)
+    useCharacterStore.getState().hydrate(d.characters, d.xpLog)
+    useQuestStore.getState().hydrate(d.quests)
+    useBestiaryStore.getState().hydrate(d.bestiary)
+    useRestStore.getState().hydrate(d.restEvents)
+    useItemStore.getState().hydrate(d.items)
+    useLogStore.getState().hydrate(d.logEntries)
+    useNotesStore.getState().hydrate(d.pinnedNotes)
+    useEconomyStore.getState().hydrate(d.economy)
+  })
 }
 
 export default function App() {

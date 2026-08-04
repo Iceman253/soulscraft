@@ -83,6 +83,17 @@ interface CampaignStore {
   importCampaign: (json: string, code: string) => Promise<string | null>
 }
 
+// While true, updateCampaignData still updates local state but does NOT push to
+// the server. Used to wrap hydration so re-hydrating from a remote change (which
+// can trigger store-internal saves, e.g. the character migration) never echoes
+// back to the server — that was an infinite A⇄B sync loop.
+let suppressSave = false
+export function runWithoutSave(fn: () => void) {
+  const prev = suppressSave
+  suppressSave = true
+  try { fn() } finally { suppressSave = prev }
+}
+
 // ── Debounced server save ──────────────────────────────────────────────────────
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleSave(get: () => CampaignStore) {
@@ -175,7 +186,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     const current = get().activeCampaign
     if (!current) return
     set({ activeCampaign: { ...current, ...patch } })
-    scheduleSave(get)
+    if (!suppressSave) scheduleSave(get)
   },
 
   applyRemote(data) {
