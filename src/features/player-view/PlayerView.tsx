@@ -116,7 +116,7 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
       <div className="flex flex-1 min-h-0">
         {/* Left: map or combat */}
         <div className="flex-1 min-w-0 min-h-0">
-          {combatActive ? <PlayerCombatView /> : <PlayerMap />}
+          {combatActive ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap />}
         </div>
 
         {/* Right: character stats + inventory — always visible */}

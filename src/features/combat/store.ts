@@ -15,6 +15,11 @@ export const HP_TIER: Record<BestiaryEntry['hpTier'], number> = {
   mighty: 16,
 }
 
+/** Auto-rolled initiative (2d6) when a combatant joins — the GM can still edit it. */
+function rollInitiative(): number {
+  return (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1)
+}
+
 interface CombatStore {
   session: CombatSession | null
 
@@ -64,7 +69,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const combatant: Combatant = {
       id: newId(),
       name: character.name,
-      initiative: 0,
+      initiative: rollInitiative(),
       maxHp: character.maxHp,
       currentHp: character.currentHp,
       def: computeDef(character.armorLoadout),
@@ -84,7 +89,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const combatant: Combatant = {
       id: newId(),
       name: label ?? creature.name,
-      initiative: 0,
+      initiative: rollInitiative(),
       maxHp: hp,
       currentHp: hp,
       def: customDef ?? 0,

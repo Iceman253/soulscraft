@@ -167,7 +167,7 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
       <div className="flex-1 min-h-0 overflow-y-auto">
         {pane === 'world' ? (
           <div className="h-full">
-            {combatActive ? <PlayerCombatView /> : <PlayerMap />}
+            {combatActive ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap />}
           </div>
         ) : needsCharacter ? (
           <div className="pb-6">
