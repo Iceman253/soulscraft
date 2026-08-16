@@ -12,6 +12,7 @@ export function TabEffects({ character: c }: TabEffectsProps) {
   const [name, setName] = useState('')
   const [durType, setDurType] = useState<ActiveEffect['durationType']>('scenes')
   const [remaining, setRemaining] = useState(3)
+  const [dmg, setDmg] = useState('none')  // dice rolled each scene/day/round (e.g. Poison)
 
   const submit = () => {
     if (!name.trim()) return
@@ -19,8 +20,9 @@ export function TabEffects({ character: c }: TabEffectsProps) {
       name: name.trim(),
       durationType: durType,
       remaining: durType === 'scenes' || durType === 'days' ? remaining : undefined,
+      damagePerRound: dmg !== 'none' ? dmg : undefined,
     })
-    setName('')
+    setName(''); setDmg('none')
   }
 
   return (
@@ -36,6 +38,7 @@ export function TabEffects({ character: c }: TabEffectsProps) {
                 name: qe.name,
                 durationType: qe.durationType,
                 remaining: qe.durationType === 'scenes' || qe.durationType === 'days' ? qe.defaultDuration : undefined,
+                damagePerRound: qe.damagePerRound,
               })}
               className="px-2.5 py-1 rounded bg-stone-700 border border-stone-600 hover:border-purple-500/50 text-stone-300 text-xs"
             >
@@ -69,6 +72,19 @@ export function TabEffects({ character: c }: TabEffectsProps) {
               className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none" />
           </div>
         )}
+        <div>
+          <div className="text-xs text-stone-500 mb-1">Dmg/tick</div>
+          <select value={dmg} onChange={e => setDmg(e.target.value)} className="bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none">
+            <option value="none">None</option>
+            <option value="1d4">1d4</option>
+            <option value="1d6">1d6</option>
+            <option value="1d8">1d8</option>
+            <option value="1d10">1d10</option>
+            <option value="1d12">1d12</option>
+            <option value="2d6">2d6</option>
+            <option value="3d6">3d6</option>
+          </select>
+        </div>
         <button onClick={submit} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm"><Plus size={13} /></button>
       </div>
 

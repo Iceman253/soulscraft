@@ -232,6 +232,18 @@ function resolveDeathAtZero(chars: Character[], id: string): { characters: Chara
   }
 }
 
+/** Roll a dice spec like "2d6", "1d8", "d6" → total. Returns 0 for anything unparseable. */
+function rollDiceSpec(spec: string): number {
+  const m = spec.match(/(\d*)\s*d\s*(\d+)/i)
+  if (!m) return 0
+  const n = m[1] ? Math.max(1, parseInt(m[1])) : 1
+  const sides = parseInt(m[2])
+  if (!sides) return 0
+  let sum = 0
+  for (let i = 0; i < n; i++) sum += Math.floor(Math.random() * sides) + 1
+  return sum
+}
+
 function defaultClassFeatureState(characterClass: string): ClassFeatureState {
   switch (characterClass) {
     case 'Warrior':
@@ -726,11 +738,25 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   advanceEffectTime(durationType) {
+    const before = get().characters
     const expired: string[] = []
-    const characters = get().characters.map(c => {
+    const dmgLogs: string[] = []
+
+    // Roll & apply damage-over-time (e.g. Poison) for effects that match this
+    // interval, then decrement and expire them. Only effects currently present
+    // are ticked — a cured/removed effect never rolls (no unnecessary damage).
+    let characters = before.map(c => {
+      let damage = 0
       const activeEffects = c.activeEffects
         .map(e => {
           if (e.durationType !== durationType || e.remaining == null) return e
+          if (e.damagePerRound) {
+            const dmg = rollDiceSpec(e.damagePerRound)
+            if (dmg > 0) {
+              damage += dmg
+              dmgLogs.push(`🩸 ${c.name} takes ${dmg} damage from ${e.name} (${e.damagePerRound}).`)
+            }
+          }
           return { ...e, remaining: e.remaining - 1 }
         })
         .filter(e => {
@@ -740,9 +766,22 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           }
           return true
         })
-      return { ...c, activeEffects }
+      const currentHp = Math.max(0, c.currentHp - damage)
+      return { ...c, activeEffects, currentHp }
     })
+
+    // Resolve death / Tower-eject for anyone this tick dropped to 0 HP.
+    for (const c of characters) {
+      const prev = before.find(x => x.id === c.id)
+      if (prev && prev.currentHp > 0 && c.currentHp === 0) {
+        const resolved = resolveDeathAtZero(characters, c.id)
+        characters = resolved.characters
+        if (resolved.message) dmgLogs.push(resolved.message)
+      }
+    }
+
     set({ characters }); save(characters, get().xpLog)
+    dmgLogs.forEach(l => log('character-move', l))
     expired.forEach(name => log('effect-expired', `✨ ${name} expired.`))
   },
 

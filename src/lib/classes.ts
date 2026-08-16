@@ -324,10 +324,12 @@ export const QUICK_EFFECTS: Array<{
   name: string
   durationType: 'scenes' | 'days' | 'until-rest' | 'permanent' | 'manual'
   defaultDuration?: number
+  /** Dice rolled and applied each interval (scene/day/combat round). */
+  damagePerRound?: string
 }> = [
-  { name: 'Poison',          durationType: 'scenes',     defaultDuration: 3 },
+  { name: 'Poison',          durationType: 'scenes',     defaultDuration: 3, damagePerRound: '1d6' },
   { name: 'Weakness',        durationType: 'scenes',     defaultDuration: 3 },
-  { name: 'Withering',       durationType: 'scenes',     defaultDuration: 2 },
+  { name: 'Withering',       durationType: 'scenes',     defaultDuration: 2, damagePerRound: '1d6' },
   { name: 'Slowness',        durationType: 'scenes',     defaultDuration: 2 },
   { name: 'Blindness',       durationType: 'scenes',     defaultDuration: 1 },
   { name: 'Fire Resistance', durationType: 'until-rest'                     },
