@@ -10,6 +10,7 @@ export type RequestType =
   | 'xp'             // award XP
   | 'level-up'       // level up character
   | 'effect-remove'  // remove an active effect
+  | 'effect-add'     // apply a new effect/condition
   | 'currency'       // grant currency
   | 'buy-item'       // buy from a market at the engine's (GM-overridable) price
   | 'sell-item'      // sell an on-hand item to a market

@@ -8,13 +8,13 @@ import { useEconomyStore } from '../economy/store'
 import { log } from '../log/store'
 import { CURRENCY_OPTIONS, formatCopper } from '../../lib/currency'
 import { CLASS_ABILITIES } from '../../lib/classAbilities'
-import type { CombatRole, AppliedStatusEffectSpec } from '../../types'
+import type { CombatRole, AppliedStatusEffectSpec, EffectDuration } from '../../types'
 
 // ── Execute an approved request against the appropriate stores ─────────────────
 // Returns false when execution failed (e.g. buyer can't afford it) so the
 // caller can leave the request pending instead of falsely marking it approved.
 function useExecute() {
-  const { adjustHp, adjustSd, awardXp, levelUp, removeEffect, addOnHandItem, setCurrency, addAbility, addSkill } = useCharacterStore()
+  const { adjustHp, adjustSd, awardXp, levelUp, removeEffect, addEffect, addOnHandItem, setCurrency, addAbility, addSkill } = useCharacterStore()
   const { setStatus } = useQuestStore()
   const { addPlayerVisibleArea } = useWorldStore()
   const characters = useCharacterStore(s => s.characters)
@@ -74,6 +74,15 @@ function useExecute() {
       case 'level-up': {
         levelUp(charId)
         log('level-up', `🆙 ${req.characterName} leveled up!`)
+        break
+      }
+      case 'effect-add': {
+        addEffect(charId, {
+          name: String(p.name),
+          durationType: (typeof p.durationType === 'string' ? p.durationType : 'manual') as EffectDuration,
+          remaining: typeof p.remaining === 'number' ? p.remaining : undefined,
+        })
+        log('effect-applied', `🧪 ${req.characterName}: effect "${p.name}" applied by GM.`)
         break
       }
       case 'effect-remove': {
@@ -173,7 +182,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
 
   const TYPE_ICONS: Record<string, string> = {
     item: '🎒', 'heal-full': '❤️', 'heal-amount': '💊', 'sd-restore': '✨',
-    xp: '⭐', 'level-up': '🆙', 'effect-remove': '🧹',
+    xp: '⭐', 'level-up': '🆙', 'effect-add': '🧪', 'effect-remove': '🧹',
     'quest-complete': '✅', 'quest-fail': '❌', 'quest-activate': '🔄',
     currency: '💰', 'buy-item': '🛒', 'sell-item': '🪙',
     'reveal-area': '🗺️', 'skill-approval': '🎓', custom: '💬',

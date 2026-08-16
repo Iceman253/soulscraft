@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import {
-  ReactFlow, type Node, type Edge,
+  ReactFlow, type Node, type Edge, ConnectionMode,
   Handle, Position, type NodeProps,
   useReactFlow, ReactFlowProvider,
 } from '@xyflow/react'
@@ -307,6 +307,8 @@ function PlayerMapCanvas() {
         id: e.id,
         source: e.sourceId,
         target: e.targetId,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
         label: e.label,
         type: 'default',
         style: { stroke: '#57534e', strokeWidth: 2 },
@@ -387,6 +389,7 @@ function PlayerMapCanvas() {
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
+        connectionMode={ConnectionMode.Loose}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}

@@ -16,6 +16,7 @@ const REQUEST_TYPES: { type: RequestType; icon: string; label: string; desc: str
   { type: 'heal-full',      icon: '❤️', label: 'Full Heal',            desc: 'Request full HP restoration'            },
   { type: 'heal-amount',    icon: '💊', label: 'Heal Amount',          desc: 'Request a specific amount of HP'        },
   { type: 'sd-restore',     icon: '✨', label: 'Restore SD',           desc: 'Request all SD restored'                },
+  { type: 'effect-add',     icon: '🧪', label: 'Add Effect',           desc: 'Ask the GM to apply a potion/condition' },
   { type: 'effect-remove',  icon: '🧹', label: 'Remove Effect',        desc: 'Ask to remove an active condition'      },
   { type: 'quest-complete', icon: '✅', label: 'Complete Quest',       desc: 'Request a quest be marked complete'     },
   { type: 'quest-fail',     icon: '❌', label: 'Fail Quest',           desc: 'Request a quest be marked failed'       },
@@ -41,6 +42,9 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
   const [xpAmount, setXpAmount] = useState('1')
   const [selectedQuestId, setSelectedQuestId] = useState('')
   const [selectedEffectId, setSelectedEffectId] = useState('')
+  const [effectName, setEffectName] = useState('')
+  const [effectDuration, setEffectDuration] = useState<'scenes' | 'days' | 'until-rest' | 'permanent' | 'manual'>('scenes')
+  const [effectCount, setEffectCount] = useState('3')
   const [currencyType, setCurrencyType] = useState('gold')
   const [currencyAmount, setCurrencyAmount] = useState('1')
   const [areaNameText, setAreaNameText] = useState('')
@@ -72,6 +76,16 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
       }
       case 'level-up':
         return { payload: {}, label: 'Level up' }
+      case 'effect-add': {
+        if (!effectName.trim()) return null
+        const needsCount = effectDuration === 'scenes' || effectDuration === 'days'
+        const remaining = needsCount ? Math.max(1, parseInt(effectCount) || 1) : undefined
+        const durLabel = needsCount ? `${remaining} ${effectDuration}` : effectDuration
+        return {
+          payload: { name: effectName.trim(), durationType: effectDuration, remaining },
+          label: `Apply effect: ${effectName.trim()} (${durLabel})`,
+        }
+      }
       case 'effect-remove': {
         const eff = c.activeEffects.find(e => e.id === selectedEffectId)
         if (!eff) return null
@@ -195,6 +209,38 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
 
         {type === 'level-up' && (
           <p className="text-sm text-stone-400">Request to level up from Level {c.level} → {c.level + 1}.</p>
+        )}
+
+        {type === 'effect-add' && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-stone-400 block mb-1">Effect name *</label>
+              <input autoFocus value={effectName} onChange={e => setEffectName(e.target.value)}
+                placeholder="Poison, Strength, Fire Resistance…"
+                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-stone-400 block mb-1">Duration</label>
+                <select value={effectDuration} onChange={e => setEffectDuration(e.target.value as typeof effectDuration)}
+                  className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50">
+                  <option value="scenes">Scenes</option>
+                  <option value="days">Days</option>
+                  <option value="until-rest">Until rest</option>
+                  <option value="permanent">Permanent</option>
+                  <option value="manual">Manual</option>
+                </select>
+              </div>
+              {(effectDuration === 'scenes' || effectDuration === 'days') && (
+                <div className="w-24">
+                  <label className="text-xs text-stone-400 block mb-1">How many</label>
+                  <input type="number" min={1} value={effectCount} onChange={e => setEffectCount(e.target.value)}
+                    className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-stone-500">The GM approves before it's applied to your character.</p>
+          </div>
         )}
 
         {type === 'effect-remove' && (
