@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { newId } from '../../lib/id'
 import { useCampaignStore } from '../campaigns/store'
-import type { RequestType, PlayerRequest } from '../../types'
+import type { PlayerRequest } from '../../types'
 
 // Re-exported for existing imports from this module.
 export type { RequestType, PlayerRequest } from '../../types'
