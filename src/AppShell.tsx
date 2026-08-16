@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TopBar } from './TopBar'
 import { SessionLog } from './features/log/SessionLog'
 import { PinnedNotes } from './features/notes/PinnedNotes'
@@ -13,6 +13,7 @@ import { ReferencePanel } from './features/reference/ReferencePanel'
 import { CombatTracker } from './features/combat/CombatTracker'
 import { DiceRoller } from './features/dice/DiceRoller'
 import { PlayerView } from './features/player-view/PlayerView'
+import { useCombatStore } from './features/combat/store'
 
 type Tab = 'map' | 'characters' | 'quests' | 'bestiary' | 'rest' | 'items' | 'economy' | 'reference'
 
@@ -28,6 +29,14 @@ export function AppShell({ playerCharacterId, onAdoptCharacter }: Props) {
   const [tab, setTab] = useState<Tab>('map')
   const [showCombat, setShowCombat] = useState(false)
   const [showDice, setShowDice] = useState(false)
+
+  // GM: if a battle is (or becomes) active — including on rejoin, once the synced
+  // session hydrates — open the Combat Tracker so they can continue or end it.
+  // Fires only on the false→true transition, so a manual close stays closed.
+  const battleActive = useCombatStore(s => s.session !== null && !s.session.ended)
+  useEffect(() => {
+    if (battleActive && !isPlayerMode) setShowCombat(true)
+  }, [battleActive, isPlayerMode])
   const [showPlayerView, setShowPlayerView] = useState(isPlayerMode)
 
   return (

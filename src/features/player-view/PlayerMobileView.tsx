@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import {
   User, Map as MapIcon, Swords, Send, Sparkles, Hourglass, RotateCcw,
   ChevronDown, ChevronRight, Trash2, Package, Coins, Heart, Zap, Shield, LogOut,
@@ -39,10 +39,23 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
   } = useCharacterStore()
   const sessionNote = useWorldStore(s => s.sessionNote)
   const combatActive = useCombatStore(s => s.session !== null && !s.session.ended)
+  const combatSession = useCombatStore(s => s.session)
   const exitToSwitcher = useCampaignStore(s => s.exitToSwitcher)
 
+  // Am I actually a combatant in this fight? (vs. a battle happening to others.)
+  const myInCombat = combatActive && !!focusedCharacterId &&
+    !!combatSession?.combatants.some(c => c.kind === 'character' && c.sourceId === focusedCharacterId && c.currentHp > 0)
+
   const [pane, setPane] = useState<Pane>('character')
-  useEffect(() => { if (combatActive) setPane('world') }, [combatActive])
+  // Auto-open combat ONLY when called into the fight. Non-combatants stay on
+  // their sheet and can tap the Combat tab to watch.
+  useEffect(() => { if (myInCombat) setPane('world') }, [myInCombat])
+  // When the battle ends, leave the combat screen and return to the sheet.
+  const prevCombatActive = useRef(combatActive)
+  useEffect(() => {
+    if (prevCombatActive.current && !combatActive) setPane('character')
+    prevCombatActive.current = combatActive
+  }, [combatActive])
 
   const [activeTab, setActiveTab] = useState<string>(
     focusedCharacterId && characters.some(c => c.id === focusedCharacterId)

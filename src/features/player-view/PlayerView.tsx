@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Eye, Edit3, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Eye, Edit3, Check, Swords, Map as MapIcon } from 'lucide-react'
 import { useCombatStore } from '../combat/store'
 import { useWorldStore } from '../map/store'
 import { useIsPhone } from '../../lib/useIsPhone'
@@ -18,7 +18,16 @@ interface PlayerViewProps {
 export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptCharacter }: PlayerViewProps) {
   const isPhone = useIsPhone()
   const combatActive = useCombatStore(s => s.session !== null && !s.session.ended)
+  const combatSession = useCombatStore(s => s.session)
   const { sessionNote, setSessionNote } = useWorldStore()
+
+  // Only show combat by default when this player is in the fight; others can opt
+  // to watch. Reset the watch flag when the battle ends.
+  const myInCombat = combatActive && !!focusedCharacterId &&
+    !!combatSession?.combatants.some(c => c.kind === 'character' && c.sourceId === focusedCharacterId && c.currentHp > 0)
+  const [watchCombat, setWatchCombat] = useState(false)
+  useEffect(() => { if (!combatActive) setWatchCombat(false) }, [combatActive])
+  const showCombat = combatActive && (myInCombat || watchCombat)
 
   // GM can edit the session note inline
   const [editingNote, setEditingNote] = useState(false)
@@ -114,9 +123,19 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
 
       {/* Two-column body (iPad / desktop) */}
       <div className="flex flex-1 min-h-0">
-        {/* Left: map or combat */}
-        <div className="flex-1 min-w-0 min-h-0">
-          {combatActive ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap />}
+        {/* Left: map or combat (combat only forced when this player is in it) */}
+        <div className="flex-1 min-w-0 min-h-0 relative">
+          {showCombat ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap />}
+
+          {/* Watch/return toggle for non-combatants while a battle is on */}
+          {combatActive && !myInCombat && (
+            <button
+              onClick={() => setWatchCombat(v => !v)}
+              className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900/90 border border-redstone/40 text-red-300 hover:border-redstone/70 text-sm shadow-lg"
+            >
+              {watchCombat ? <><MapIcon size={14} /> Back to map</> : <><Swords size={14} /> Watch battle</>}
+            </button>
+          )}
         </div>
 
         {/* Right: character stats + inventory — always visible */}

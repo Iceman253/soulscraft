@@ -56,6 +56,19 @@ export function PlayerCombatView({ focusedCharacterId }: Props) {
     )
   }
 
+  // Combat can be active with no combatants yet (GM just started it) — guard so
+  // the turn-order math below never indexes an empty array.
+  if (session.combatants.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-stone-500 text-base md:text-sm">
+        <div className="text-center">
+          <Swords size={32} className="mx-auto mb-3 opacity-30 text-redstone" />
+          Combat is starting — waiting for combatants…
+        </div>
+      </div>
+    )
+  }
+
   const total = session.combatants.length
   const activeCombatant = session.combatants[session.activeIndex]
 
