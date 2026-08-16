@@ -550,6 +550,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
             onPaneContextMenu={onPaneContextMenu}
             connectionMode={ConnectionMode.Loose}
             fitView
+            minZoom={0.02}
             proOptions={{ hideAttribution: true }}
             style={{ background: '#1a1a1a' }}
           >

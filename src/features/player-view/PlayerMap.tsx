@@ -394,6 +394,7 @@ function PlayerMapCanvas() {
         zoomOnScroll
         fitView
         fitViewOptions={{ padding: 0.3 }}
+        minZoom={0.02}
         proOptions={{ hideAttribution: true }}
       />
     </div>

@@ -285,6 +285,7 @@ export function WorldMap() {
         onPaneContextMenu={onPaneContextMenu}
         connectionMode={ConnectionMode.Loose}
         fitView
+        minZoom={0.02}
         proOptions={{ hideAttribution: true }}
         style={{ background: '#1a1a1a' }}
       >

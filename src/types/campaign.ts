@@ -9,6 +9,7 @@ import type { XpEvent } from './xp'
 import type { Item } from './items'
 import type { EconomyData } from './economy'
 import type { CombatSession } from './combat'
+import type { PlayerRequest } from './request'
 
 // ── Campaign ───────────────────────────────────────────────────────────
 export interface CampaignMeta {
@@ -51,4 +52,6 @@ export interface CampaignData {
   /** Active combat session, synced across devices so players see the fight.
    *  Optional for backward compatibility. */
   combat?: CombatSession | null
+  /** Player→GM requests, synced so they reach the GM across devices. */
+  requests?: PlayerRequest[]
 }

@@ -1,38 +1,15 @@
 import { create } from 'zustand'
 import { newId } from '../../lib/id'
+import { useCampaignStore } from '../campaigns/store'
+import type { RequestType, PlayerRequest } from '../../types'
 
-// ── Request types ─────────────────────────────────────────────────────────────
-export type RequestType =
-  | 'item'           // add item to on-hand
-  | 'quest-complete' // mark quest completed
-  | 'quest-fail'     // mark quest failed
-  | 'quest-activate' // re-activate a quest
-  | 'heal-full'      // restore full HP
-  | 'heal-amount'    // heal a specific amount
-  | 'sd-restore'     // restore all SD
-  | 'xp'             // award XP
-  | 'level-up'       // level up character
-  | 'effect-remove'  // remove an active effect
-  | 'currency'       // grant currency
-  | 'buy-item'       // buy from a market at the engine's (GM-overridable) price
-  | 'sell-item'      // sell an on-hand item to a market
-  | 'reveal-area'    // reveal area on player map
-  | 'skill-approval' // level up + new custom skill awaiting GM approval
-  | 'custom'         // free-text request
-
-export interface PlayerRequest {
-  id: string
-  characterId: string
-  characterName: string
-  type: RequestType
-  payload: Record<string, unknown>
-  label: string           // short human-readable summary shown to GM
-  status: 'pending' | 'approved' | 'denied'
-  createdAt: number
-}
+// Re-exported for existing imports from this module.
+export type { RequestType, PlayerRequest } from '../../types'
 
 interface RequestStore {
   requests: PlayerRequest[]
+  /** Adopt synced requests from campaign data (remote change / initial load). */
+  hydrate: (requests: PlayerRequest[]) => void
   addRequest: (req: Omit<PlayerRequest, 'id' | 'status' | 'createdAt'>) => void
   approveRequest: (id: string) => void   // just marks status; caller executes
   denyRequest: (id: string) => void
@@ -44,6 +21,10 @@ interface RequestStore {
 
 export const useRequestStore = create<RequestStore>((set, get) => ({
   requests: [],
+
+  hydrate(requests) {
+    set({ requests })
+  },
 
   addRequest(req) {
     const request: PlayerRequest = {
@@ -79,3 +60,10 @@ export const useRequestStore = create<RequestStore>((set, get) => ({
     })
   },
 }))
+
+// Persist requests into the shared campaign data so a player's request reaches
+// the GM (and status changes reach the player). App wraps hydration in
+// runWithoutSave, so adopting a remote list doesn't echo back to the server.
+useRequestStore.subscribe((state) => {
+  useCampaignStore.getState().updateCampaignData({ requests: state.requests })
+})
