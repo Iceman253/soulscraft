@@ -67,6 +67,9 @@ export function EffectPicker({ onApply, onClose, targetTags = [] }: EffectPicker
                   {e.damagePerRound && (
                     <span className="text-xs text-red-400 font-mono">🩸{e.damagePerRound}/turn</span>
                   )}
+                  {e.healPerRound && (
+                    <span className="text-xs text-emerald font-mono">💚{e.healPerRound}/turn</span>
+                  )}
                   {isImmune && (
                     <span className="text-xs text-amber-400 font-medium">⚠ immune</span>
                   )}

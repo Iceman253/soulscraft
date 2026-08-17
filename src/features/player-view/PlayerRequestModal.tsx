@@ -45,7 +45,8 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
   const [effectName, setEffectName] = useState('')
   const [effectDuration, setEffectDuration] = useState<'scenes' | 'days' | 'until-rest' | 'permanent' | 'manual'>('days')
   const [effectCount, setEffectCount] = useState('3')
-  const [effectDmg, setEffectDmg] = useState('none')  // dice rolled each scene/day, e.g. '1d6'
+  const [effectDmg, setEffectDmg] = useState('none')   // HP lost each scene/day, e.g. '1d6' (Poison)
+  const [effectHeal, setEffectHeal] = useState('none') // HP restored each scene/day (Regeneration)
   const [currencyType, setCurrencyType] = useState('gold')
   const [currencyAmount, setCurrencyAmount] = useState('1')
   const [areaNameText, setAreaNameText] = useState('')
@@ -83,9 +84,14 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
         const remaining = needsCount ? Math.max(1, parseInt(effectCount) || 1) : undefined
         const durLabel = needsCount ? `${remaining} ${effectDuration}` : effectDuration
         const damagePerRound = effectDmg !== 'none' ? effectDmg : undefined
+        const healPerRound = effectHeal !== 'none' ? effectHeal : undefined
+        const tickBits = [
+          damagePerRound && `${damagePerRound} dmg/tick`,
+          healPerRound && `${healPerRound} heal/tick`,
+        ].filter(Boolean).join(', ')
         return {
-          payload: { name: effectName.trim(), durationType: effectDuration, remaining, damagePerRound },
-          label: `Apply effect: ${effectName.trim()} (${durLabel}${damagePerRound ? `, ${damagePerRound}/tick` : ''})`,
+          payload: { name: effectName.trim(), durationType: effectDuration, remaining, damagePerRound, healPerRound },
+          label: `Apply effect: ${effectName.trim()} (${durLabel}${tickBits ? `, ${tickBits}` : ''})`,
         }
       }
       case 'effect-remove': {
@@ -253,6 +259,20 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
                 <option value="1d12">1d12</option>
                 <option value="2d6">2d6</option>
                 <option value="3d6">3d6 (Poison max)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-stone-400 block mb-1">Heal each {effectDuration === 'days' ? 'day' : effectDuration === 'scenes' ? 'scene' : 'tick'} <span className="text-stone-500">(e.g. Regeneration)</span></label>
+              <select value={effectHeal} onChange={e => setEffectHeal(e.target.value)}
+                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50">
+                <option value="none">No healing</option>
+                <option value="1d4">1d4</option>
+                <option value="1d6">1d6</option>
+                <option value="1d8">1d8</option>
+                <option value="1d10">1d10</option>
+                <option value="1d12">1d12</option>
+                <option value="2d6">2d6</option>
+                <option value="3d6">3d6</option>
               </select>
             </div>
             <p className="text-xs text-stone-500">The GM approves before it's applied — and can change the dice.</p>

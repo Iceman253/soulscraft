@@ -20,6 +20,22 @@ function rollInitiative(): number {
   return (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1)
 }
 
+/** Roll a dice spec like "2d6", "1d8", "d6" → total. Returns 0 for anything unparseable. */
+function rollCombatDice(spec: string): number {
+  const m = spec.match(/(\d*)\s*d\s*(\d+)/i)
+  if (!m) return 0
+  const n = m[1] ? Math.max(1, parseInt(m[1])) : 1
+  const sides = parseInt(m[2])
+  if (!sides) return 0
+  let sum = 0
+  const buf = new Uint32Array(1)
+  for (let i = 0; i < n; i++) {
+    crypto.getRandomValues(buf)
+    sum += (buf[0] % sides) + 1
+  }
+  return sum
+}
+
 interface CombatStore {
   session: CombatSession | null
 
@@ -150,21 +166,34 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
     const newRound = nextIndex <= session.activeIndex ? session.round + 1 : session.round
 
-    // Apply per-round damage effects to the combatant whose turn is starting
+    // Apply per-round damage (Poison…) and healing (Regeneration…) to the
+    // combatant whose turn is starting. Damage lands first; healing only helps a
+    // combatant still standing (never revives one dropped to 0 this tick) and is
+    // capped at maxHp.
     const next = session.combatants[nextIndex]
     let combatants = [...session.combatants]
+    let hp = next.currentHp
     for (const effect of next.activeEffects) {
-      if (!effect.damagePerRound) continue
-      const m = effect.damagePerRound.match(/d(\d+)/i)
-      const sides = m ? parseInt(m[1]) : 6
-      const buf = new Uint32Array(1)
-      crypto.getRandomValues(buf)
-      const dmg = (buf[0] % sides) + 1
-      combatants = combatants.map(c =>
-        c.id === next.id ? { ...c, currentHp: Math.max(0, c.currentHp - dmg) } : c
-      )
-      log('combat-end', `🩸 ${next.name} takes ${dmg} damage (${effect.damagePerRound}) from ${effect.name}.`)
+      if (effect.damagePerRound) {
+        const dmg = rollCombatDice(effect.damagePerRound)
+        if (dmg > 0) {
+          hp = Math.max(0, hp - dmg)
+          log('combat-end', `🩸 ${next.name} takes ${dmg} damage (${effect.damagePerRound}) from ${effect.name}.`)
+        }
+      }
     }
+    if (hp > 0) {
+      for (const effect of next.activeEffects) {
+        if (!effect.healPerRound) continue
+        const amt = rollCombatDice(effect.healPerRound)
+        if (amt <= 0) continue
+        const capped = Math.min(next.maxHp, hp + amt)
+        const gained = capped - hp
+        if (gained > 0) log('combat-end', `💚 ${next.name} regenerates ${gained} HP (${effect.healPerRound}) from ${effect.name}.`)
+        hp = capped
+      }
+    }
+    combatants = combatants.map(c => c.id === next.id ? { ...c, currentHp: hp } : c)
 
     set({ session: { ...session, combatants, activeIndex: nextIndex, round: newRound } })
     // Mirror per-round damage onto a PC's sheet (triggers death / Tower-eject).

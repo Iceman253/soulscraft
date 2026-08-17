@@ -12,7 +12,8 @@ export function TabEffects({ character: c }: TabEffectsProps) {
   const [name, setName] = useState('')
   const [durType, setDurType] = useState<ActiveEffect['durationType']>('scenes')
   const [remaining, setRemaining] = useState(3)
-  const [dmg, setDmg] = useState('none')  // dice rolled each scene/day/round (e.g. Poison)
+  const [dmg, setDmg] = useState('none')   // dice lost each scene/day/round (e.g. Poison)
+  const [heal, setHeal] = useState('none') // dice restored each interval (e.g. Regeneration)
 
   const submit = () => {
     if (!name.trim()) return
@@ -21,8 +22,9 @@ export function TabEffects({ character: c }: TabEffectsProps) {
       durationType: durType,
       remaining: durType === 'scenes' || durType === 'days' ? remaining : undefined,
       damagePerRound: dmg !== 'none' ? dmg : undefined,
+      healPerRound: heal !== 'none' ? heal : undefined,
     })
-    setName(''); setDmg('none')
+    setName(''); setDmg('none'); setHeal('none')
   }
 
   return (
@@ -39,6 +41,8 @@ export function TabEffects({ character: c }: TabEffectsProps) {
                 durationType: qe.durationType,
                 remaining: qe.durationType === 'scenes' || qe.durationType === 'days' ? qe.defaultDuration : undefined,
                 damagePerRound: qe.damagePerRound,
+                healPerRound: qe.healPerRound,
+                unhealable: qe.unhealable,
               })}
               className="px-2.5 py-1 rounded bg-stone-700 border border-stone-600 hover:border-purple-500/50 text-stone-300 text-xs"
             >
@@ -85,6 +89,19 @@ export function TabEffects({ character: c }: TabEffectsProps) {
             <option value="3d6">3d6</option>
           </select>
         </div>
+        <div>
+          <div className="text-xs text-stone-500 mb-1">Heal/tick</div>
+          <select value={heal} onChange={e => setHeal(e.target.value)} className="bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none">
+            <option value="none">None</option>
+            <option value="1d4">1d4</option>
+            <option value="1d6">1d6</option>
+            <option value="1d8">1d8</option>
+            <option value="1d10">1d10</option>
+            <option value="1d12">1d12</option>
+            <option value="2d6">2d6</option>
+            <option value="3d6">3d6</option>
+          </select>
+        </div>
         <button onClick={submit} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm"><Plus size={13} /></button>
       </div>
 
@@ -100,6 +117,8 @@ export function TabEffects({ character: c }: TabEffectsProps) {
           {c.activeEffects.map(effect => (
             <div key={effect.id} className="flex items-center gap-2 bg-stone-800 border border-stone-700 rounded-lg px-3 py-2">
               <span className="flex-1 text-sm text-stone-200">{effect.name}</span>
+              {effect.damagePerRound && <Badge variant="red">🩸 {effect.damagePerRound}{effect.unhealable ? ' 🔒' : ''}</Badge>}
+              {effect.healPerRound && <Badge variant="green">💚 {effect.healPerRound}</Badge>}
               <DurBadge effect={effect} />
               <button onClick={() => removeEffect(c.id, effect.id)} className="p-0.5 text-stone-500 hover:text-red-400">
                 <X size={13} />

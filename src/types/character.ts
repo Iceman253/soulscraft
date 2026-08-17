@@ -175,7 +175,11 @@ export interface ActiveEffect {
   description?: string
   durationType: EffectDuration
   remaining?: number
-  damagePerRound?: string  // e.g. '1d6' — applied automatically at start of each turn
+  damagePerRound?: string  // e.g. '1d6' — HP lost automatically each tick (Poison, Withering…)
+  healPerRound?: string    // e.g. '1d6' — HP restored automatically each tick (Regeneration…)
+  /** Withering/Disintegration-style: HP lost to damagePerRound can't be healed
+   *  while the effect is active (informational — enforced by GM). */
+  unhealable?: boolean
 }
 
 export interface Character {

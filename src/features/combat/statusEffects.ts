@@ -5,7 +5,8 @@ export interface StatusTemplate {
   description: string
   harmful: boolean
   level: 1 | 2 | 3 | 4 | 5
-  damagePerRound?: string  // e.g. '1d6'
+  damagePerRound?: string  // e.g. '1d6' — HP lost at the start of each turn
+  healPerRound?: string    // e.g. '1d6' — HP restored at the start of each turn
 }
 
 export const STATUS_EFFECTS: StatusTemplate[] = [
@@ -32,7 +33,7 @@ export const STATUS_EFFECTS: StatusTemplate[] = [
   { name: 'Darkness',         level: 2, harmful: true,  description: 'Vision obscured by oppressive black haze; can only see within Close range.' },
   // Level 3
   { name: 'Absorption',       level: 3, harmful: false, description: 'Takes only half damage.' },
-  { name: 'Regeneration',     level: 3, harmful: false, description: 'Heals 1d6 HP after taking any amount of damage.' },
+  { name: 'Regeneration',     level: 3, harmful: false, description: 'Heals 1d6 HP after taking any amount of damage.', healPerRound: '1d6' },
   { name: 'Luck',             level: 3, harmful: false, description: 'Can reroll any action and use the best result for the scene.' },
   { name: 'Levitation',       level: 3, harmful: true,  description: 'Becomes weightless and floats up into the air.' },
   { name: 'Fear',             level: 3, harmful: true,  description: 'Overcome by dread; hesitates, cowers, or flees.' },

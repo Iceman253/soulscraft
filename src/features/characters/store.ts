@@ -714,8 +714,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   addEffect(id, effect) {
     const newEffect: ActiveEffect = { ...effect, id: newId() }
+    // Withering (Guidebook: "0 Souls Dice until removed") drains SD on
+    // application — mirrors the combat tracker so it behaves the same out of
+    // combat. GM restores SD when the curse is lifted.
+    const isWithering = /wither/i.test(effect.name)
     const characters = mapChar(get().characters, id, c => ({
-      ...c, activeEffects: [...c.activeEffects, newEffect],
+      ...c,
+      activeEffects: [...c.activeEffects, newEffect],
+      currentSd: isWithering ? 0 : c.currentSd,
     }))
     set({ characters }); save(characters, get().xpLog)
     const char = characters.find(c => c.id === id)
@@ -723,7 +729,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       const dur = effect.durationType === 'scenes' ? `${effect.remaining} scenes`
         : effect.durationType === 'days' ? `${effect.remaining} days`
         : effect.durationType
-      log('effect-applied', `🧪 ${effect.name} applied to ${char.name} (${dur}).`)
+      log('effect-applied', `🧪 ${effect.name} applied to ${char.name} (${dur})${isWithering ? ' — SD drained to 0' : ''}.`)
     }
   },
 
@@ -742,20 +748,30 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const expired: string[] = []
     const dmgLogs: string[] = []
 
-    // Roll & apply damage-over-time (e.g. Poison) for effects that match this
-    // interval, then decrement and expire them. Only effects currently present
-    // are ticked — a cured/removed effect never rolls (no unnecessary damage).
+    // Roll & apply per-tick damage (Poison, Withering…) and healing
+    // (Regeneration…) for effects matching this interval, then decrement and
+    // expire them. Only effects currently present are ticked — a cured/removed
+    // effect never rolls (no unnecessary damage, no stale healing).
     let characters = before.map(c => {
+      // A dead or ghosted character stops receiving effect HP changes — no
+      // heal-revives the fallen, no post-mortem poison. Their timers still run
+      // down and expire so a cure/rez comes back clean.
+      const skipHp = !!c.isDead || !!c.isGhost
       let damage = 0
+      let heal = 0
       const activeEffects = c.activeEffects
         .map(e => {
           if (e.durationType !== durationType || e.remaining == null) return e
-          if (e.damagePerRound) {
+          if (!skipHp && e.damagePerRound) {
             const dmg = rollDiceSpec(e.damagePerRound)
             if (dmg > 0) {
               damage += dmg
               dmgLogs.push(`🩸 ${c.name} takes ${dmg} damage from ${e.name} (${e.damagePerRound}).`)
             }
+          }
+          if (!skipHp && e.healPerRound) {
+            const amt = rollDiceSpec(e.healPerRound)
+            if (amt > 0) heal += amt
           }
           return { ...e, remaining: e.remaining - 1 }
         })
@@ -766,7 +782,17 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           }
           return true
         })
-      const currentHp = Math.max(0, c.currentHp - damage)
+      // Apply damage first, then healing — but never heal a character to whom
+      // damage dropped to 0 HP this tick (they need death resolution first),
+      // and cap healing at maxHp.
+      const afterDamage = Math.max(0, c.currentHp - damage)
+      let currentHp = afterDamage
+      if (heal > 0 && afterDamage > 0) {
+        const capped = Math.min(c.maxHp, afterDamage + heal)
+        const gained = capped - afterDamage
+        if (gained > 0) dmgLogs.push(`💚 ${c.name} regenerates ${gained} HP.`)
+        currentHp = capped
+      }
       return { ...c, activeEffects, currentHp }
     })
 

@@ -228,11 +228,13 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
       description: template.description,
       durationType: 'manual',
       damagePerRound: template.damagePerRound,
+      healPerRound: template.healPerRound,
     }
     addCombatantEffect(combatantId, effect)
     const cTarget = session?.combatants.find(c => c.id === combatantId)
     const cName = cTarget?.name ?? ''
     let extraNote = template.damagePerRound ? ` (${template.damagePerRound}/turn)` : ''
+    if (template.healPerRound) extraNote += ` (heals ${template.healPerRound}/turn)`
 
     // Special auto-effects on application
     if (template.name === 'Withering' && cTarget) {
@@ -411,8 +413,10 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                             : 'bg-purple-900/30 border-purple-700/40 text-purple-300'
                       }`}>
                         {e.damagePerRound && <span className="text-red-400">🩸</span>}
+                        {e.healPerRound && <span className="text-emerald">💚</span>}
                         {e.name}
                         {e.damagePerRound && <span className="text-red-400/70 font-mono text-xs">{e.damagePerRound}/turn</span>}
+                        {e.healPerRound && <span className="text-emerald/70 font-mono text-xs">+{e.healPerRound}/turn</span>}
                         <button onClick={() => removeCombatantEffect(c.id, e.id)} className="ml-0.5 text-stone-500 hover:text-red-400">
                           <X size={10} />
                         </button>

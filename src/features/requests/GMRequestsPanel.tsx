@@ -82,6 +82,7 @@ function useExecute() {
           durationType: (typeof p.durationType === 'string' ? p.durationType : 'manual') as EffectDuration,
           remaining: typeof p.remaining === 'number' ? p.remaining : undefined,
           damagePerRound: typeof p.damagePerRound === 'string' ? p.damagePerRound : undefined,
+          healPerRound: typeof p.healPerRound === 'string' ? p.healPerRound : undefined,
         })
         log('effect-applied', `🧪 ${req.characterName}: effect "${p.name}" applied by GM.`)
         break
