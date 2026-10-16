@@ -12,6 +12,7 @@ import { getBaseDef, fullSetLoadout } from '../../lib/armor'
 import { WARRIOR_MANEUVERS, DELVER_EVASIONS, VINDICATOR_VOICES, CLASS_DAMAGE_DICE, CLASS_DISCIPLINES, DISCIPLINE_EDGES, DEFAULT_CLASS_SKILLS, SPECIES_DATA, calcMaxHp } from '../../lib/constants'
 import type { DefaultSkill } from '../../lib/classes'
 import { CLASS_ABILITIES } from '../../lib/classAbilities'
+import { rollDiceSpec } from '../../lib/dice'
 
 // ── One-time hydration migration ───────────────────────────────────────
 // Re-syncs combatRoles and appliedEffects on stored abilities + the Discipline
@@ -230,18 +231,6 @@ function resolveDeathAtZero(chars: Character[], id: string): { characters: Chara
     characters: mapChar(chars, id, x => ({ ...x, isDead: true })),
     message: `💀 ${c.name} has fallen — no HP and no SD remaining.`,
   }
-}
-
-/** Roll a dice spec like "2d6", "1d8", "d6" → total. Returns 0 for anything unparseable. */
-function rollDiceSpec(spec: string): number {
-  const m = spec.match(/(\d*)\s*d\s*(\d+)/i)
-  if (!m) return 0
-  const n = m[1] ? Math.max(1, parseInt(m[1])) : 1
-  const sides = parseInt(m[2])
-  if (!sides) return 0
-  let sum = 0
-  for (let i = 0; i < n; i++) sum += Math.floor(Math.random() * sides) + 1
-  return sum
 }
 
 function defaultClassFeatureState(characterClass: string): ClassFeatureState {

@@ -5,6 +5,7 @@ import { log } from '../log/store'
 import { computeDef } from '../../lib/armor'
 import { useCharacterStore } from '../characters/store'
 import { useCampaignStore } from '../campaigns/store'
+import { rollCombatDice } from '../../lib/dice'
 
 // Rulebook p.101: Weak 1-4 HP, Average 5-10 HP, Strong 11-12 HP, Mighty 13+ HP.
 // Defaults sit at the midpoint / typical value of each tier.
@@ -18,22 +19,6 @@ export const HP_TIER: Record<BestiaryEntry['hpTier'], number> = {
 /** Auto-rolled initiative (2d6) when a combatant joins — the GM can still edit it. */
 function rollInitiative(): number {
   return (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1)
-}
-
-/** Roll a dice spec like "2d6", "1d8", "d6" → total. Returns 0 for anything unparseable. */
-function rollCombatDice(spec: string): number {
-  const m = spec.match(/(\d*)\s*d\s*(\d+)/i)
-  if (!m) return 0
-  const n = m[1] ? Math.max(1, parseInt(m[1])) : 1
-  const sides = parseInt(m[2])
-  if (!sides) return 0
-  let sum = 0
-  const buf = new Uint32Array(1)
-  for (let i = 0; i < n; i++) {
-    crypto.getRandomValues(buf)
-    sum += (buf[0] % sides) + 1
-  }
-  return sum
 }
 
 interface CombatStore {

@@ -42,15 +42,18 @@ apt-get update -qq
 # build-essential + python3 let better-sqlite3 compile if no prebuilt binary exists.
 apt-get install -y -qq ca-certificates curl git openssl nginx avahi-daemon build-essential python3 >/dev/null
 
-# Node 22 (via NodeSource) — needed only to build the static bundle.
-# Vite requires Node >= 20.19; Debian's packaged Node (18) is too old, so we
-# check the MAJOR version, not just presence, and replace it if it's stale.
+# Node 22 (via NodeSource) — needed to test and build the static bundle.
+# Vitest requires Node >= 22.12 (Vite >= 20.19); Debian's packaged Node (18) is
+# too old, so we check the version, not just presence, and replace it if stale.
 NODE_MAJOR=0
+NODE_MINOR=0
 if command -v node >/dev/null 2>&1; then
   NODE_MAJOR="$(node -v 2>/dev/null | sed 's/^v\([0-9]*\).*/\1/')"
+  NODE_MINOR="$(node -v 2>/dev/null | sed 's/^v[0-9]*\.\([0-9]*\).*/\1/')"
   [ -n "$NODE_MAJOR" ] || NODE_MAJOR=0
+  [ -n "$NODE_MINOR" ] || NODE_MINOR=0
 fi
-if [ "$NODE_MAJOR" -lt 20 ]; then
+if [ "$NODE_MAJOR" -lt 22 ] || { [ "$NODE_MAJOR" -eq 22 ] && [ "$NODE_MINOR" -lt 12 ]; }; then
   msg "Installing Node.js 22 (current: $(node -v 2>/dev/null || echo none))…"
   # Remove any distro nodejs/npm first — they conflict with the NodeSource package.
   apt-get purge -y -qq nodejs npm >/dev/null 2>&1 || true
@@ -89,6 +92,11 @@ case "${AUDIT_FIX:-safe}" in
     msg "Running npm audit fix (non-breaking)…"
     npm audit fix || true ;;
 esac
+
+# Unit tests — abort the deploy if any fail, so a broken build never replaces
+# the live site.
+msg "Running unit tests (npm test)…"
+npm test || die "Unit tests failed — deploy aborted. The live site was not changed."
 
 # Build.
 msg "Building the app (npm run build)…"
