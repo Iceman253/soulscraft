@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { X, Trash2, ChevronRight, Store } from 'lucide-react'
+import { X, Trash2, ChevronRight, Store, Pickaxe, Hammer } from 'lucide-react'
 import { useWorldStore } from './store'
 import { useCharacterStore } from '../characters/store'
 import { useItemStore } from '../items/store'
@@ -8,6 +8,9 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { AREA_TYPES, REALMS } from '../../lib/constants'
 import { defaultMarketForArea } from '../../lib/economyEngine'
+import { COMMON_MATERIALS, PROJECT_TIERS, structureProgress } from '../../lib/building'
+import { useBuildStore } from '../building/store'
+import { PixelIcon } from '../building/PixelIcon'
 import type { Area } from '../../types'
 
 const PROSPERITY_LABELS = ['Destitute', 'Poor', 'Modest', 'Comfortable', 'Wealthy']
@@ -17,9 +20,12 @@ interface NodePanelProps {
   area: Area
   onClose: () => void
   onOpenSubMap: () => void
+  onSelectStructure?: (id: string) => void
+  onPlanBuild?: () => void
+  onMine?: () => void
 }
 
-export function NodePanel({ area, onClose, onOpenSubMap }: NodePanelProps) {
+export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPlanBuild, onMine }: NodePanelProps) {
   const { updateArea, deleteArea, areas, edges } = useWorldStore()
   const allCharacters = useCharacterStore(s => s.characters)
   const characters = useMemo(() => allCharacters.filter(c => c.locationId === area.id), [allCharacters, area.id])
@@ -35,6 +41,16 @@ export function NodePanel({ area, onClose, onOpenSubMap }: NodePanelProps) {
     })
     .filter(r => r.other), [edges, areas, area.id])
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const allStructures = useBuildStore(s => s.structures)
+  const structures = useMemo(() => allStructures.filter(s => s.areaId === area.id), [allStructures, area.id])
+  const materials = area.materials ?? []
+  const [newMaterial, setNewMaterial] = useState('')
+  const [showMaterialPicker, setShowMaterialPicker] = useState(false)
+  const addMaterial = (m: string) => {
+    const name = m.trim()
+    if (name && !materials.some(x => x.toLowerCase() === name.toLowerCase())) updateArea(area.id, { materials: [...materials, name] })
+  }
+  const removeMaterial = (m: string) => updateArea(area.id, { materials: materials.filter(x => x !== m) })
 
   return (
     <div className="h-full bg-stone-800 border-l border-stone-700 flex flex-col">
@@ -87,6 +103,80 @@ export function NodePanel({ area, onClose, onOpenSubMap }: NodePanelProps) {
             rows={4}
             className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50 resize-none"
           />
+        </div>
+
+        {/* Mining — what can be mined here (Guidebook p.81) */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-stone-500 uppercase tracking-wider font-heading">Mineable here</div>
+            {onMine && (
+              <button onClick={onMine} className="flex items-center gap-1 text-[11px] text-stone-400 hover:text-gold">
+                <Pickaxe size={11} /> Go mining
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {materials.map(m => (
+              <span key={m} className="flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-stone-900 border border-stone-600 text-xs text-stone-300">
+                {m}
+                <button onClick={() => removeMaterial(m)} className="text-stone-600 hover:text-red-400" title={`Remove ${m}`}><X size={10} /></button>
+              </span>
+            ))}
+            <button onClick={() => setShowMaterialPicker(v => !v)} className="px-2 py-0.5 rounded-full border border-dashed border-stone-600 text-xs text-stone-500 hover:text-stone-200">
+              {showMaterialPicker ? 'Done' : '+ Material'}
+            </button>
+          </div>
+          {materials.length === 0 && !showMaterialPicker && (
+            <div className="text-[10px] text-stone-600 mt-1">Players can only mine what the place has — a forest for wood, a mineshaft for ore.</div>
+          )}
+          {showMaterialPicker && (
+            <div className="mt-2 space-y-1.5">
+              <div className="flex flex-wrap gap-1">
+                {COMMON_MATERIALS.filter(m => !materials.some(x => x.toLowerCase() === m.toLowerCase())).map(m => (
+                  <button key={m} onClick={() => addMaterial(m)} className="px-1.5 py-0.5 rounded border border-stone-700 text-[11px] text-stone-400 hover:text-gold hover:border-gold/40">{m}</button>
+                ))}
+              </div>
+              <input
+                value={newMaterial}
+                onChange={e => setNewMaterial(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { addMaterial(newMaterial); setNewMaterial('') } }}
+                placeholder="Other material, then Enter"
+                className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-100 text-xs outline-none focus:border-gold/50"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Builds */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-stone-500 uppercase tracking-wider font-heading">Builds</div>
+            {onPlanBuild && (
+              <button onClick={onPlanBuild} className="flex items-center gap-1 text-[11px] text-stone-400 hover:text-gold">
+                <Hammer size={11} /> Plan a build
+              </button>
+            )}
+          </div>
+          {structures.length === 0 ? (
+            <div className="text-[10px] text-stone-600">Nothing built here yet.</div>
+          ) : (
+            <div className="space-y-1">
+              {structures.map(st => {
+                const p = structureProgress(st)
+                return (
+                  <button key={st.id} onClick={() => onSelectStructure?.(st.id)} className="w-full flex items-center gap-2 px-1.5 py-1 rounded hover:bg-stone-700/60 text-left">
+                    <PixelIcon icon={st.icon} tier={st.tier} size={22} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-stone-200 truncate">{st.name}</div>
+                      <div className="text-[10px] text-stone-500">
+                        {PROJECT_TIERS[st.tier].label} · {p.status === 'complete' ? 'complete' : `${Math.round(p.fraction * 100)}% built`}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Market */}

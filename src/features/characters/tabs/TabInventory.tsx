@@ -3,6 +3,7 @@ import { useCharacterStore } from '../store'
 import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, Sword, Shield, Gift, Package } from 'lucide-react'
 import { fileToDataUrl, saveItemImage, loadItemImage } from '../../../lib/imageCache'
 import { CURRENCY_OPTIONS } from '../../../lib/currency'
+import { BLOCK_CARRY_LIMIT, countBlocks } from '../../../lib/building'
 import type { Character, CharacterItem } from '../../../types'
 
 // Rulebook equipment packs (pp. 91) — quick-fill starting gear
@@ -33,8 +34,6 @@ const EQUIPMENT_PACKS: { name: string; items: { name: string; quantity: number }
   },
 ]
 
-const BLOCK_CAP = 10
-
 const GEAR_SLOT_LABELS: Record<NonNullable<CharacterItem['gearSlot']>, { label: string; icon: React.ReactNode }> = {
   mainHand: { label: 'Main Hand', icon: <Sword size={9} /> },
   offHand:  { label: 'Off Hand',  icon: <Sword size={9} /> },
@@ -60,8 +59,8 @@ export function TabInventory({ character: c }: TabInventoryProps) {
     setShowPacks(false)
   }
 
-  const blockCount = c.onHand.items.filter(i => i.isBlock).reduce((sum, i) => sum + (i.quantity ?? 1), 0)
-  const blocksFull = blockCount >= BLOCK_CAP
+  const blockCount = countBlocks(c.onHand.items)
+  const blocksFull = blockCount >= BLOCK_CARRY_LIMIT
 
   return (
     <div className="p-4 space-y-5">
@@ -174,7 +173,7 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
                 ? 'bg-red-900/40 border-red-700 text-red-400 font-bold'
                 : 'bg-stone-800 border-stone-700 text-stone-500'
             }`}>
-              📦 {blockCount}/{BLOCK_CAP} blocks{blocksFull ? ' — FULL' : ''}
+              📦 {blockCount}/{BLOCK_CARRY_LIMIT} blocks{blockCount > BLOCK_CARRY_LIMIT ? ' — OVER LIMIT' : blocksFull ? ' — FULL' : ''}
             </span>
           )}
         </div>

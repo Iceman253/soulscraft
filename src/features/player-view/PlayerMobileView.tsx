@@ -7,6 +7,7 @@ import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
 import { useCombatStore } from '../combat/store'
 import { useRequestStore } from '../requests/store'
+import { MyBuilds } from '../building/MyBuilds'
 import { useCampaignStore } from '../campaigns/store'
 import { LevelUpModal, type LevelUpInitialState } from '../characters/LevelUpModal'
 import { PlayerRequestModal } from './PlayerRequestModal'
@@ -448,6 +449,13 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
                     ⚠️ {activeChar.missedRests} missed rest{activeChar.missedRests !== 1 ? 's' : ''} — −{activeChar.missedRests}d4 on rolls
                   </div>
                 )}
+              </Section>
+            )}
+
+            {/* Builds — own character draws their builds' map icons */}
+            {isOwnChar && (
+              <Section title="Builds">
+                <MyBuilds characterId={activeChar.id} />
               </Section>
             )}
 

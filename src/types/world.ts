@@ -35,6 +35,9 @@ export interface Area {
   /** The randomly-placed Tower of Trials (rulebook p.74). Characters whose token
    *  is dropped here enter Tower Mode (cannot die). */
   isTower?: boolean
+  /** Materials that can be mined here (Guidebook p.81: you can only mine a
+   *  material where it's available — a forest for wood, a mineshaft for ore). */
+  materials?: string[]
 }
 
 export interface AreaEdge {
@@ -84,4 +87,33 @@ export interface MapBackground {
   y: number
   w: number
   h: number
+}
+
+// ── Building (Guidebook p.83) ───────────────────────────────────────────
+export type ProjectTier = 'redstone' | 'tiny' | 'small' | 'medium' | 'large' | 'mega'
+
+/** A player-built structure: a Building-phase project tracked from plan to
+ *  completion, shown on the world map with a hand-drawn pixel icon. */
+export interface Structure {
+  id: string
+  name: string
+  tier: ProjectTier
+  description: string
+  /** Area it stands in, or null for a free-standing build on the world map. */
+  areaId: string | null
+  /** World-map position (flow coordinates). */
+  position: { x: number; y: number }
+  builderIds: string[]
+  /** Requirements — start at the rulebook values for the tier (halved for an
+   *  Architect); the GM can lower them when the party optimizes progress. */
+  blocksRequired: number
+  daysRequired: number
+  redstoneRequired: number
+  blocksCommitted: number
+  redstoneCommitted: number
+  daysWorked: number
+  /** 16×16 pixel-art icon (see lib/pixelArt.ts); empty/absent = tier emoji. */
+  icon?: string
+  createdAt: number
+  completedAt?: number
 }

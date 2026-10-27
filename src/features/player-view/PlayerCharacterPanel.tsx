@@ -16,6 +16,8 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { computeDef } from '../../lib/armor'
 import { CURRENCY_OPTIONS } from '../../lib/currency'
 import { POTION_RECIPES } from '../../lib/potions'
+import { BLOCK_CARRY_LIMIT, countBlocks } from '../../lib/building'
+import { MyBuilds } from '../building/MyBuilds'
 import type { CharacterItem, Area } from '../../types'
 
 interface Props {
@@ -655,8 +657,9 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
             <div className="flex items-center justify-between mb-2">
               <div className="text-xs font-medium text-stone-400 font-heading tracking-wide">On Hand</div>
               {activeChar.onHand.items.some(i => i.isBlock) && (
-                <div className="text-xs text-stone-500">
-                  {activeChar.onHand.items.filter(i => i.isBlock).length}/10 blocks
+                <div className={`text-xs ${countBlocks(activeChar.onHand.items) > BLOCK_CARRY_LIMIT ? 'text-red-400' : 'text-stone-500'}`}>
+                  {countBlocks(activeChar.onHand.items)}/{BLOCK_CARRY_LIMIT} blocks
+                  {countBlocks(activeChar.onHand.items) > BLOCK_CARRY_LIMIT ? ' — over limit' : ''}
                 </div>
               )}
             </div>
@@ -803,6 +806,14 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
           )}
 
           <div className="border-t border-stone-700" />
+
+          {/* Builds — own character draws their builds' map icons */}
+          {isOwnChar && (
+            <div>
+              <div className="text-xs font-medium text-stone-400 font-heading tracking-wide mb-2">Builds</div>
+              <MyBuilds characterId={activeChar.id} />
+            </div>
+          )}
 
           {/* Notes — editable only for own character */}
           <div>

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ActiveEffect, Character } from '../../../types'
 import { queueMathRolls } from '../../../test/rng'
+import { makeChar } from '../../../test/fixtures'
 
 // The store persists through the campaign store and logs through the log store;
 // stub both so no server, localStorage or WebSocket is touched.
@@ -15,41 +16,6 @@ vi.mock('../../log/store', () => ({ log }))
 vi.mock('../../map/store', () => ({ useWorldStore: { getState: () => ({}) } }))
 
 import { useCharacterStore } from '../store'
-
-function makeChar(overrides: Partial<Character> = {}): Character {
-  return {
-    id: 'c1',
-    name: 'Steve',
-    species: 'Human',
-    variant: '',
-    class: 'Warrior',
-    discipline: '',
-    level: 1,
-    maxHp: 10,
-    currentHp: 10,
-    maxSd: 6,
-    currentSd: 0,
-    xp: 0,
-    damageDie: 'd6',
-    classFeatureState: { class: 'custom', state: null },
-    disciplineEdge: { name: '', description: '', used: false },
-    armorLoadout: {} as Character['armorLoadout'],
-    weaponLoadout: {} as Character['weaponLoadout'],
-    skills: [],
-    traits: [],
-    abilities: [],
-    activeEffects: [],
-    missedRests: 0,
-    locationId: null,
-    subLocationId: null,
-    currency: { copper: 0, iron: 0, gold: 0, emeralds: 0, diamonds: 0 },
-    onHand: { items: [] },
-    storage: { items: [] },
-    rations: 0,
-    notes: '',
-    ...overrides,
-  }
-}
 
 let effectSeq = 0
 function effect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {

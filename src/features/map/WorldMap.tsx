@@ -18,6 +18,10 @@ import { SubMap } from './SubMap'
 import { AddNodeModal } from './AddNodeModal'
 import { ContextMenu } from '../../ui/ContextMenu'
 import { TokenAvatar } from '../../ui/TokenAvatar'
+import { useBuildStore } from '../building/store'
+import { StructurePanel } from '../building/StructurePanel'
+import { MiningModal } from '../building/MiningModal'
+import { StructureNode } from '../building/StructureNode'
 import type { AreaEdge as AreaEdgeType, Character } from '../../types'
 
 /** A free-floating character token on the world map (dropped on empty canvas). */
@@ -41,7 +45,7 @@ function MapBackgroundNode({ data }: NodeProps) {
   )
 }
 
-const nodeTypes = { area: AreaNodeComponent, token: TokenNode, mapBackground: MapBackgroundNode }
+const nodeTypes = { area: AreaNodeComponent, token: TokenNode, mapBackground: MapBackgroundNode, structure: StructureNode }
 const edgeTypes = { area: AreaEdgeComponent }
 
 export function WorldMap() {
@@ -58,11 +62,24 @@ export function WorldMap() {
   const [subMapInitialSubNodeId, setSubMapInitialSubNodeId] = useState<string | null>(null)
   const [showRevealDropdown, setShowRevealDropdown] = useState(false)
   const [scaleMode, setScaleMode] = useState(false)
+  const { structures, addStructure, moveStructure } = useBuildStore()
+  const [selectedStructureId, setSelectedStructureId] = useState<string | null>(null)
+  // undefined = closed; null = open with no area preselected.
+  const [miningAreaId, setMiningAreaId] = useState<string | null | undefined>(undefined)
+  const selectStructure = useCallback((id: string | null) => { setSelectedStructureId(id); if (id) setSelectedAreaId(null) }, [])
+  /** Plan a new build, placed under its area (staggered) or at a free map position. */
+  const planBuild = useCallback((areaId: string | null, at?: { x: number; y: number }) => {
+    const area = areaId ? areas.find(a => a.id === areaId) : null
+    const siblings = areaId ? structures.filter(st => st.areaId === areaId).length : 0
+    const position = at ?? (area ? { x: area.position.x + siblings * 56, y: area.position.y + 120 } : { x: 300, y: 300 })
+    selectStructure(addStructure({ areaId, position }))
+  }, [areas, structures, addStructure, selectStructure])
 
   const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
     e.preventDefault()
+    if (node.id.startsWith('st:')) { selectStructure(node.id.slice(3)); return }
     setCtxMenu({ x: e.clientX, y: e.clientY, areaId: node.id })
-  }, [])
+  }, [selectStructure])
 
   const onPaneContextMenu = useCallback((e: MouseEvent | React.MouseEvent) => {
     e.preventDefault()
@@ -82,7 +99,7 @@ export function WorldMap() {
       fogEnabled,
       onReveal: () => revealArea(area.id),
       onOpenSubMap: () => { setSubMapAreaId(area.id); setSubMapInitialSubNodeId(null) },
-      onSelect: () => setSelectedAreaId(area.id),
+      onSelect: () => { setSelectedAreaId(area.id); setSelectedStructureId(null) },
       selected: selectedAreaId === area.id,
       onCharClick: (subLocationId: string | null) => {
         setSubMapAreaId(area.id)
@@ -110,6 +127,16 @@ export function WorldMap() {
       draggable: true,
     })), [characters])
 
+  // Player builds (pixel icons), drawn above areas so they can sit on top.
+  const structureNodes: Node[] = useMemo(() => structures.map(st => ({
+    id: 'st:' + st.id,
+    type: 'structure',
+    position: st.position,
+    data: { structure: st, selected: st.id === selectedStructureId },
+    draggable: true,
+    zIndex: 5,
+  })), [structures, selectedStructureId])
+
   // Background as a flow-space node (pans/zooms with the nodes). Draggable only
   // while scaling; otherwise pointer-events off so panning works over it.
   const bgNode = useMemo<Node | null>(() => (bgUrl && mapBackground) ? {
@@ -124,8 +151,8 @@ export function WorldMap() {
   } : null, [bgUrl, mapBackground, scaleMode])
 
   const allNodes = useMemo(
-    () => [bgNode, ...baseNodes, ...tokenNodes].filter(Boolean) as Node[],
-    [bgNode, baseNodes, tokenNodes],
+    () => [bgNode, ...baseNodes, ...structureNodes, ...tokenNodes].filter(Boolean) as Node[],
+    [bgNode, baseNodes, structureNodes, tokenNodes],
   )
 
   // Local state for ReactFlow to apply smooth drag updates against without round-tripping the store.
@@ -161,10 +188,11 @@ export function WorldMap() {
         if (change.id === 'mapbg') {
           if (mapBackground) setMapBackground({ ...mapBackground, x: change.position.x, y: change.position.y })
         } else if (change.id.startsWith('tok:')) setMapPos(change.id.slice(4), change.position)
+        else if (change.id.startsWith('st:')) moveStructure(change.id.slice(3), change.position)
         else moveArea(change.id, change.position)
       }
     }
-  }, [moveArea, setMapPos, mapBackground, setMapBackground])
+  }, [moveArea, setMapPos, moveStructure, mapBackground, setMapBackground])
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     setSelectedEdgeIds(prev => {
@@ -280,7 +308,8 @@ export function WorldMap() {
         onConnect={onConnect}
         onReconnect={onReconnect}
         edgesReconnectable
-        onPaneClick={() => { setSelectedAreaId(null); setCtxMenu(null); setSelectedEdgeIds(new Set()) }}
+        onPaneClick={() => { setSelectedAreaId(null); setSelectedStructureId(null); setCtxMenu(null); setSelectedEdgeIds(new Set()) }}
+        onNodeClick={(_, node) => { if (node.id.startsWith('st:')) selectStructure(node.id.slice(3)) }}
         onNodeContextMenu={onNodeContextMenu}
         onPaneContextMenu={onPaneContextMenu}
         connectionMode={ConnectionMode.Loose}
@@ -485,14 +514,28 @@ export function WorldMap() {
       )}
 
       {/* Node panel sidebar */}
-      {selectedArea && (
+      {selectedArea && !selectedStructureId && (
         <div className="absolute top-0 right-0 h-full w-72 z-10 shadow-2xl">
           <NodePanel
             area={selectedArea}
             onClose={() => setSelectedAreaId(null)}
             onOpenSubMap={() => setSubMapAreaId(selectedArea.id)}
+            onSelectStructure={selectStructure}
+            onPlanBuild={() => planBuild(selectedArea.id)}
+            onMine={() => setMiningAreaId(selectedArea.id)}
           />
         </div>
+      )}
+
+      {/* Build sidebar */}
+      {selectedStructureId && structures.some(st => st.id === selectedStructureId) && (
+        <div className="absolute top-0 right-0 h-full w-80 z-10 shadow-2xl">
+          <StructurePanel structureId={selectedStructureId} onClose={() => setSelectedStructureId(null)} />
+        </div>
+      )}
+
+      {miningAreaId !== undefined && (
+        <MiningModal initialAreaId={miningAreaId ?? undefined} onClose={() => setMiningAreaId(undefined)} />
       )}
 
       {showAddModal && (
@@ -518,6 +561,8 @@ export function WorldMap() {
           { label: 'Open Sub-map',  icon: '🗺️', onClick: () => setSubMapAreaId(area.id) },
           { label: 'Select / Edit', icon: '✏️', onClick: () => setSelectedAreaId(area.id) },
           { type: 'char-picker' as const, label: 'Place Characters Here', icon: '🧑', presentIds: getPresentIds(area.id), onApply: (ids: string[]) => applyPlacement(area.id, ids) },
+          { label: 'Go Mining Here', icon: '⛏️', onClick: () => setMiningAreaId(area.id) },
+          { label: 'Plan a Build Here', icon: '🏗️', onClick: () => planBuild(area.id) },
           { label: '---' as const },
           ...(fogEnabled ? [{ label: area.revealed ? 'Hide (Fog)' : 'Reveal', icon: area.revealed ? '🌫️' : '👁️', onClick: () => revealArea(area.id) }] : []),
           {
@@ -529,6 +574,11 @@ export function WorldMap() {
           { label: 'Delete Area', icon: '🗑️', danger: true as const, onClick: () => { deleteArea(area.id); setSelectedAreaId(null) } },
         ] : [
           { label: 'Add Area', icon: '➕', onClick: () => setShowAddModal(true) },
+          {
+            label: 'Plan a Build Here', icon: '🏗️',
+            onClick: () => planBuild(null, rfRef.current?.screenToFlowPosition({ x: ctxMenu.x, y: ctxMenu.y })),
+          },
+          { label: 'Go Mining', icon: '⛏️', onClick: () => setMiningAreaId(null) },
           { label: '---' as const },
           { label: fogEnabled ? 'Fog: ON — Turn Off' : 'Fog: OFF — Turn On', icon: '🌫️', onClick: toggleFog },
         ]

@@ -15,6 +15,7 @@ const TYPE_COLORS: Record<string, string> = {
   'combat-end':   'text-red-400',
   'effect-applied':'text-teal-300',
   'effect-expired':'text-stone-400',
+  building:       'text-amber-300',
 }
 
 export function SessionLog() {

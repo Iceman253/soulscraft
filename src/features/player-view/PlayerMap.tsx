@@ -10,6 +10,8 @@ import { useWorldStore } from '../map/store'
 import { useCharacterStore } from '../characters/store'
 import { useCampaignStore } from '../campaigns/store'
 import { loadMapBg } from '../../lib/imageCache'
+import { useBuildStore } from '../building/store'
+import { StructureNode } from '../building/StructureNode'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 import type { Area, Character } from '../../types'
 
@@ -134,12 +136,14 @@ const nodeTypes = {
   ghostDest:   GhostDestNode,
   playerToken: PlayerTokenNode,
   mapBackground: PlayerBgNode,
+  structure:   StructureNode,
 }
 
 // ── Inner canvas (needs ReactFlowProvider context for useReactFlow) ──────────
 function PlayerMapCanvas() {
   const { areas, edges, playerVisibleAreaIds, travelingMarkers, mapBackground } = useWorldStore()
   const characters = useCharacterStore(s => s.characters)
+  const structures = useBuildStore(s => s.structures)
   const activeId = useCampaignStore(s => s.activeId)
   const bgUrl = activeId ? loadMapBg(activeId) : null
   const { fitView } = useReactFlow()
@@ -295,7 +299,20 @@ function PlayerMapCanvas() {
       style: { pointerEvents: 'none' },
     }] : []
 
-    const rfNodes = [...bgNodes, ...areaNodes, ...placeholderNodes, ...ghostNodes, ...tokenNodes]
+    // Player builds — shown when free-standing or in an area the players can see.
+    const structureNodes: Node[] = structures
+      .filter(st => !st.areaId || visibleSet.has(st.areaId) || !areas.some(a => a.id === st.areaId))
+      .map(st => ({
+        id: 'st:' + st.id,
+        type: 'structure',
+        position: st.position,
+        data: { structure: st },
+        draggable: false,
+        selectable: false,
+        zIndex: 5,
+      }))
+
+    const rfNodes = [...bgNodes, ...areaNodes, ...placeholderNodes, ...ghostNodes, ...structureNodes, ...tokenNodes]
 
     // Build edges
     const shownNodeIds = new Set(rfNodes.map(n => n.id))
@@ -359,7 +376,7 @@ function PlayerMapCanvas() {
     }
 
     return { rfNodes, rfEdges: [...areaEdges, ...ghostEdges, ...travelEdges] }
-  }, [areas, edges, playerVisibleAreaIds, travelingMarkers, characters, bgUrl, mapBackground])
+  }, [areas, edges, playerVisibleAreaIds, travelingMarkers, characters, structures, bgUrl, mapBackground])
 
   // Re-fit whenever the set of visible nodes changes so newly revealed areas
   // are always in view rather than appearing off-screen.
@@ -369,7 +386,7 @@ function PlayerMapCanvas() {
     }
   }, [rfNodes.length, fitView])
 
-  const hasFreeTokens = characters.some(c => c.mapPos && !c.isDead)
+  const hasFreeTokens = characters.some(c => c.mapPos && !c.isDead) || structures.some(st => !st.areaId)
   const hasBg = !!(bgUrl && mapBackground)
   if (playerVisibleAreaIds.length === 0 && travelingMarkers.length === 0 && !hasFreeTokens && !hasBg) {
     return (

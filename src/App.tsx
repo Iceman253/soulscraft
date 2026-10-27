@@ -11,6 +11,7 @@ import { useNotesStore } from './features/notes/store'
 import { useEconomyStore } from './features/economy/store'
 import { useCombatStore } from './features/combat/store'
 import { useRequestStore } from './features/requests/store'
+import { useBuildStore } from './features/building/store'
 import { CampaignSwitcher } from './features/campaigns/CampaignSwitcher'
 import { AppShell } from './AppShell'
 import { useIsPhone } from './lib/useIsPhone'
@@ -47,6 +48,7 @@ function hydrateAll(d: CampaignData) {
     useEconomyStore.getState().hydrate(d.economy)
     useCombatStore.getState().hydrate(d.combat ?? null)
     useRequestStore.getState().hydrate(d.requests ?? [])
+    useBuildStore.getState().hydrate(d.structures ?? [])
   })
 }
 

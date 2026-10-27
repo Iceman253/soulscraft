@@ -1,4 +1,4 @@
-import type { Area, AreaEdge, TravelingMarker, TowerTrials, MapBackground } from './world'
+import type { Area, AreaEdge, TravelingMarker, TowerTrials, MapBackground, Structure } from './world'
 import type { Character } from './character'
 import type { BestiaryEntry } from './bestiary'
 import type { Quest } from './quest'
@@ -54,4 +54,6 @@ export interface CampaignData {
   combat?: CombatSession | null
   /** Player→GM requests, synced so they reach the GM across devices. */
   requests?: PlayerRequest[]
+  /** Player-built structures (Building phase, p.83). Optional for backward compatibility. */
+  structures?: Structure[]
 }
