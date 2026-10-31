@@ -1,5 +1,5 @@
 import { defineConfig, mergeConfig } from 'vitest/config'
-import viteConfig from './vite.config'
+import viteConfig from './vite.config.ts'
 
 // Unit tests for game logic (stores, dice). The node environment is enough —
 // nothing here renders React. Test files are excluded from tsconfig.app.json so
