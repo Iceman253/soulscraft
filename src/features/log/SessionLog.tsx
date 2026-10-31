@@ -38,7 +38,7 @@ export function SessionLog() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-stone-700 shrink-0">
         <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider font-heading">Session Log</span>
-        <button onClick={clearLog} className="p-1 rounded text-stone-500 hover:text-red-400 hover:bg-stone-700">
+        <button onClick={clearLog} className="p-1 rounded-sm text-stone-500 hover:text-red-400 hover:bg-stone-700">
           <Trash2 size={12} />
         </button>
       </div>
@@ -51,9 +51,9 @@ export function SessionLog() {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && submit()}
           placeholder="Add note..."
-          className="flex-1 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-xs text-stone-200 outline-none focus:border-gold/40 placeholder:text-stone-600"
+          className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-xs text-stone-200 outline-hidden focus:border-gold/40 placeholder:text-stone-600"
         />
-        <button onClick={submit} className="p-1.5 rounded bg-stone-700 text-stone-400 hover:bg-stone-600 hover:text-stone-100">
+        <button onClick={submit} className="p-1.5 rounded-sm bg-stone-700 text-stone-400 hover:bg-stone-600 hover:text-stone-100">
           <Send size={12} />
         </button>
       </div>

@@ -91,21 +91,21 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
         {/* Time advancement — subtle, text-only style */}
         <button
           onClick={() => setConfirm('scene')}
-          className="px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded transition-all"
+          className="px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded-sm transition-all"
           title="End Scene — decrements all scene-duration effects/enchantments"
         >
           End Scene
         </button>
         <button
           onClick={() => setConfirm('day')}
-          className="px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded transition-all"
+          className="px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded-sm transition-all"
           title="End Day — decrements all day-duration effects/enchantments"
         >
           End Day
         </button>
         <button
           onClick={() => setShowMilestone(true)}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded transition-all"
+          className="flex items-center gap-1 px-2.5 py-1 text-xs text-stone-400 hover:text-stone-200 border border-transparent hover:border-stone-600 rounded-sm transition-all"
           title="End of Session — award milestone XP"
         >
           <Trophy size={11} /> End Session
@@ -118,7 +118,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
           onClick={onTogglePlayerView}
           title="Toggle Player View"
           className={[
-            'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs border transition-all',
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs border transition-all',
             playerViewActive
               ? 'bg-teal-600/20 border-teal-500/50 text-teal-300'
               : 'bg-transparent border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200',
@@ -130,7 +130,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
         <button
           onClick={onToggleCombat}
           className={[
-            'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs border transition-all',
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs border transition-all',
             combatActive
               ? 'bg-redstone/20 border-redstone/60 text-red-300'
               : 'bg-transparent border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200',
@@ -141,7 +141,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
 
         <button
           onClick={onToggleDice}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs border border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200 bg-transparent transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs border border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200 bg-transparent transition-all"
         >
           <Dice6 size={12} /> Dice
         </button>
@@ -154,7 +154,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
             onClick={() => setShowRequests(v => !v)}
             title="Player requests"
             className={[
-              'relative flex items-center justify-center w-7 h-7 rounded transition-colors',
+              'relative flex items-center justify-center w-7 h-7 rounded-sm transition-colors',
               pendingCount > 0
                 ? 'text-gold hover:bg-stone-700'
                 : 'text-stone-500 hover:text-stone-300 hover:bg-stone-700',
@@ -172,7 +172,7 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
 
         <button
           onClick={() => setConfirm('exit')}
-          className="p-1.5 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700 transition-colors"
+          className="p-1.5 rounded-sm text-stone-500 hover:text-stone-200 hover:bg-stone-700 transition-colors"
           title="Exit to campaign list"
         >
           <LogOut size={14} />

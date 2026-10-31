@@ -69,7 +69,7 @@ export function CharacterCard({ character: c, onOpen }: CharacterCardProps) {
           {/* Traveling badge + button */}
           <div className="flex flex-col items-end gap-1 shrink-0">
             {isTraveling && (
-              <span className="text-xs bg-amber-900/40 border border-amber-600/40 text-amber-300 px-1.5 py-0.5 rounded">
+              <span className="text-xs bg-amber-900/40 border border-amber-600/40 text-amber-300 px-1.5 py-0.5 rounded-sm">
                 🚶 Traveling
               </span>
             )}
@@ -95,9 +95,9 @@ export function CharacterCard({ character: c, onOpen }: CharacterCardProps) {
             <button
               onClick={rollDamage}
               title={`Roll ${c.damageDie} damage`}
-              className={`px-2 py-0.5 rounded text-xs font-mono border transition-all ${
+              className={`px-2 py-0.5 rounded-sm text-xs font-mono border transition-all ${
                 dmgRoll !== null
-                  ? 'bg-gold/30 border-gold text-gold font-bold shadow-sm shadow-gold/30'
+                  ? 'bg-gold/30 border-gold text-gold font-bold shadow-xs shadow-gold/30'
                   : 'bg-stone-700 border-stone-500 text-stone-200 hover:border-gold/60 hover:text-gold hover:bg-stone-700/80'
               }`}
             >

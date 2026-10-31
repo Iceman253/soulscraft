@@ -33,17 +33,17 @@ export function EffectPicker({ onApply, onClose, targetTags = [] }: EffectPicker
   return (
     <div className="mt-2 bg-stone-900 border border-purple-700/40 rounded-lg p-3">
       <div className="flex items-center gap-2 mb-2">
-        <div className="flex-1 flex items-center gap-1 bg-stone-800 border border-stone-700 rounded px-2 py-1">
+        <div className="flex-1 flex items-center gap-1 bg-stone-800 border border-stone-700 rounded-sm px-2 py-1">
           <Search size={10} className="text-stone-500 shrink-0" />
           <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Search all 41 effects…"
-            className="flex-1 bg-transparent text-stone-300 text-xs outline-none placeholder:text-stone-600" />
+            className="flex-1 bg-transparent text-stone-300 text-xs outline-hidden placeholder:text-stone-600" />
         </div>
         <button onClick={onClose} className="text-stone-500 hover:text-stone-300"><X size={13} /></button>
       </div>
 
       {/* Immunity notice */}
       {immuneEffects.size > 0 && (
-        <div className="mb-2 px-2 py-1.5 rounded bg-amber-900/20 border border-amber-700/30 text-xs text-amber-400 flex items-start gap-1.5">
+        <div className="mb-2 px-2 py-1.5 rounded-sm bg-amber-900/20 border border-amber-700/30 text-xs text-amber-400 flex items-start gap-1.5">
           <AlertTriangle size={11} className="mt-0.5 shrink-0" />
           <span>
             <strong>{isConstruct ? 'Construct' : 'Undead'}</strong> — immune to marked effects per rulebook rules.
@@ -57,7 +57,7 @@ export function EffectPicker({ onApply, onClose, targetTags = [] }: EffectPicker
           const isImmune = immuneEffects.has(e.name)
           return (
             <button key={e.name} onClick={() => onApply(e)}
-              className={`w-full flex items-start gap-2 px-2 py-1.5 rounded text-left group transition-colors ${
+              className={`w-full flex items-start gap-2 px-2 py-1.5 rounded-sm text-left group transition-colors ${
                 isImmune ? 'opacity-40 hover:opacity-60 hover:bg-stone-800' : 'hover:bg-stone-800'
               }`}>
               <div className="flex-1 min-w-0">

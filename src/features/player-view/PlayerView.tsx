@@ -69,7 +69,7 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
         <Eye size={15} className="text-teal-400 shrink-0" />
         <span className="font-semibold text-stone-200 text-sm shrink-0">Player View</span>
         {combatActive && (
-          <span className="text-xs bg-redstone/20 border border-redstone/40 text-red-400 px-2 py-0.5 rounded shrink-0">
+          <span className="text-xs bg-redstone/20 border border-redstone/40 text-red-400 px-2 py-0.5 rounded-sm shrink-0">
             ⚔️ Combat Active
           </span>
         )}
@@ -84,9 +84,9 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
                 onChange={e => setDraftNote(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') saveNote(); if (e.key === 'Escape') setEditingNote(false) }}
                 placeholder="Add a scene note for players…"
-                className="flex-1 bg-stone-800 border border-teal-600/50 rounded px-2.5 py-1 text-stone-200 text-sm outline-none placeholder:text-stone-600 min-w-0"
+                className="flex-1 bg-stone-800 border border-teal-600/50 rounded-sm px-2.5 py-1 text-stone-200 text-sm outline-hidden placeholder:text-stone-600 min-w-0"
               />
-              <button onClick={saveNote} className="shrink-0 p-1 rounded text-teal-400 hover:bg-stone-700">
+              <button onClick={saveNote} className="shrink-0 p-1 rounded-sm text-teal-400 hover:bg-stone-700">
                 <Check size={14} />
               </button>
             </>

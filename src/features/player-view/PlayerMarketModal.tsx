@@ -115,7 +115,7 @@ export function PlayerMarketModal({ character: c, market, onClose }: Props) {
                 </button>
               ))}
             </div>
-            <button onClick={onClose} className="p-1.5 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700">
+            <button onClick={onClose} className="p-1.5 rounded-sm text-stone-500 hover:text-stone-200 hover:bg-stone-700">
               <X size={14} />
             </button>
           </div>
@@ -162,11 +162,11 @@ export function PlayerMarketModal({ character: c, market, onClose }: Props) {
                             <input
                               type="number" min={1} max={maxQty} value={qty}
                               onChange={e => setQtyByGood(q => ({ ...q, [good.id]: Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1)) }))}
-                              className="w-12 bg-stone-900 border border-stone-700 rounded px-1 py-0.5 text-stone-200 text-xs text-center outline-none focus:border-stone-500 font-mono shrink-0"
+                              className="w-12 bg-stone-900 border border-stone-700 rounded-sm px-1 py-0.5 text-stone-200 text-xs text-center outline-hidden focus:border-stone-500 font-mono shrink-0"
                             />
                             <button
                               onClick={() => requestBuy(good, quote.final, listing.stock)}
-                              className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-amber-900/40 border border-amber-700/50 text-amber-200 hover:bg-amber-800/50 transition-colors shrink-0"
+                              className="flex items-center gap-1 px-2 py-1 rounded-sm text-[11px] bg-amber-900/40 border border-amber-700/50 text-amber-200 hover:bg-amber-800/50 transition-colors shrink-0"
                             >
                               <ShoppingCart size={10} /> Request
                             </button>
@@ -190,7 +190,7 @@ export function PlayerMarketModal({ character: c, market, onClose }: Props) {
                   <select
                     value={sellItemId}
                     onChange={e => { setSellItemId(e.target.value); setSellQty(1) }}
-                    className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500"
+                    className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500"
                   >
                     <option value="">— Pick an item —</option>
                     {c.onHand.items.map(i => (
@@ -208,7 +208,7 @@ export function PlayerMarketModal({ character: c, market, onClose }: Props) {
                       <input
                         type="number" min={1} max={sellItem.quantity} value={sellQty}
                         onChange={e => setSellQty(Math.max(1, Math.min(sellItem.quantity, parseInt(e.target.value) || 1)))}
-                        className="w-20 bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+                        className="w-20 bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
                       />
                     </div>
                     <div className="flex-1 bg-stone-800 border border-stone-700/60 rounded-lg px-3 py-2 text-xs">

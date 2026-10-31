@@ -180,12 +180,12 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
               <label className="text-xs text-stone-400 block mb-1">Item name *</label>
               <input autoFocus value={itemName} onChange={e => setItemName(e.target.value)}
                 placeholder="Potion of Healing..."
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
             </div>
             <div>
               <label className="text-xs text-stone-400 block mb-1">Quantity</label>
               <input type="number" min={1} value={itemQty} onChange={e => setItemQty(e.target.value)}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
             </div>
           </div>
         )}
@@ -195,7 +195,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
             <label className="text-xs text-stone-400 block mb-1">HP amount *</label>
             <input autoFocus type="number" min={1} value={healAmount} onChange={e => setHealAmount(e.target.value)}
               placeholder="10"
-              className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+              className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
           </div>
         )}
 
@@ -211,7 +211,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
           <div>
             <label className="text-xs text-stone-400 block mb-1">XP amount</label>
             <input autoFocus type="number" min={1} max={10} value={xpAmount} onChange={e => setXpAmount(e.target.value)}
-              className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+              className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
           </div>
         )}
 
@@ -225,13 +225,13 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
               <label className="text-xs text-stone-400 block mb-1">Effect name *</label>
               <input autoFocus value={effectName} onChange={e => setEffectName(e.target.value)}
                 placeholder="Poison, Strength, Fire Resistance…"
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="text-xs text-stone-400 block mb-1">Duration</label>
                 <select value={effectDuration} onChange={e => setEffectDuration(e.target.value as typeof effectDuration)}
-                  className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50">
+                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50">
                   <option value="scenes">Scenes</option>
                   <option value="days">Days</option>
                   <option value="until-rest">Until rest</option>
@@ -243,14 +243,14 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
                 <div className="w-24">
                   <label className="text-xs text-stone-400 block mb-1">How many</label>
                   <input type="number" min={1} value={effectCount} onChange={e => setEffectCount(e.target.value)}
-                    className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+                    className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
                 </div>
               )}
             </div>
             <div>
               <label className="text-xs text-stone-400 block mb-1">Damage each {effectDuration === 'days' ? 'day' : effectDuration === 'scenes' ? 'scene' : 'tick'} <span className="text-stone-500">(e.g. Poison)</span></label>
               <select value={effectDmg} onChange={e => setEffectDmg(e.target.value)}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50">
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50">
                 <option value="none">No damage</option>
                 <option value="1d4">1d4</option>
                 <option value="1d6">1d6</option>
@@ -264,7 +264,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
             <div>
               <label className="text-xs text-stone-400 block mb-1">Heal each {effectDuration === 'days' ? 'day' : effectDuration === 'scenes' ? 'scene' : 'tick'} <span className="text-stone-500">(e.g. Regeneration)</span></label>
               <select value={effectHeal} onChange={e => setEffectHeal(e.target.value)}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50">
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50">
                 <option value="none">No healing</option>
                 <option value="1d4">1d4</option>
                 <option value="1d6">1d6</option>
@@ -286,7 +286,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
               <p className="text-sm text-stone-500 italic">No active effects.</p>
             ) : (
               <select value={selectedEffectId} onChange={e => setSelectedEffectId(e.target.value)}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50">
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50">
                 <option value="">Select effect…</option>
                 {c.activeEffects.map(e => (
                   <option key={e.id} value={e.id}>{e.name}{e.remaining != null ? ` (${e.remaining} scenes left)` : ''}</option>
@@ -303,7 +303,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
               <p className="text-sm text-stone-500 italic">No quests in this campaign.</p>
             ) : (
               <select value={selectedQuestId} onChange={e => setSelectedQuestId(e.target.value)}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50">
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50">
                 <option value="">Select quest…</option>
                 {quests.map(q => (
                   <option key={q.id} value={q.id}>{q.title} ({q.status})</option>
@@ -318,7 +318,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
             <div>
               <label className="text-xs text-stone-400 block mb-1">Currency type</label>
               <select value={currencyType} onChange={e => setCurrencyType(e.target.value)}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50">
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50">
                 {CURRENCY_OPTIONS.map(o => (
                   <option key={o.key} value={o.key}>{o.label}</option>
                 ))}
@@ -327,7 +327,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
             <div>
               <label className="text-xs text-stone-400 block mb-1">Amount</label>
               <input type="number" min={1} value={currencyAmount} onChange={e => setCurrencyAmount(e.target.value)}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
             </div>
           </div>
         )}
@@ -337,7 +337,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
             <label className="text-xs text-stone-400 block mb-1">Location name *</label>
             <input autoFocus value={areaNameText} onChange={e => setAreaNameText(e.target.value)}
               placeholder="The Ancient Ruins…"
-              className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+              className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
             <p className="text-xs text-stone-500 mt-1">Type the name of a place you'd like to see on the map.</p>
             {/* No dropdown — players shouldn't see areas they haven't discovered */}
           </div>
@@ -348,7 +348,7 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
             <label className="text-xs text-stone-400 block mb-1">Your request *</label>
             <textarea autoFocus value={customText} onChange={e => setCustomText(e.target.value)}
               rows={3} placeholder="I'd like to…"
-              className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none resize-none focus:border-gold/50" />
+              className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden resize-none focus:border-gold/50" />
           </div>
         )}
 
@@ -357,15 +357,15 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
           <label className="text-xs text-stone-400 block mb-1">Note to GM <span className="text-stone-500">(optional)</span></label>
           <input value={note} onChange={e => setNote(e.target.value)}
             placeholder="Because…"
-            className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500" />
+            className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500" />
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
+          <button onClick={onClose} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
             Cancel
           </button>
           <button onClick={handleSend} disabled={!canSend}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold text-sm disabled:opacity-40 hover:bg-yellow-400 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold text-sm disabled:opacity-40 hover:bg-yellow-400 transition-colors">
             <Send size={13} /> Send Request
           </button>
         </div>

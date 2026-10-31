@@ -17,7 +17,7 @@ const OUTCOME_TEXT = {
 
 const fmtDays = (d: number) => d === 0.5 ? '½ day' : `${d} day${d === 1 ? '' : 's'}`
 
-const inputCls = 'w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-sm outline-none focus:border-gold/50'
+const inputCls = 'w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-100 text-sm outline-hidden focus:border-gold/50'
 const labelCls = 'block text-xs text-stone-500 mb-1'
 
 /** Mining (Guidebook p.81–82): pick a place with the material, an amount, roll
@@ -125,7 +125,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
           <div className="flex gap-1.5 mt-2">
             <input value={customMaterial} onChange={e => setCustomMaterial(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addCustom() }}
               placeholder="Other material…" className={inputCls} />
-            <button onClick={addCustom} className="px-2.5 rounded border border-stone-600 text-xs text-stone-300 hover:border-gold/50">Add</button>
+            <button onClick={addCustom} className="px-2.5 rounded-sm border border-stone-600 text-xs text-stone-300 hover:border-gold/50">Add</button>
           </div>
           {materials.filter(m => !areaMaterials.includes(m)).length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -147,12 +147,12 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
           <div className="flex flex-wrap items-center gap-1.5">
             {MINING_AMOUNTS.map(a => (
               <button key={a.blocks} onClick={() => { setRequested(a.blocks); setGained(null) }}
-                className={`px-2.5 py-1 rounded border text-xs ${requested === a.blocks ? 'border-gold/70 bg-gold/15 text-gold' : 'border-stone-600 text-stone-300 hover:border-stone-500'}`}>
+                className={`px-2.5 py-1 rounded-sm border text-xs ${requested === a.blocks ? 'border-gold/70 bg-gold/15 text-gold' : 'border-stone-600 text-stone-300 hover:border-stone-500'}`}>
                 {a.blocks} <span className="text-stone-500">· {fmtDays(a.days)}</span>
               </button>
             ))}
             <input type="number" min={1} value={requested} onChange={e => { setRequested(Math.max(1, parseInt(e.target.value) || 1)); setGained(null) }}
-              className="w-20 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-100 text-xs font-mono outline-none" />
+              className="w-20 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-100 text-xs font-mono outline-hidden" />
           </div>
           <div className="text-[11px] text-stone-500 mt-1">Takes {fmtDays(miningDays(requested))} of in-game time.</div>
         </div>
@@ -197,8 +197,8 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
             <label className={labelCls}>2d6 roll</label>
             <div className="flex gap-1.5">
               <input type="number" value={roll} onChange={e => { setRoll(e.target.value === '' ? '' : parseInt(e.target.value) || 0); setPenalty(0); setGained(null) }}
-                className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-sm font-mono outline-none focus:border-gold/50" />
-              <button onClick={() => { const check = rollMiningCheck(0, character?.missedRests ?? 0); setRoll(check.dice); setPenalty(check.penalty); setGained(null) }} className="flex items-center gap-1 px-2.5 rounded border border-stone-600 text-xs text-stone-300 hover:border-gold/50">
+                className="w-16 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-100 text-sm font-mono outline-hidden focus:border-gold/50" />
+              <button onClick={() => { const check = rollMiningCheck(0, character?.missedRests ?? 0); setRoll(check.dice); setPenalty(check.penalty); setGained(null) }} className="flex items-center gap-1 px-2.5 rounded-sm border border-stone-600 text-xs text-stone-300 hover:border-gold/50">
                 <Dices size={13} /> Roll
               </button>
             </div>
@@ -206,7 +206,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
           <div>
             <label className={labelCls}>Other (SD boost…)</label>
             <input type="number" value={otherBonus} onChange={e => setOtherBonus(parseInt(e.target.value) || 0)}
-              className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-sm font-mono outline-none" />
+              className="w-16 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-100 text-sm font-mono outline-hidden" />
           </div>
           <div className="text-sm text-stone-400 pb-1.5 font-mono">
             {roll === '' ? '?' : roll} {bonus >= 0 ? '+' : '−'} {Math.abs(bonus)}{penalty > 0 ? ` − ${penalty} (missed rest)` : ''} = <span className="text-stone-100 font-semibold">{total ?? '?'}</span>
@@ -214,7 +214,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
         </div>
 
         {outcome && (
-          <div className={`rounded border px-3 py-2 text-xs ${OUTCOME_TEXT[outcome].cls}`}>
+          <div className={`rounded-sm border px-3 py-2 text-xs ${OUTCOME_TEXT[outcome].cls}`}>
             <div className="font-semibold">{OUTCOME_TEXT[outcome].label}</div>
             <div className="opacity-80">{OUTCOME_TEXT[outcome].hint}</div>
             {roll === 12 && <div className="mt-1 font-semibold text-gold">⭐ Double 6s: +1 XP</div>}
@@ -246,9 +246,9 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
         )}
 
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-3 py-1.5 rounded text-sm text-stone-400 hover:text-stone-200">Cancel</button>
+          <button onClick={onClose} className="px-3 py-1.5 rounded-sm text-sm text-stone-400 hover:text-stone-200">Cancel</button>
           <button onClick={apply} disabled={!character || total === null}
-            className="px-3 py-1.5 rounded bg-gold text-stone-900 text-sm font-semibold hover:bg-yellow-400 disabled:opacity-40">
+            className="px-3 py-1.5 rounded-sm bg-gold text-stone-900 text-sm font-semibold hover:bg-yellow-400 disabled:opacity-40">
             Resolve mining
           </button>
         </div>

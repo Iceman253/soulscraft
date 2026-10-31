@@ -57,10 +57,10 @@ export function ItemPanel() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-stone-100 font-heading tracking-wide">World Items</h2>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowMerchant(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-700 text-stone-200 font-semibold hover:bg-stone-600 text-sm">
+          <button onClick={() => setShowMerchant(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stone-700 text-stone-200 font-semibold hover:bg-stone-600 text-sm">
             🏪 Merchant
           </button>
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm">
+          <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm">
             <Plus size={14} /> Add Item
           </button>
         </div>
@@ -69,7 +69,7 @@ export function ItemPanel() {
       <div className="relative mb-4">
         <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search items..."
-          className="w-full bg-stone-800 border border-stone-700 rounded-lg pl-8 pr-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500" />
+          className="w-full bg-stone-800 border border-stone-700 rounded-lg pl-8 pr-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500" />
       </div>
 
       {/* Character Gear section */}
@@ -116,25 +116,25 @@ export function ItemPanel() {
             <div>
               <label className="text-sm text-stone-400 block mb-1">Name *</label>
               <input autoFocus value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                placeholder="Iron Sword..." className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50" />
+                placeholder="Iron Sword..." className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm text-stone-400 block mb-1">Quantity</label>
                 <input type="number" value={newQty} min={1} onChange={e => setNewQty(parseInt(e.target.value) || 1)}
-                  className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none" />
+                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden" />
               </div>
               <div>
                 <label className="text-sm text-stone-400 block mb-1">Location</label>
-                <select value={newAreaId} onChange={e => setNewAreaId(e.target.value)} className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-2 text-stone-200 text-sm outline-none">
+                <select value={newAreaId} onChange={e => setNewAreaId(e.target.value)} className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-2 text-stone-200 text-sm outline-hidden">
                   <option value="">Unassigned</option>
                   {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
-              <button onClick={handleAdd} disabled={!newName.trim()} className="px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold text-sm disabled:opacity-50">Add</button>
+              <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
+              <button onClick={handleAdd} disabled={!newName.trim()} className="px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold text-sm disabled:opacity-50">Add</button>
             </div>
           </div>
         </Modal>
@@ -162,7 +162,7 @@ function ItemCard({ item, areas, onUpdate, onDelete, onMove }: {
 
   return (
     <div className="bg-stone-800 border border-stone-700 rounded-xl p-3 group relative">
-      <button onClick={() => onDelete(item.id)} className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 text-stone-500 hover:text-red-400 transition-opacity">
+      <button onClick={() => onDelete(item.id)} className="absolute top-2 right-2 p-1 rounded-sm opacity-0 group-hover:opacity-100 text-stone-500 hover:text-red-400 transition-opacity">
         <Trash2 size={12} />
       </button>
 
@@ -172,19 +172,19 @@ function ItemCard({ item, areas, onUpdate, onDelete, onMove }: {
       </label>
 
       <input value={item.name} onChange={e => onUpdate(item.id, { name: e.target.value })}
-        className="w-full text-center bg-transparent text-stone-100 text-sm font-medium outline-none hover:bg-stone-700 rounded px-1" />
+        className="w-full text-center bg-transparent text-stone-100 text-sm font-medium outline-hidden hover:bg-stone-700 rounded-sm px-1" />
 
       <div className="flex items-center justify-center gap-1.5 mt-1">
-        <button onClick={() => onUpdate(item.id, { quantity: Math.max(1, item.quantity - 1) })} className="w-5 h-5 rounded bg-stone-700 text-stone-400 text-xs hover:bg-stone-600">-</button>
+        <button onClick={() => onUpdate(item.id, { quantity: Math.max(1, item.quantity - 1) })} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-400 text-xs hover:bg-stone-600">-</button>
         <span className="text-xs text-stone-300 w-6 text-center font-mono tabular-nums">{item.quantity}</span>
-        <button onClick={() => onUpdate(item.id, { quantity: item.quantity + 1 })} className="w-5 h-5 rounded bg-stone-700 text-stone-400 text-xs hover:bg-stone-600">+</button>
+        <button onClick={() => onUpdate(item.id, { quantity: item.quantity + 1 })} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-400 text-xs hover:bg-stone-600">+</button>
       </div>
 
       <div className="mt-2">
         <select
           value={item.location.kind === 'area' ? item.location.areaId : ''}
           onChange={e => onMove(item.id, e.target.value ? { kind: 'area', areaId: e.target.value } : { kind: 'unassigned' })}
-          className="w-full bg-stone-900 border border-stone-700 rounded px-1.5 py-1 text-stone-400 text-xs outline-none"
+          className="w-full bg-stone-900 border border-stone-700 rounded-sm px-1.5 py-1 text-stone-400 text-xs outline-hidden"
         >
           <option value="">Unassigned</option>
           {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}

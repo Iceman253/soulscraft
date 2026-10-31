@@ -33,7 +33,7 @@ function TokenNode({ data }: NodeProps) {
       <div className="rounded-full ring-2 ring-gold/70 shadow-lg">
         <TokenAvatar name={c.name} characterId={c.id} size={34} />
       </div>
-      <span className="text-[10px] text-stone-100 bg-stone-900/85 px-1 rounded whitespace-nowrap max-w-24 truncate">{c.name}</span>
+      <span className="text-[10px] text-stone-100 bg-stone-900/85 px-1 rounded-sm whitespace-nowrap max-w-24 truncate">{c.name}</span>
     </div>
   )
 }
@@ -332,12 +332,12 @@ export function WorldMap() {
 
       {/* Toolbar */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-        <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-sm shadow-lg">
+        <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-sm shadow-lg">
           <Plus size={14} /> Add Area
         </button>
         <button
           onClick={toggleFog}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm shadow-lg ${fogEnabled ? 'bg-stone-900 border-gold/50 text-gold' : 'bg-stone-800 border-stone-600 text-stone-400 hover:text-stone-200'}`}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-sm shadow-lg ${fogEnabled ? 'bg-stone-900 border-gold/50 text-gold' : 'bg-stone-800 border-stone-600 text-stone-400 hover:text-stone-200'}`}
         >
           {fogEnabled ? <Eye size={14} /> : <EyeOff size={14} />} Fog {fogEnabled ? 'ON' : 'OFF'}
         </button>
@@ -361,7 +361,7 @@ export function WorldMap() {
                     partyAreaIds.forEach(id => addPlayerVisibleArea(id))
                   }
                 }}
-                className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-l border border-r-0 text-sm transition-colors ${
+                className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-l-sm border border-r-0 text-sm transition-colors ${
                   noParty
                     ? 'bg-stone-800 border-stone-600 text-stone-600 cursor-not-allowed'
                     : allVisible
@@ -389,7 +389,7 @@ export function WorldMap() {
               {/* Dropdown toggle */}
               <button
                 onClick={() => setShowRevealDropdown(v => !v)}
-                className={`flex items-center px-1.5 py-1.5 rounded-r border border-stone-600 text-sm transition-colors ${
+                className={`flex items-center px-1.5 py-1.5 rounded-r-sm border border-stone-600 text-sm transition-colors ${
                   showRevealDropdown
                     ? 'bg-stone-700 border-teal-500/50 text-teal-300'
                     : 'bg-stone-800 text-teal-400 hover:bg-stone-700 hover:text-teal-300'
@@ -440,14 +440,14 @@ export function WorldMap() {
             </div>
           )
         })()}
-        <label className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-800 border border-stone-600 text-stone-400 hover:text-stone-200 cursor-pointer text-sm shadow-lg">
+        <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stone-800 border border-stone-600 text-stone-400 hover:text-stone-200 cursor-pointer text-sm shadow-lg">
           <Image size={14} /> Map BG
           <input type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
         </label>
         {bgUrl && mapBackground && !scaleMode && (
           <button
             onClick={() => setScaleMode(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-800 border border-stone-600 text-stone-400 hover:text-gold hover:border-gold/50 text-sm shadow-lg"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stone-800 border border-stone-600 text-stone-400 hover:text-gold hover:border-gold/50 text-sm shadow-lg"
           >
             <Image size={14} /> Scale BG
           </button>
@@ -458,12 +458,12 @@ export function WorldMap() {
       {scaleMode && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-stone-900/95 border border-gold/40 rounded-lg shadow-2xl px-3 py-2">
           <span className="text-xs text-stone-300 font-medium">Scale background</span>
-          <button onClick={() => scaleBg(1 / 1.1)} title="Smaller" className="w-7 h-7 rounded bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-base leading-none">−</button>
-          <button onClick={() => scaleBg(1.1)} title="Larger" className="w-7 h-7 rounded bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-base leading-none">+</button>
+          <button onClick={() => scaleBg(1 / 1.1)} title="Smaller" className="w-7 h-7 rounded-sm bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-base leading-none">−</button>
+          <button onClick={() => scaleBg(1.1)} title="Larger" className="w-7 h-7 rounded-sm bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-base leading-none">+</button>
           <span className="text-[10px] text-stone-500 mx-1">drag the image to position it</span>
           <button
             onClick={() => setScaleMode(false)}
-            className="px-2.5 py-1 rounded bg-gold text-stone-900 text-xs font-semibold hover:bg-yellow-400"
+            className="px-2.5 py-1 rounded-sm bg-gold text-stone-900 text-xs font-semibold hover:bg-yellow-400"
           >
             Finished Scaling ⏎
           </button>
@@ -491,7 +491,7 @@ export function WorldMap() {
                   key={c.id}
                   draggable
                   onDragStart={e => { e.dataTransfer.setData(CHAR_DND, c.id); e.dataTransfer.effectAllowed = 'move' }}
-                  className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-stone-800 cursor-grab active:cursor-grabbing"
+                  className="flex items-center gap-2 px-1.5 py-1 rounded-sm hover:bg-stone-800 cursor-grab active:cursor-grabbing"
                   title="Drag onto a location on the map"
                 >
                   <TokenAvatar name={c.name} characterId={c.id} size={22} />

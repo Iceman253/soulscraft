@@ -57,7 +57,7 @@ export function TabGear({ character: c }: TabGearProps) {
           {ARMOR_MATERIALS.map(mat => (
             <button key={mat} onClick={() => equipFullSet(c.id, mat)}
               title={`Add ${mat} armor to on-hand & equip`}
-              className="px-2.5 py-1 rounded bg-stone-700 border border-stone-600 hover:border-gold/50 text-stone-300 text-xs capitalize flex items-center gap-1">
+              className="px-2.5 py-1 rounded-sm bg-stone-700 border border-stone-600 hover:border-gold/50 text-stone-300 text-xs capitalize flex items-center gap-1">
               <PackagePlus size={10} className="opacity-60" /> {mat}
             </button>
           ))}
@@ -177,7 +177,7 @@ function ArmorSlotRow({ slot, label, tags, piece, validMaterials, unequippedOnHa
   return (
     <div className="bg-stone-800 border border-stone-700 rounded-lg p-3">
       <div className="flex items-center gap-2.5">
-        <label className="w-10 h-10 rounded bg-stone-700 border border-stone-600 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center">
+        <label className="w-10 h-10 rounded-sm bg-stone-700 border border-stone-600 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center">
           {img ? <img src={img} className="w-full h-full object-cover" /> : <Shield size={16} className="text-stone-500" />}
           <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload} disabled={!piece} />
         </label>
@@ -191,7 +191,7 @@ function ArmorSlotRow({ slot, label, tags, piece, validMaterials, unequippedOnHa
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-stone-500">DEF</span>
                   <input type="number" value={piece.currentDef} onChange={e => onOverride(parseInt(e.target.value) || 0)}
-                    className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-blue-300 text-xs outline-none font-mono tabular-nums" />
+                    className="w-12 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-0.5 text-blue-300 text-xs outline-hidden font-mono tabular-nums" />
                   {piece.currentDef !== piece.baseDef && (
                     <button onClick={onReset} title="Reset to base" className="p-0.5 text-stone-500 hover:text-stone-300"><RotateCcw size={10} /></button>
                   )}
@@ -207,7 +207,7 @@ function ArmorSlotRow({ slot, label, tags, piece, validMaterials, unequippedOnHa
         {piece && (
           <button onClick={onUnequip} className="text-xs text-stone-500 hover:text-red-400 shrink-0">Unequip</button>
         )}
-        <button onClick={() => setShowEnc(v => !v)} className="p-1 rounded text-stone-500 hover:text-gold flex items-center gap-0.5 text-xs">
+        <button onClick={() => setShowEnc(v => !v)} className="p-1 rounded-sm text-stone-500 hover:text-gold flex items-center gap-0.5 text-xs">
           <img src="/enchanted-book.png" className="w-4 h-4 object-contain" alt="enchantments" />
           {piece?.enchantments.length ? <span className="text-gold font-bold">{piece.enchantments.length}</span> : ''}
         </button>
@@ -221,19 +221,19 @@ function ArmorSlotRow({ slot, label, tags, piece, validMaterials, unequippedOnHa
               <div className="text-xs text-stone-500">Equip from on-hand inventory:</div>
               <div className="flex gap-1.5 flex-wrap items-end">
                 <select value={selectedItemId} onChange={e => { setSelectedItemId(e.target.value); setMatOverride('') }}
-                  className="flex-1 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-200 text-xs outline-none focus:border-gold/50">
+                  className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden focus:border-gold/50">
                   <option value="">— Pick item —</option>
                   {unequippedOnHand.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
                 {selectedItemId && (
                   <select value={matOverride || autoMat || ''} onChange={e => setMatOverride(e.target.value as ArmorMaterial)}
-                    className="bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none">
+                    className="bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
                     <option value="">— Material —</option>
                     {validMaterials.map(m => <option key={m} value={m}>{m} (+{getBaseDef(m, slot)} DEF)</option>)}
                   </select>
                 )}
                 <button onClick={handleEquip} disabled={!selectedItemId || !effectiveMat}
-                  className="px-2.5 py-1 rounded bg-gold text-stone-900 font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed">
+                  className="px-2.5 py-1 rounded-sm bg-gold text-stone-900 font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed">
                   Equip
                 </button>
               </div>
@@ -250,10 +250,10 @@ function ArmorSlotRow({ slot, label, tags, piece, validMaterials, unequippedOnHa
           ) : (
             <div className="flex gap-1.5 items-center">
               <select value={quickMat} onChange={e => setQuickMat(e.target.value as ArmorMaterial)}
-                className="flex-1 bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none">
+                className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
                 {validMaterials.map(m => <option key={m} value={m}>{m} (+{getBaseDef(m, slot)} DEF)</option>)}
               </select>
-              <button onClick={handleQuickAdd} className="px-2.5 py-1 rounded bg-stone-600 text-stone-200 text-xs hover:bg-stone-500">Add & Equip</button>
+              <button onClick={handleQuickAdd} className="px-2.5 py-1 rounded-sm bg-stone-600 text-stone-200 text-xs hover:bg-stone-500">Add & Equip</button>
               <button onClick={() => setShowQuickAdd(false)} className="text-xs text-stone-500 hover:text-stone-300">✕</button>
             </div>
           )}
@@ -325,7 +325,7 @@ function WeaponSlotRow({ hand, weapon, unequippedOnHand, onEquip, onUnequip, onO
   return (
     <div className="bg-stone-800 border border-stone-700 rounded-lg p-3">
       <div className="flex items-center gap-2.5">
-        <label className="w-10 h-10 rounded bg-stone-700 border border-stone-600 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center">
+        <label className="w-10 h-10 rounded-sm bg-stone-700 border border-stone-600 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center">
           {img ? <img src={img} className="w-full h-full object-cover" /> : <Sword size={16} className="text-stone-500" />}
           <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload} disabled={!weapon} />
         </label>
@@ -338,7 +338,7 @@ function WeaponSlotRow({ hand, weapon, unequippedOnHand, onEquip, onUnequip, onO
               <div className="flex items-center gap-1">
                 <span className="text-xs text-stone-500">+DMG</span>
                 <input type="number" value={weapon.currentDamageBonus} onChange={e => onOverride(parseInt(e.target.value) || 0)}
-                  className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-orange-300 text-xs outline-none font-mono tabular-nums" />
+                  className="w-12 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-0.5 text-orange-300 text-xs outline-hidden font-mono tabular-nums" />
                 {weapon.currentDamageBonus !== weapon.baseDamageBonus && (
                   <button onClick={onReset} className="p-0.5 text-stone-500 hover:text-stone-300"><RotateCcw size={10} /></button>
                 )}
@@ -350,7 +350,7 @@ function WeaponSlotRow({ hand, weapon, unequippedOnHand, onEquip, onUnequip, onO
         </div>
 
         {weapon && <button onClick={onUnequip} className="text-xs text-stone-500 hover:text-red-400">Unequip</button>}
-        <button onClick={() => setShowEnc(v => !v)} className="p-1 rounded text-stone-500 hover:text-gold flex items-center gap-0.5 text-xs">
+        <button onClick={() => setShowEnc(v => !v)} className="p-1 rounded-sm text-stone-500 hover:text-gold flex items-center gap-0.5 text-xs">
           <img src="/enchanted-book.png" className="w-4 h-4 object-contain" alt="enchantments" />
           {weapon?.enchantments.length ? <span className="text-gold font-bold">{weapon.enchantments.length}</span> : ''}
         </button>
@@ -364,7 +364,7 @@ function WeaponSlotRow({ hand, weapon, unequippedOnHand, onEquip, onUnequip, onO
               <div className="text-xs text-stone-500">Equip from on-hand inventory:</div>
               <div className="flex gap-1.5 flex-wrap items-end">
                 <select value={selectedItemId} onChange={e => { setSelectedItemId(e.target.value); setTypeOverride(''); setMatOverride('') }}
-                  className="flex-1 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-200 text-xs outline-none focus:border-gold/50">
+                  className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden focus:border-gold/50">
                   <option value="">— Pick item —</option>
                   {unequippedOnHand.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
@@ -374,7 +374,7 @@ function WeaponSlotRow({ hand, weapon, unequippedOnHand, onEquip, onUnequip, onO
                   <div>
                     <div className="text-xs text-stone-500 mb-0.5">Type</div>
                     <select value={typeOverride || autoType || ''} onChange={e => { setTypeOverride(e.target.value as WeaponType); setMatOverride('') }}
-                      className="bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none">
+                      className="bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
                       <option value="">— Type —</option>
                       {WEAPON_TYPES.map(t => <option key={t} value={t}>{WEAPON_TYPE_LABELS[t]}</option>)}
                     </select>
@@ -382,13 +382,13 @@ function WeaponSlotRow({ hand, weapon, unequippedOnHand, onEquip, onUnequip, onO
                   <div>
                     <div className="text-xs text-stone-500 mb-0.5">Material</div>
                     <select value={matOverride || autoMat || ''} onChange={e => setMatOverride(e.target.value as WeaponMaterial)}
-                      className="bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none">
+                      className="bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
                       <option value="">— Material —</option>
                       {validMats.map(m => <option key={m} value={m}>{WEAPON_MATERIAL_LABELS[m]}</option>)}
                     </select>
                   </div>
                   <button onClick={handleEquip} disabled={!effectiveType || !effectiveMat}
-                    className="px-2.5 py-1 rounded bg-gold text-stone-900 font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed self-end">
+                    className="px-2.5 py-1 rounded-sm bg-gold text-stone-900 font-semibold text-xs disabled:opacity-40 disabled:cursor-not-allowed self-end">
                     Equip
                   </button>
                 </div>
@@ -408,18 +408,18 @@ function WeaponSlotRow({ hand, weapon, unequippedOnHand, onEquip, onUnequip, onO
               <div>
                 <div className="text-xs text-stone-500 mb-0.5">Type</div>
                 <select value={quickType} onChange={e => { setQuickType(e.target.value as WeaponType); setQuickMat(WEAPON_TYPE_MATERIALS[e.target.value as WeaponType][0]) }}
-                  className="bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none">
+                  className="bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
                   {WEAPON_TYPES.map(t => <option key={t} value={t}>{WEAPON_TYPE_LABELS[t]}</option>)}
                 </select>
               </div>
               <div>
                 <div className="text-xs text-stone-500 mb-0.5">Material</div>
                 <select value={quickMat} onChange={e => setQuickMat(e.target.value as WeaponMaterial)}
-                  className="bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none">
+                  className="bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
                   {WEAPON_TYPE_MATERIALS[quickType].map(m => <option key={m} value={m}>{WEAPON_MATERIAL_LABELS[m]}</option>)}
                 </select>
               </div>
-              <button onClick={handleQuickAdd} className="px-2.5 py-1 rounded bg-stone-600 text-stone-200 text-xs hover:bg-stone-500">Add & Equip</button>
+              <button onClick={handleQuickAdd} className="px-2.5 py-1 rounded-sm bg-stone-600 text-stone-200 text-xs hover:bg-stone-500">Add & Equip</button>
               <button onClick={() => setShowQuickAdd(false)} className="text-xs text-stone-500 hover:text-stone-300">✕</button>
             </div>
           )}
@@ -464,9 +464,9 @@ function AddEnchantmentRow({ onAdd }: { onAdd: (e: Omit<GearEnchantment, 'id'>) 
   return (
     <div className="flex gap-1.5 items-end">
       <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()}
-        placeholder="Enchantment name..." className="flex-1 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-200 text-xs outline-none focus:border-purple-500/50" />
+        placeholder="Enchantment name..." className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden focus:border-purple-500/50" />
       <select value={durType} onChange={e => setDurType(e.target.value as GearEnchantment['durationType'])}
-        className="bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none">
+        className="bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
         <option value="scenes">Scenes</option>
         <option value="days">Days</option>
         <option value="permanent">Permanent</option>
@@ -474,9 +474,9 @@ function AddEnchantmentRow({ onAdd }: { onAdd: (e: Omit<GearEnchantment, 'id'>) 
       </select>
       {(durType === 'scenes' || durType === 'days') && (
         <input type="number" value={remaining} onChange={e => setRemaining(parseInt(e.target.value) || 1)} min={1}
-          className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none" />
+          className="w-12 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden" />
       )}
-      <button onClick={submit} className="px-2 py-1 rounded bg-stone-700 hover:bg-stone-600 text-stone-300 text-xs"><Plus size={11} /></button>
+      <button onClick={submit} className="px-2 py-1 rounded-sm bg-stone-700 hover:bg-stone-600 text-stone-300 text-xs"><Plus size={11} /></button>
     </div>
   )
 }

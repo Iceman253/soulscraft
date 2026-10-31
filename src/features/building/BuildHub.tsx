@@ -94,7 +94,7 @@ export function BuildHub({ character }: { character: Character }) {
                   <span className="block truncate text-sm text-stone-500">{PROJECT_TIERS[s.tier].label} · {placementLabel(s, areas)}</span>
                   {p.status === 'complete'
                     ? <span className="block text-sm text-emerald">🏰 Complete</span>
-                    : <span className="mt-1 block h-1.5 overflow-hidden rounded bg-stone-800"><span className="block h-full bg-amber-500" style={{ width: `${Math.round(p.fraction * 100)}%` }} /></span>}
+                    : <span className="mt-1 block h-1.5 overflow-hidden rounded-sm bg-stone-800"><span className="block h-full bg-amber-500" style={{ width: `${Math.round(p.fraction * 100)}%` }} /></span>}
                 </span>
               </button>
             )

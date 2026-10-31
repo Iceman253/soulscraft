@@ -59,7 +59,7 @@ export function MobileCharacterCreate({ title = 'Create your character', onCreat
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Your hero's name…"
-          className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3.5 text-lg text-stone-100 outline-none focus:border-gold/60 placeholder:text-stone-600"
+          className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3.5 text-lg text-stone-100 outline-hidden focus:border-gold/60 placeholder:text-stone-600"
         />
       </Field>
 

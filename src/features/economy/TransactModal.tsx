@@ -86,7 +86,7 @@ export function TransactModal(props: Props) {
             {props.mode === 'buy' ? <ShoppingCart size={15} className="text-amber-400" /> : <Coins size={15} className="text-emerald" />}
             <h2 className="font-bold text-stone-100 text-sm font-heading">{title}</h2>
           </div>
-          <button onClick={onClose} className="p-1 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700">
+          <button onClick={onClose} className="p-1 rounded-sm text-stone-500 hover:text-stone-200 hover:bg-stone-700">
             <X size={14} />
           </button>
         </div>
@@ -101,7 +101,7 @@ export function TransactModal(props: Props) {
             <select
               value={charId}
               onChange={e => { setCharId(e.target.value); setItemId(''); setError(null) }}
-              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="">— Select character —</option>
               {characters.map(c => (
@@ -120,7 +120,7 @@ export function TransactModal(props: Props) {
                 <select
                   value={itemId}
                   onChange={e => pickItem(e.target.value)}
-                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500"
+                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500"
                 >
                   <option value="">— Select item —</option>
                   {char.onHand.items.map(i => (
@@ -138,7 +138,7 @@ export function TransactModal(props: Props) {
               <input
                 type="number" min={1} max={maxQty} value={qty}
                 onChange={e => setQty(Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1)))}
-                className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+                className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
               />
               {props.mode === 'buy' && maxQty < 999 && (
                 <div className="text-[10px] text-stone-600 mt-1">{maxQty} in stock</div>
@@ -151,7 +151,7 @@ export function TransactModal(props: Props) {
               <input
                 type="number" min={0} value={unitPrice}
                 onChange={e => setUnitPrice(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-full bg-stone-800 border border-amber-700/40 rounded-lg px-3 py-2 text-amber-100 text-sm outline-none focus:border-amber-600 font-mono tabular-nums"
+                className="w-full bg-stone-800 border border-amber-700/40 rounded-lg px-3 py-2 text-amber-100 text-sm outline-hidden focus:border-amber-600 font-mono tabular-nums"
               />
               <div className="text-[10px] text-stone-600 mt-1">
                 {props.mode === 'buy'

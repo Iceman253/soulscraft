@@ -76,7 +76,7 @@ function ItemNameEditor({ item, onSave }: { item: CharacterItem; onSave: (custom
           if (e.key === 'Enter') { onSave(draft.trim() || undefined); setEditing(false) }
           if (e.key === 'Escape') setEditing(false)
         }}
-        className="flex-1 bg-stone-700 border border-stone-500 rounded px-1.5 py-0.5 text-stone-100 text-xs outline-none focus:border-gold/60 min-w-0"
+        className="flex-1 bg-stone-700 border border-stone-500 rounded-sm px-1.5 py-0.5 text-stone-100 text-xs outline-hidden focus:border-gold/60 min-w-0"
       />
       <button onClick={() => { onSave(draft.trim() || undefined); setEditing(false) }} className="p-0.5 text-gold hover:text-gold/80 shrink-0">
         <Check size={11} />
@@ -263,7 +263,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
               <button
                 key={c.id}
                 onClick={() => setActiveTab(c.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t text-xs whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t-sm text-xs whitespace-nowrap transition-colors ${
                   isActive
                     ? isDead
                       ? 'bg-stone-900 text-stone-500 border-t border-l border-r border-stone-700 -mb-px pb-2'
@@ -291,7 +291,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
             {localMarket && (
               <button
                 onClick={() => setShowMarket(true)}
-                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 text-xs text-stone-400 hover:text-amber-300 hover:bg-stone-800/50 rounded-t whitespace-nowrap transition-colors shrink-0"
+                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 text-xs text-stone-400 hover:text-amber-300 hover:bg-stone-800/50 rounded-t-sm whitespace-nowrap transition-colors shrink-0"
                 title={`Browse ${localMarket.name}`}
               >
                 🏪 Market
@@ -299,7 +299,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
             )}
             <button
               onClick={() => setShowRequestModal(true)}
-              className="ml-1 flex items-center gap-1.5 px-3 py-1.5 text-xs text-stone-400 hover:text-teal-300 hover:bg-stone-800/50 rounded-t whitespace-nowrap transition-colors shrink-0"
+              className="ml-1 flex items-center gap-1.5 px-3 py-1.5 text-xs text-stone-400 hover:text-teal-300 hover:bg-stone-800/50 rounded-t-sm whitespace-nowrap transition-colors shrink-0"
               title="Send a request to the GM"
             >
               <Send size={11} /> Request
@@ -322,7 +322,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
           <div className="flex gap-2">
             {[1, 2, 3].map(n => (
               <button key={n} onClick={() => applyPendingPotion(n)}
-                className="flex-1 py-1.5 rounded border border-stone-600 text-stone-300 hover:border-gold/50 hover:text-gold text-xs font-semibold transition-colors">
+                className="flex-1 py-1.5 rounded-sm border border-stone-600 text-stone-300 hover:border-gold/50 hover:text-gold text-xs font-semibold transition-colors">
                 {n} measure{n !== 1 ? 's' : ''} → {n} scene{n !== 1 ? 's' : ''}
               </button>
             ))}
@@ -411,7 +411,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                   {Array.from({ length: Math.min(activeChar.currentSd, 6) }, (_, i) => i + 1).map(n => (
                     <button key={n}
                       onClick={() => { adjustSd(activeChar.id, -n); adjustHp(activeChar.id, n) }}
-                      className="px-2 py-1 rounded bg-red-800 hover:bg-red-700 text-red-100 text-xs font-bold border border-red-600 transition-colors">
+                      className="px-2 py-1 rounded-sm bg-red-800 hover:bg-red-700 text-red-100 text-xs font-bold border border-red-600 transition-colors">
                       −{n} SD → +{n} HP
                     </button>
                   ))}
@@ -452,7 +452,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                   <span>📍</span>
                   <span className="text-stone-300">{location?.name}</span>
                   <span className="text-stone-500">{location?.type}</span>
-                  {atRestSpot && <span className="ml-1 px-1.5 py-0.5 rounded bg-teal-900/40 border border-teal-700/40 text-teal-400">🏕️ Rest Spot</span>}
+                  {atRestSpot && <span className="ml-1 px-1.5 py-0.5 rounded-sm bg-teal-900/40 border border-teal-700/40 text-teal-400">🏕️ Rest Spot</span>}
                 </>
               )}
             </div>
@@ -488,7 +488,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                 {activeChar.skills.map(s => (
                   <div
                     key={s.id}
-                    className="flex items-center gap-1 bg-stone-800 border border-stone-700 rounded px-2 py-0.5"
+                    className="flex items-center gap-1 bg-stone-800 border border-stone-700 rounded-sm px-2 py-0.5"
                     title={s.description || undefined}
                   >
                     <span className="text-xs text-stone-200">{s.name}</span>
@@ -507,7 +507,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                 <span className="text-gold font-bold font-mono tabular-nums text-sm">{activeChar.xp} / 5</span>
                 {pendingSkillApproval ? (
                   <span
-                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded bg-stone-700 border border-amber-500/40 text-amber-300 text-xs font-semibold"
+                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-sm bg-stone-700 border border-amber-500/40 text-amber-300 text-xs font-semibold"
                     title="Your level-up proposal is awaiting GM approval."
                   >
                     <Hourglass size={11} /> Pending GM review
@@ -515,7 +515,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                 ) : activeChar.xp >= 5 ? (
                   <button
                     onClick={openFreshLevelUp}
-                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500 text-stone-900 text-xs font-bold hover:bg-amber-400 transition-colors animate-pulse"
+                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-sm bg-amber-500 text-stone-900 text-xs font-bold hover:bg-amber-400 transition-colors animate-pulse"
                   >
                     <Sparkles size={11} /> Level Up
                   </button>
@@ -525,7 +525,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
               </div>
               <div className="mt-1.5 h-1.5 rounded-full bg-stone-900 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-amber-600 to-amber-400 transition-all"
+                  className="h-full bg-linear-to-r/srgb from-amber-600 to-amber-400 transition-all"
                   style={{ width: `${Math.min(100, (activeChar.xp / 5) * 100)}%` }}
                 />
               </div>
@@ -556,13 +556,13 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                   <div className="flex gap-1.5">
                     <button
                       onClick={retryLevelUpFromDenied}
-                      className="flex items-center gap-1 px-2 py-1 rounded bg-amber-700/40 border border-amber-600/50 text-amber-200 hover:bg-amber-700/60 transition-colors text-xs font-medium"
+                      className="flex items-center gap-1 px-2 py-1 rounded-sm bg-amber-700/40 border border-amber-600/50 text-amber-200 hover:bg-amber-700/60 transition-colors text-xs font-medium"
                     >
                       <RotateCcw size={11} /> Pick again
                     </button>
                     <button
                       onClick={() => clearRequest(deniedSkillApproval.id)}
-                      className="px-2 py-1 rounded text-stone-500 hover:text-stone-300 text-xs"
+                      className="px-2 py-1 rounded-sm text-stone-500 hover:text-stone-300 text-xs"
                     >
                       Dismiss
                     </button>
@@ -670,7 +670,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                 {activeChar.onHand.items.map(item => {
                   const isPotion = isPotionItem(item)
                   return (
-                    <div key={item.id} className="flex items-center gap-2 px-2 py-1.5 rounded bg-stone-800 text-xs group">
+                    <div key={item.id} className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-stone-800 text-xs group">
                       <div className="flex-1 min-w-0">
                         {isOwnChar ? (
                           <ItemNameEditor
@@ -687,7 +687,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                       {isOwnChar && isPotion && (
                         <button
                           onClick={() => usePotion(activeChar.id, item)}
-                          className="px-1.5 py-0.5 rounded bg-emerald/20 border border-emerald/40 text-emerald text-xs hover:bg-emerald/30 transition-colors shrink-0"
+                          className="px-1.5 py-0.5 rounded-sm bg-emerald/20 border border-emerald/40 text-emerald text-xs hover:bg-emerald/30 transition-colors shrink-0"
                           title="Use potion"
                         >
                           Use
@@ -698,7 +698,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                       {isOwnChar && atRestSpot && (
                         <button
                           onClick={() => moveItemToStorage(activeChar.id, item.id)}
-                          className="px-1.5 py-0.5 rounded bg-stone-700 border border-stone-600 text-stone-400 hover:text-stone-200 hover:bg-stone-600 text-xs transition-colors shrink-0"
+                          className="px-1.5 py-0.5 rounded-sm bg-stone-700 border border-stone-600 text-stone-400 hover:text-stone-200 hover:bg-stone-600 text-xs transition-colors shrink-0"
                           title="Store"
                         >
                           Store
@@ -739,7 +739,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                     <div className="text-xs text-stone-500 italic pl-4">Storage is empty.</div>
                   ) : (
                     activeChar.storage.items.map(item => (
-                      <div key={item.id} className="flex items-center gap-2 px-2 py-1.5 rounded bg-stone-800/60 text-xs group">
+                      <div key={item.id} className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-stone-800/60 text-xs group">
                         <div className="flex-1 min-w-0">
                           {isOwnChar ? (
                             <ItemNameEditor
@@ -754,7 +754,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                         {atRestSpot && (
                           <button
                             onClick={() => moveItemToHand(activeChar.id, item.id)}
-                            className="px-1.5 py-0.5 rounded bg-stone-700 border border-stone-600 text-stone-400 hover:text-stone-200 hover:bg-stone-600 text-xs transition-colors shrink-0"
+                            className="px-1.5 py-0.5 rounded-sm bg-stone-700 border border-stone-600 text-stone-400 hover:text-stone-200 hover:bg-stone-600 text-xs transition-colors shrink-0"
                             title="Take"
                           >
                             Take
@@ -835,19 +835,19 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                   value={draftNotes}
                   onChange={e => setDraftNotes(e.target.value)}
                   rows={5}
-                  className="w-full bg-stone-800 border border-stone-600 rounded px-2.5 py-2 text-stone-100 text-xs outline-none resize-none focus:border-gold/50 transition-colors"
+                  className="w-full bg-stone-800 border border-stone-600 rounded-sm px-2.5 py-2 text-stone-100 text-xs outline-hidden resize-none focus:border-gold/50 transition-colors"
                   placeholder="Write notes here…"
                 />
                 <div className="flex gap-1.5 justify-end">
                   <button
                     onClick={() => setEditingNotes(false)}
-                    className="px-2.5 py-1 rounded text-xs text-stone-400 hover:text-stone-200 border border-stone-600 hover:border-stone-500 transition-colors"
+                    className="px-2.5 py-1 rounded-sm text-xs text-stone-400 hover:text-stone-200 border border-stone-600 hover:border-stone-500 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => { updateCharacter(activeChar.id, { notes: draftNotes }); setEditingNotes(false) }}
-                    className="px-2.5 py-1 rounded text-xs text-gold border border-gold/50 hover:bg-gold/10 transition-colors"
+                    className="px-2.5 py-1 rounded-sm text-xs text-gold border border-gold/50 hover:bg-gold/10 transition-colors"
                   >
                     Save
                   </button>
@@ -856,7 +856,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
             ) : (
               <div
                 onClick={isOwnChar ? () => { setDraftNotes(activeChar.notes ?? ''); setEditingNotes(true) } : undefined}
-                className={`text-xs text-stone-400 whitespace-pre-wrap rounded px-2 py-1.5 min-h-[2.5rem] ${
+                className={`text-xs text-stone-400 whitespace-pre-wrap rounded-sm px-2 py-1.5 min-h-[2.5rem] ${
                   isOwnChar ? 'cursor-text hover:bg-stone-800/60 transition-colors' : ''
                 } ${!activeChar.notes ? 'text-stone-600 italic' : ''}`}
               >
@@ -887,7 +887,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                       <HpBar current={c.currentHp} max={c.maxHp} className="w-16" />
                       <button
                         onClick={() => smiteCharacter(c.id, c.name)}
-                        className="p-1 rounded text-red-400 hover:text-red-200 hover:bg-red-900/40 transition-colors shrink-0"
+                        className="p-1 rounded-sm text-red-400 hover:text-red-200 hover:bg-red-900/40 transition-colors shrink-0"
                         title={`Kill ${c.name}`}
                       >
                         <Skull size={12} />
@@ -908,7 +908,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                       <HpBar current={c.currentHp} max={c.maxHp} className="w-16" />
                       <button
                         onClick={() => smiteCombatant(c.id, c.name)}
-                        className="p-1 rounded text-red-400 hover:text-red-200 hover:bg-red-900/40 transition-colors shrink-0"
+                        className="p-1 rounded-sm text-red-400 hover:text-red-200 hover:bg-red-900/40 transition-colors shrink-0"
                         title={`Kill ${c.name}`}
                       >
                         <Skull size={12} />

@@ -76,7 +76,7 @@ export function ReferencePanel() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={tab === 'potions' ? 'Search potions, ingredients…' : tab === 'enchanting' ? 'Search signs…' : ''}
-            className={`w-full bg-stone-800 border border-stone-700 rounded-lg pl-8 pr-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500 ${tab === 'hazards' ? 'hidden' : ''}`}
+            className={`w-full bg-stone-800 border border-stone-700 rounded-lg pl-8 pr-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500 ${tab === 'hazards' ? 'hidden' : ''}`}
           />
         </div>
       </div>
@@ -106,7 +106,7 @@ function HazardsSection() {
               <div className="flex items-center gap-2">
                 <span className="text-base">{h.icon}</span>
                 <span className="font-semibold text-stone-100 text-sm font-heading tracking-wide">{h.name}</span>
-                {h.ignoresDef && <span className="text-xs px-1.5 py-0.5 rounded bg-red-900/30 border border-red-800/40 text-red-400">Ignores DEF</span>}
+                {h.ignoresDef && <span className="text-xs px-1.5 py-0.5 rounded-sm bg-red-900/30 border border-red-800/40 text-red-400">Ignores DEF</span>}
               </div>
               <span className="font-mono text-sm text-gold font-bold shrink-0">{h.damage}</span>
             </div>
@@ -163,8 +163,8 @@ function PotionCard({ potion: p }: { potion: PotionRecipe }) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {p.instant
-            ? <span className="text-xs bg-stone-700 text-stone-400 px-1.5 py-0.5 rounded">Instant</span>
-            : <span className="text-xs bg-blue-900/40 text-blue-300 px-1.5 py-0.5 rounded border border-blue-800/40">+ Redstone</span>
+            ? <span className="text-xs bg-stone-700 text-stone-400 px-1.5 py-0.5 rounded-sm">Instant</span>
+            : <span className="text-xs bg-blue-900/40 text-blue-300 px-1.5 py-0.5 rounded-sm border border-blue-800/40">+ Redstone</span>
           }
           {open ? <ChevronDown size={14} className="text-stone-500" /> : <ChevronRight size={14} className="text-stone-500" />}
         </div>
@@ -178,7 +178,7 @@ function PotionCard({ potion: p }: { potion: PotionRecipe }) {
             <div className="text-xs text-stone-500 mb-1">Ingredients</div>
             <div className="flex flex-wrap gap-1.5">
               {p.ingredients.map((ing, i) => (
-                <span key={i} className="px-2 py-0.5 rounded bg-stone-700 border border-stone-600 text-stone-300 text-xs">
+                <span key={i} className="px-2 py-0.5 rounded-sm bg-stone-700 border border-stone-600 text-stone-300 text-xs">
                   {ing}
                 </span>
               ))}

@@ -28,7 +28,7 @@ export function EditableText({ value, onSave, className = '', placeholder = 'Cli
         if (!multiline && e.key === 'Enter') commit()
         if (e.key === 'Escape') { setEditing(false); setDraft(value) }
       },
-      className: `bg-stone-900 border border-gold/50 rounded px-2 py-1 text-stone-100 outline-none w-full ${className}`,
+      className: `bg-stone-900 border border-gold/50 rounded-sm px-2 py-1 text-stone-100 outline-hidden w-full ${className}`,
     }
     return multiline
       ? <textarea {...sharedProps} rows={3} />
@@ -38,7 +38,7 @@ export function EditableText({ value, onSave, className = '', placeholder = 'Cli
   return (
     <span
       onClick={() => setEditing(true)}
-      className={`cursor-text hover:bg-stone-700/50 rounded px-1 -mx-1 transition-colors ${value ? '' : 'text-stone-500 italic'} ${className}`}
+      className={`cursor-text hover:bg-stone-700/50 rounded-sm px-1 -mx-1 transition-colors ${value ? '' : 'text-stone-500 italic'} ${className}`}
     >
       {value || placeholder}
     </span>

@@ -88,8 +88,8 @@ export function PlaceCharactersModal({ areaId, subNodeId, onClose }: PlaceCharac
           ))}
         </div>
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
-          <button onClick={handleConfirm} className="px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm">Confirm</button>
+          <button onClick={onClose} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
+          <button onClick={handleConfirm} className="px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm">Confirm</button>
         </div>
       </div>
     </Modal>

@@ -280,7 +280,7 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
                   <span className="text-xl font-bold font-mono tabular-nums text-stone-100">{activeChar.currentHp}<span className="text-stone-500 text-base"> / {activeChar.maxHp}</span></span>
                 </div>
                 <div className="h-3 rounded-full bg-stone-800 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all"
+                  <div className="h-full bg-linear-to-r/srgb from-red-600 to-red-400 transition-all"
                     style={{ width: `${Math.max(0, Math.min(100, (activeChar.currentHp / activeChar.maxHp) * 100))}%` }} />
                 </div>
               </div>
@@ -465,7 +465,7 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
                   onChange={e => updateCharacter(activeChar.id, { notes: e.target.value })}
                   rows={4}
                   placeholder="Tap to add notes…"
-                  className="w-full bg-stone-900 border border-stone-700 rounded-xl px-3.5 py-3 text-base text-stone-100 outline-none resize-none focus:border-gold/50"
+                  className="w-full bg-stone-900 border border-stone-700 rounded-xl px-3.5 py-3 text-base text-stone-100 outline-hidden resize-none focus:border-gold/50"
                 />
               </Section>
             )}

@@ -122,7 +122,7 @@ export function AttackModal({
             <Sword size={16} className="text-redstone" />
             <span className="font-bold text-stone-100 font-heading tracking-wide">{attacker.name} Attacks</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-700">
+          <button onClick={onClose} className="p-1 rounded-sm text-stone-500 hover:text-stone-300 hover:bg-stone-700">
             <X size={14} />
           </button>
         </div>
@@ -132,7 +132,7 @@ export function AttackModal({
           <div>
             <label className="text-xs text-stone-400 mb-1 block">Target</label>
             <select value={attack.targetId} onChange={e => onSetTarget(e.target.value)}
-              className="w-full bg-stone-800 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
+              className="w-full bg-stone-800 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden">
               {others.map(c => (
                 <option key={c.id} value={c.id}>{c.name} (HP: {c.currentHp}/{c.maxHp}, DEF: {c.def})</option>
               ))}
@@ -163,14 +163,14 @@ export function AttackModal({
               <span className="text-xs text-stone-400">Extra Bonus</span>
               <div className="flex items-center gap-1">
                 <button onClick={() => onSetBonus(attack.skillBonus - 1)}
-                  className="w-5 h-5 rounded bg-stone-700 text-stone-300 text-xs">-</button>
+                  className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 text-xs">-</button>
                 <span className={`text-sm font-bold w-8 text-center font-mono tabular-nums ${
                   attack.skillBonus > 0 ? 'text-gold' : attack.skillBonus < 0 ? 'text-red-400' : 'text-stone-400'
                 }`}>
                   {attack.skillBonus > 0 ? `+${attack.skillBonus}` : attack.skillBonus}
                 </span>
                 <button onClick={() => onSetBonus(attack.skillBonus + 1)}
-                  className="w-5 h-5 rounded bg-stone-700 text-stone-300 text-xs">+</button>
+                  className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 text-xs">+</button>
               </div>
               {appliedBonus !== 0 && (
                 <span className="text-xs text-stone-500">
@@ -281,7 +281,7 @@ export function AttackModal({
                 value={complicationNote}
                 onChange={e => setComplicationNote(e.target.value)}
                 placeholder="Complication note (e.g. 'attacker stumbles', 'breaks weapon')..."
-                className="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-stone-200 text-xs outline-none focus:border-amber-600"
+                className="w-full bg-stone-900 border border-stone-700 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden focus:border-amber-600"
               />
               <p className="text-[10px] text-amber-400/60 leading-relaxed">
                 The attack still hits — but the GM should introduce a twist: counter-attack opening, lost positioning, broken gear, telegraphed move, etc.
@@ -336,7 +336,7 @@ export function AttackModal({
         </div>
 
         <div className="px-5 py-3 border-t border-stone-700 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
+          <button onClick={onClose} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
             Cancel
           </button>
           {attack.phase === 'done' && attack.damageRoll && (() => {
@@ -346,14 +346,14 @@ export function AttackModal({
             return (
               <button
                 onClick={() => onApplyDamage(isPartial ? { reduceDamage, note: complicationNote.trim() } : undefined)}
-                className="px-4 py-1.5 rounded bg-redstone hover:bg-red-700 text-white font-semibold text-sm"
+                className="px-4 py-1.5 rounded-sm bg-redstone hover:bg-red-700 text-white font-semibold text-sm"
               >
                 Apply {attack.damageRoll.instantKill ? 'Defeat' : `${finalDealt} Damage`} to {target?.name}
               </button>
             )
           })()}
           {attack.phase === 'done' && !attack.damageRoll && (
-            <button onClick={onClose} className="px-4 py-1.5 rounded bg-stone-600 text-stone-200 text-sm">
+            <button onClick={onClose} className="px-4 py-1.5 rounded-sm bg-stone-600 text-stone-200 text-sm">
               Close
             </button>
           )}

@@ -129,12 +129,12 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
         {!playerOnly && (
           <div className="flex gap-2 mb-5">
             <button onClick={() => setShowNew(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm border border-gold/50 text-gold hover:bg-gold/10 hover:border-gold transition-all rounded font-heading tracking-wide"
+              className="flex items-center gap-2 px-4 py-2 text-sm border border-gold/50 text-gold hover:bg-gold/10 hover:border-gold transition-all rounded-sm font-heading tracking-wide"
               style={{ fontSize: '12px', letterSpacing: '0.08em' }}>
               <Plus size={14} /> New Campaign
             </button>
             <button onClick={handleImport}
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200 transition-all rounded font-heading"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-200 transition-all rounded-sm font-heading"
               style={{ fontSize: '12px', letterSpacing: '0.08em' }}>
               <Upload size={13} /> Import
             </button>
@@ -149,9 +149,9 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
         )}
 
         {/* Campaign list */}
-        <div className="divide-y divide-stone-700">
+        <div className="[&>*+*]:border-t [&>*+*]:border-stone-700">
           {index.map(meta => (
-            <div key={meta.id} className="group flex items-center gap-4 py-4 hover:bg-stone-800/60 px-3 -mx-3 rounded transition-colors">
+            <div key={meta.id} className="group flex items-center gap-4 py-4 hover:bg-stone-800/60 px-3 -mx-3 rounded-sm transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="font-heading text-stone-100 tracking-wide mb-0.5" style={{ fontSize: '14px' }}>{meta.name}</div>
                 <div className="text-xs text-stone-500 mt-1 font-mono">{new Date(meta.updatedAt).toLocaleString()}</div>
@@ -168,18 +168,18 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
               {!playerOnly && (
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => exportCampaign(meta.id)} title="Export"
-                    className="p-1.5 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700 transition-colors">
+                    className="p-1.5 rounded-sm text-stone-500 hover:text-stone-200 hover:bg-stone-700 transition-colors">
                     <Download size={14} />
                   </button>
                   <button onClick={() => { setDeleteCode(''); setDeletePrompt({ id: meta.id, name: meta.name }) }} title="Delete"
-                    className="p-1.5 rounded text-stone-500 hover:text-red-400 hover:bg-stone-700 transition-colors">
+                    className="p-1.5 rounded-sm text-stone-500 hover:text-red-400 hover:bg-stone-700 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
               )}
 
               <button onClick={() => openEnter(meta.id, meta.name)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-stone-600 text-stone-300 hover:border-gold/50 hover:text-gold text-sm font-heading transition-all shrink-0 group-hover:border-stone-500"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-stone-600 text-stone-300 hover:border-gold/50 hover:text-gold text-sm font-heading transition-all shrink-0 group-hover:border-stone-500"
                 style={{ fontSize: '12px', letterSpacing: '0.06em' }}>
                 Enter <ChevronRight size={13} />
               </button>
@@ -196,8 +196,8 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
 
       {/* Code prompt */}
       {codePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="bg-stone-800 border border-stone-600 rounded p-6 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="bg-stone-800 border border-stone-600 rounded-sm p-6 w-full max-w-sm shadow-2xl">
             <h2 className="font-heading text-stone-100 mb-1 tracking-wider flex items-center gap-2" style={{ fontSize: '15px' }}>
               <Lock size={14} className="text-gold" /> {codePrompt.name}
             </h2>
@@ -206,12 +206,12 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
               onChange={e => setCode(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submitCode()}
               placeholder="Campaign code"
-              className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 outline-none focus:border-gold/60 text-sm" />
+              className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 outline-hidden focus:border-gold/60 text-sm" />
             {codeError && <div className="text-red-400 text-xs mt-2">{codeError}</div>}
             <div className="flex gap-2 mt-4 justify-end">
-              <button onClick={() => setCodePrompt(null)} className="px-3 py-1.5 rounded border border-stone-600 text-stone-400 hover:text-stone-200 text-sm">Cancel</button>
+              <button onClick={() => setCodePrompt(null)} className="px-3 py-1.5 rounded-sm border border-stone-600 text-stone-400 hover:text-stone-200 text-sm">Cancel</button>
               <button onClick={submitCode} disabled={busy || !code}
-                className="px-4 py-1.5 rounded border border-gold/60 text-gold hover:bg-gold/10 font-heading text-sm disabled:opacity-40">
+                className="px-4 py-1.5 rounded-sm border border-gold/60 text-gold hover:bg-gold/10 font-heading text-sm disabled:opacity-40">
                 {busy ? 'Checking…' : 'Enter'}
               </button>
             </div>
@@ -221,29 +221,29 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
 
       {/* New Campaign (GM) */}
       {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="bg-stone-800 border border-stone-600 rounded p-6 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="bg-stone-800 border border-stone-600 rounded-sm p-6 w-full max-w-md shadow-2xl">
             <h2 className="font-heading text-stone-100 mb-4 tracking-wider" style={{ fontSize: '15px' }}>New Campaign</h2>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-stone-400 mb-1 uppercase tracking-widest" style={{ fontSize: '10px' }}>Campaign Name *</label>
                 <input autoFocus type="text" value={newName} onChange={e => setNewName(e.target.value)}
                   placeholder="The Nether Expedition…"
-                  className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 outline-none focus:border-gold/60 text-sm" />
+                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 outline-hidden focus:border-gold/60 text-sm" />
               </div>
               <div>
                 <label className="block text-xs text-stone-400 mb-1 uppercase tracking-widest" style={{ fontSize: '10px' }}>Campaign Code * <span className="text-stone-600 normal-case">(players need this to join)</span></label>
                 <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleCreate()}
                   placeholder="e.g. nether42"
-                  className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 outline-none focus:border-gold/60 text-sm" />
+                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 outline-hidden focus:border-gold/60 text-sm" />
               </div>
             </div>
             <div className="flex gap-2 mt-5 justify-end">
               <button onClick={() => { setShowNew(false); setNewName(''); setNewCode('') }}
-                className="px-3 py-1.5 rounded border border-stone-600 text-stone-400 hover:text-stone-200 text-sm">Cancel</button>
+                className="px-3 py-1.5 rounded-sm border border-stone-600 text-stone-400 hover:text-stone-200 text-sm">Cancel</button>
               <button onClick={handleCreate} disabled={busy || !newName.trim() || !newCode.trim()}
-                className="px-4 py-1.5 rounded border border-gold/60 text-gold hover:bg-gold/10 font-heading text-sm disabled:opacity-40">
+                className="px-4 py-1.5 rounded-sm border border-gold/60 text-gold hover:bg-gold/10 font-heading text-sm disabled:opacity-40">
                 {busy ? 'Creating…' : 'Create'}
               </button>
             </div>
@@ -253,17 +253,17 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
 
       {/* Delete confirm (GM) — requires the code */}
       {deletePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="bg-stone-800 border border-red-800/50 rounded p-6 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="bg-stone-800 border border-red-800/50 rounded-sm p-6 w-full max-w-sm shadow-2xl">
             <h2 className="font-heading text-red-300 mb-1 tracking-wider" style={{ fontSize: '15px' }}>Delete "{deletePrompt.name}"</h2>
             <p className="text-stone-500 text-sm mb-4">This permanently deletes the campaign from the server. Enter its code to confirm.</p>
             <input autoFocus type="password" value={deleteCode} onChange={e => setDeleteCode(e.target.value)}
               placeholder="Campaign code"
-              className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 outline-none focus:border-red-500/60 text-sm" />
+              className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 outline-hidden focus:border-red-500/60 text-sm" />
             <div className="flex gap-2 mt-4 justify-end">
-              <button onClick={() => setDeletePrompt(null)} className="px-3 py-1.5 rounded border border-stone-600 text-stone-400 hover:text-stone-200 text-sm">Cancel</button>
+              <button onClick={() => setDeletePrompt(null)} className="px-3 py-1.5 rounded-sm border border-stone-600 text-stone-400 hover:text-stone-200 text-sm">Cancel</button>
               <button onClick={confirmDelete} disabled={!deleteCode}
-                className="px-4 py-1.5 rounded bg-red-800 text-red-100 hover:bg-red-700 text-sm disabled:opacity-40">Delete</button>
+                className="px-4 py-1.5 rounded-sm bg-red-800 text-red-100 hover:bg-red-700 text-sm disabled:opacity-40">Delete</button>
             </div>
           </div>
         </div>
@@ -271,15 +271,15 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
 
       {/* Role / character picker */}
       {pendingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="bg-stone-800 border border-stone-600 rounded p-6 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="bg-stone-800 border border-stone-600 rounded-sm p-6 w-full max-w-sm shadow-2xl">
             {roleStep === 'pick-role' ? (
               <>
                 <h2 className="font-heading text-stone-100 text-center mb-1 tracking-wider" style={{ fontSize: '15px' }}>Who are you?</h2>
                 <p className="text-stone-500 text-sm text-center mb-6 italic">Choose how you want to play this session.</p>
                 <div className="flex flex-col gap-2">
                   <button onClick={() => { onPlay(pendingId, null); setPendingId(null) }}
-                    className="flex items-center gap-3 p-4 rounded border border-stone-600 hover:border-gold/40 hover:bg-stone-700/50 text-left transition-all">
+                    className="flex items-center gap-3 p-4 rounded-sm border border-stone-600 hover:border-gold/40 hover:bg-stone-700/50 text-left transition-all">
                     <Shield size={20} className="text-gold shrink-0" />
                     <div>
                       <div className="font-heading text-stone-100 tracking-wide" style={{ fontSize: '13px' }}>Game Master</div>
@@ -290,7 +290,7 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
                       if (stagedCharacters.length === 0) { onPlay(pendingId, ''); setPendingId(null) }
                       else setRoleStep('pick-character')
                     }}
-                    className="flex items-center gap-3 p-4 rounded border border-stone-600 hover:border-teal-500/40 hover:bg-stone-700/50 text-left transition-all">
+                    className="flex items-center gap-3 p-4 rounded-sm border border-stone-600 hover:border-teal-500/40 hover:bg-stone-700/50 text-left transition-all">
                     <User size={20} className="text-teal-400 shrink-0" />
                     <div>
                       <div className="font-heading text-stone-100 tracking-wide" style={{ fontSize: '13px' }}>Player</div>
@@ -306,7 +306,7 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
                 <p className="text-stone-500 text-sm text-center mb-4 italic">Select your character, or create a new one.</p>
                 <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto">
                   <button onClick={() => { onPlay(pendingId, ''); setPendingId(null) }}
-                    className="flex items-center gap-3 p-3 rounded border border-dashed border-gold/40 hover:border-gold/70 hover:bg-gold/5 text-left transition-all">
+                    className="flex items-center gap-3 p-3 rounded-sm border border-dashed border-gold/40 hover:border-gold/70 hover:bg-gold/5 text-left transition-all">
                     <span className="w-8 h-8 rounded-full bg-gold/10 border border-gold/40 flex items-center justify-center text-gold shrink-0"><User size={16} /></span>
                     <div>
                       <div className="font-heading text-gold tracking-wide" style={{ fontSize: '13px' }}>Create a new character</div>
@@ -315,7 +315,7 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
                   </button>
                   {stagedCharacters.filter(c => !c.isDead).map(c => (
                     <button key={c.id} onClick={() => { onPlay(pendingId, c.id); setPendingId(null) }}
-                      className="flex items-center gap-3 p-3 rounded border border-stone-600 hover:border-teal-500/40 hover:bg-stone-700/50 text-left transition-all">
+                      className="flex items-center gap-3 p-3 rounded-sm border border-stone-600 hover:border-teal-500/40 hover:bg-stone-700/50 text-left transition-all">
                       <TokenAvatar name={c.name} characterId={c.id} size={32} />
                       <div>
                         <div className="font-heading text-stone-100 tracking-wide" style={{ fontSize: '13px' }}>{c.name}</div>

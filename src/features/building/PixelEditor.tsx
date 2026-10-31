@@ -96,7 +96,7 @@ export function PixelEditor({ initial, onSave, onCancel, saveLabel = 'Save icon'
   return (
     <div className="space-y-3">
       <div className="sticky top-0 z-10 -mx-1 flex items-center justify-between gap-2 rounded-lg bg-stone-900/95 p-1">
-        <button onClick={onCancel} className="px-3 py-2 rounded text-sm text-stone-400 hover:text-stone-200">Cancel</button>
+        <button onClick={onCancel} className="px-3 py-2 rounded-sm text-sm text-stone-400 hover:text-stone-200">Cancel</button>
         <button onClick={() => onSave(icon)} disabled={requireDrawing && isBlankIcon(icon)}
           className="px-5 py-2 rounded-lg bg-gold text-stone-900 text-base font-bold hover:bg-yellow-400 disabled:opacity-40">{saveLabel}</button>
       </div>
@@ -121,15 +121,15 @@ export function PixelEditor({ initial, onSave, onCancel, saveLabel = 'Save icon'
             key={t.id}
             onClick={() => setTool(t.id)}
             title={t.label}
-            className={`flex items-center gap-1 px-2.5 py-2 rounded border text-xs ${tool === t.id ? 'border-gold/70 bg-gold/15 text-gold' : 'border-stone-600 text-stone-300 hover:border-stone-500'}`}
+            className={`flex items-center gap-1 px-2.5 py-2 rounded-sm border text-xs ${tool === t.id ? 'border-gold/70 bg-gold/15 text-gold' : 'border-stone-600 text-stone-300 hover:border-stone-500'}`}
           >
             {t.icon}<span>{t.label}</span>
           </button>
         ))}
-        <button onClick={undo} disabled={!history.length} title="Undo" className="p-2 rounded border border-stone-600 text-stone-300 disabled:opacity-30 hover:border-stone-500">
+        <button onClick={undo} disabled={!history.length} title="Undo" className="p-2 rounded-sm border border-stone-600 text-stone-300 disabled:opacity-30 hover:border-stone-500">
           <Undo2 size={15} />
         </button>
-        <button onClick={clear} title="Clear" className="p-2 rounded border border-stone-600 text-stone-300 hover:border-red-500/60 hover:text-red-300">
+        <button onClick={clear} title="Clear" className="p-2 rounded-sm border border-stone-600 text-stone-300 hover:border-red-500/60 hover:text-red-300">
           <Trash2 size={15} />
         </button>
         <label className="flex items-center gap-1 text-xs text-stone-400 ml-auto select-none">
@@ -146,7 +146,7 @@ export function PixelEditor({ initial, onSave, onCancel, saveLabel = 'Save icon'
           onPointerUp={stop}
           onPointerCancel={stop}
           onLostPointerCapture={stop}
-          className="relative mx-auto w-full max-w-[420px] sm:max-w-[320px] aspect-square rounded border border-stone-600 overflow-hidden select-none cursor-crosshair"
+          className="relative mx-auto w-full max-w-[420px] sm:max-w-[320px] aspect-square rounded-sm border border-stone-600 overflow-hidden select-none cursor-crosshair"
           style={{ background: CHECKER, touchAction: 'none' }}
         >
           <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${ICON_SIZE}, 1fr)` }}>
@@ -168,14 +168,14 @@ export function PixelEditor({ initial, onSave, onCancel, saveLabel = 'Save icon'
                 key={p.key}
                 onClick={() => { setColor(p.key); if (tool === 'eraser' || tool === 'picker') setTool('pencil') }}
                 title={p.name}
-                className={`aspect-square w-full min-w-7 sm:w-7 rounded border-2 ${color === p.key && tool !== 'eraser' ? 'border-gold scale-110' : 'border-stone-700'}`}
+                className={`aspect-square w-full min-w-7 sm:w-7 rounded-sm border-2 ${color === p.key && tool !== 'eraser' ? 'border-gold scale-110' : 'border-stone-700'}`}
                 style={{ background: p.color }}
               />
             ))}
           </div>
           <div className="flex sm:flex-col items-center gap-2 shrink-0">
             <div className="text-[10px] text-stone-500 uppercase tracking-wider">Preview</div>
-            <div className="flex items-end gap-2 bg-stone-900 rounded p-2 border border-stone-700">
+            <div className="flex items-end gap-2 bg-stone-900 rounded-sm p-2 border border-stone-700">
               <PixelIcon icon={icon} size={48} />
               <PixelIcon icon={icon} size={24} />
             </div>

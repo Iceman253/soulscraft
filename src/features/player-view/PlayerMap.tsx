@@ -49,10 +49,10 @@ function PlayerAreaNode({ data }: NodeProps) {
     <div className={`relative min-w-32 rounded-lg border-2 bg-stone-800 shadow-lg ${
       REALM_COLORS[area.realm] ?? 'border-stone-600'
     } ${hasActiveCharacters ? 'ring-2 ring-gold shadow-gold/20' : ''}`}>
-      <Handle id="top"    type="source" position={Position.Top}    className="!bg-stone-500 !w-3 !h-3 !border-stone-400" />
-      <Handle id="bottom" type="source" position={Position.Bottom} className="!bg-stone-500 !w-3 !h-3 !border-stone-400" />
-      <Handle id="left"   type="source" position={Position.Left}   className="!bg-stone-500 !w-3 !h-3 !border-stone-400" />
-      <Handle id="right"  type="source" position={Position.Right}  className="!bg-stone-500 !w-3 !h-3 !border-stone-400" />
+      <Handle id="top"    type="source" position={Position.Top}    className="bg-stone-500! w-3! h-3! border-stone-400!" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="bg-stone-500! w-3! h-3! border-stone-400!" />
+      <Handle id="left"   type="source" position={Position.Left}   className="bg-stone-500! w-3! h-3! border-stone-400!" />
+      <Handle id="right"  type="source" position={Position.Right}  className="bg-stone-500! w-3! h-3! border-stone-400!" />
       <div className="p-2.5">
         <div className="flex items-center gap-1.5 mb-1">
           <span className="text-base leading-none">{TYPE_ICONS[area.type] ?? '📍'}</span>
@@ -83,11 +83,11 @@ interface UnknownNodeData { label?: string }
 function UnknownDestinationNode({ data }: NodeProps) {
   const { label } = data as unknown as UnknownNodeData
   return (
-    <div className="min-w-28 rounded-lg border-2 border-dashed border-stone-600 bg-stone-900 shadow">
-      <Handle id="top"    type="source" position={Position.Top}    className="!bg-stone-600 !w-3 !h-3 !border-stone-500" />
-      <Handle id="bottom" type="source" position={Position.Bottom} className="!bg-stone-600 !w-3 !h-3 !border-stone-500" />
-      <Handle id="left"   type="source" position={Position.Left}   className="!bg-stone-600 !w-3 !h-3 !border-stone-500" />
-      <Handle id="right"  type="source" position={Position.Right}  className="!bg-stone-600 !w-3 !h-3 !border-stone-500" />
+    <div className="min-w-28 rounded-lg border-2 border-dashed border-stone-600 bg-stone-900 shadow-sm">
+      <Handle id="top"    type="source" position={Position.Top}    className="bg-stone-600! w-3! h-3! border-stone-500!" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="bg-stone-600! w-3! h-3! border-stone-500!" />
+      <Handle id="left"   type="source" position={Position.Left}   className="bg-stone-600! w-3! h-3! border-stone-500!" />
+      <Handle id="right"  type="source" position={Position.Right}  className="bg-stone-600! w-3! h-3! border-stone-500!" />
       <div className="p-2.5">
         <div className="text-stone-500 text-sm font-medium">???</div>
         {label && <div className="text-xs text-stone-500 mt-0.5 italic">{label}</div>}
@@ -117,7 +117,7 @@ function PlayerTokenNode({ data }: NodeProps) {
       <div className="rounded-full ring-2 ring-gold/70 shadow-lg">
         <TokenAvatar name={c.name} characterId={c.id} size={28} className={c.isGhost ? 'opacity-50 grayscale' : ''} />
       </div>
-      <span className="text-[10px] text-stone-100 bg-stone-900/85 px-1 rounded whitespace-nowrap max-w-24 truncate">{c.name}</span>
+      <span className="text-[10px] text-stone-100 bg-stone-900/85 px-1 rounded-sm whitespace-nowrap max-w-24 truncate">{c.name}</span>
     </div>
   )
 }

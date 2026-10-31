@@ -13,7 +13,7 @@ export function TabNotes({ character: c }: TabNotesProps) {
         value={c.notes}
         onChange={e => updateCharacter(c.id, { notes: e.target.value })}
         placeholder="Write anything here — backstory, ongoing effects, relationships, goals..."
-        className="flex-1 min-h-64 w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-3 text-stone-200 text-sm outline-none focus:border-stone-500 resize-none leading-relaxed"
+        className="flex-1 min-h-64 w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-3 text-stone-200 text-sm outline-hidden focus:border-stone-500 resize-none leading-relaxed"
       />
     </div>
   )

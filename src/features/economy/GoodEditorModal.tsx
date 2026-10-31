@@ -41,7 +41,7 @@ export function GoodEditorModal({ good, onClose }: Props) {
 
         <div className="flex items-center justify-between px-4 py-3 border-b border-stone-700 shrink-0">
           <h2 className="font-bold text-stone-100 text-sm font-heading">{good ? 'Edit Custom Good' : 'New Custom Good'}</h2>
-          <button onClick={onClose} className="p-1 rounded text-stone-500 hover:text-stone-200 hover:bg-stone-700">
+          <button onClick={onClose} className="p-1 rounded-sm text-stone-500 hover:text-stone-200 hover:bg-stone-700">
             <X size={14} />
           </button>
         </div>
@@ -53,7 +53,7 @@ export function GoodEditorModal({ good, onClose }: Props) {
               value={name} autoFocus
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Sculk Compass"
-              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 placeholder:text-stone-600"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 placeholder:text-stone-600"
             />
           </div>
 
@@ -63,7 +63,7 @@ export function GoodEditorModal({ good, onClose }: Props) {
               <select
                 value={category}
                 onChange={e => setCategory(e.target.value as Good['category'])}
-                className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none"
+                className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden"
               >
                 {GOOD_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
               </select>
@@ -74,7 +74,7 @@ export function GoodEditorModal({ good, onClose }: Props) {
                 value={unit}
                 onChange={e => setUnit(e.target.value)}
                 placeholder="each / per day / bundle…"
-                className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500 placeholder:text-stone-600"
+                className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500 placeholder:text-stone-600"
               />
             </div>
           </div>
@@ -87,7 +87,7 @@ export function GoodEditorModal({ good, onClose }: Props) {
               <input
                 type="number" min={1} value={price}
                 onChange={e => setPrice(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-32 bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+                className="w-32 bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
               />
               <span className="text-xs text-stone-400 font-mono">= {formatCopper(price)}</span>
             </div>
@@ -120,7 +120,7 @@ export function GoodEditorModal({ good, onClose }: Props) {
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={2}
-              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500 resize-none"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500 resize-none"
             />
           </div>
         </div>

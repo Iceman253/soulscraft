@@ -81,10 +81,10 @@ export function AreaNodeComponent({ data }: NodeProps) {
           👥
         </div>
       )}
-      <Handle id="top"    type="source" position={Position.Top}    className="!bg-stone-500 !w-3 !h-3 !border-stone-400" />
-      <Handle id="bottom" type="source" position={Position.Bottom} className="!bg-stone-500 !w-3 !h-3 !border-stone-400" />
-      <Handle id="left"   type="source" position={Position.Left}   className="!bg-stone-500 !w-3 !h-3 !border-stone-400" />
-      <Handle id="right"  type="source" position={Position.Right}  className="!bg-stone-500 !w-3 !h-3 !border-stone-400" />
+      <Handle id="top"    type="source" position={Position.Top}    className="bg-stone-500! w-3! h-3! border-stone-400!" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="bg-stone-500! w-3! h-3! border-stone-400!" />
+      <Handle id="left"   type="source" position={Position.Left}   className="bg-stone-500! w-3! h-3! border-stone-400!" />
+      <Handle id="right"  type="source" position={Position.Right}  className="bg-stone-500! w-3! h-3! border-stone-400!" />
 
       <div className="p-2.5">
         {hidden ? (
@@ -136,14 +136,14 @@ export function AreaNodeComponent({ data }: NodeProps) {
               {fogEnabled && (
                 <button
                   onClick={e => { e.stopPropagation(); onReveal() }}
-                  className="flex items-center gap-1 text-xs text-stone-500 hover:text-emerald px-1 rounded"
+                  className="flex items-center gap-1 text-xs text-stone-500 hover:text-emerald px-1 rounded-sm"
                 >
                   <Eye size={10} /> Reveal
                 </button>
               )}
               <button
                 onClick={e => { e.stopPropagation(); onOpenSubMap() }}
-                className="flex items-center gap-1 text-xs text-stone-500 hover:text-gold ml-auto px-1 rounded"
+                className="flex items-center gap-1 text-xs text-stone-500 hover:text-gold ml-auto px-1 rounded-sm"
               >
                 Sub-map <ChevronRight size={10} />
               </button>

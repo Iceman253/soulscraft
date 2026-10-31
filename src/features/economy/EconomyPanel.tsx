@@ -49,7 +49,7 @@ export function EconomyPanel() {
           <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">Markets</span>
           <button
             onClick={handleAdd}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-sm text-xs bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors"
           >
             <Plus size={12} /> New
           </button>
@@ -84,7 +84,7 @@ export function EconomyPanel() {
                 </div>
                 <button
                   onClick={e => { e.stopPropagation(); setConfirmDelete(m) }}
-                  className="p-1 rounded text-stone-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  className="p-1 rounded-sm text-stone-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 >
                   <Trash2 size={12} />
                 </button>

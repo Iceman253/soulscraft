@@ -25,7 +25,7 @@ function PlaceNode({ data }: NodeProps) {
 function PinNode({ data }: NodeProps) {
   const { icon, tier } = data as unknown as { icon?: string; tier?: ProjectTier }
   return (
-    <div className="rounded bg-stone-900/80 p-0.5 ring-2 ring-gold shadow-lg shadow-gold/30">
+    <div className="rounded-sm bg-stone-900/80 p-0.5 ring-2 ring-gold shadow-lg shadow-gold/30">
       <PixelIcon icon={icon} tier={tier} size={36} />
     </div>
   )

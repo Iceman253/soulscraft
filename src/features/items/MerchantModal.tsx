@@ -72,7 +72,7 @@ export function MerchantModal({ onClose }: Props) {
             <span className="text-lg">🏪</span>
             <h2 className="font-bold text-stone-100 text-base font-heading tracking-wide">Merchant Wares</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded text-stone-400 hover:text-stone-100 hover:bg-stone-700 transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-sm text-stone-400 hover:text-stone-100 hover:bg-stone-700 transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -104,7 +104,7 @@ export function MerchantModal({ onClose }: Props) {
                       >
                         <span className="text-stone-200 text-sm">📦 {item.name}</span>
                         <button
-                          className="text-xs px-2 py-0.5 rounded bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
+                          className="text-xs px-2 py-0.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
                           onClick={e => { e.stopPropagation(); setSelectedItem(item.name) }}
                         >
                           Select
@@ -131,7 +131,7 @@ export function MerchantModal({ onClose }: Props) {
                     >
                       <span className="text-stone-200 text-sm">{name}</span>
                       <button
-                        className="text-xs px-2 py-0.5 rounded bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
+                        className="text-xs px-2 py-0.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
                         onClick={e => { e.stopPropagation(); setSelectedItem(name) }}
                       >
                         Select
@@ -157,7 +157,7 @@ export function MerchantModal({ onClose }: Props) {
                     >
                       <span className="text-stone-200 text-sm">{name}</span>
                       <button
-                        className="text-xs px-2 py-0.5 rounded bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
+                        className="text-xs px-2 py-0.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
                         onClick={e => { e.stopPropagation(); setSelectedItem(name) }}
                       >
                         Select
@@ -209,7 +209,7 @@ export function MerchantModal({ onClose }: Props) {
                   value={quantity}
                   min={1}
                   onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
                 />
               </div>
 
@@ -221,7 +221,7 @@ export function MerchantModal({ onClose }: Props) {
                   value={price}
                   min={0}
                   onChange={e => setPrice(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
                 />
               </div>
 
@@ -252,7 +252,7 @@ export function MerchantModal({ onClose }: Props) {
                 <select
                   value={charId}
                   onChange={e => setCharId(e.target.value)}
-                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500"
+                  className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500"
                 >
                   <option value="">— Select character —</option>
                   {characters.map(c => {
@@ -275,7 +275,7 @@ export function MerchantModal({ onClose }: Props) {
                     {CURRENCY_OPTIONS.map(opt => (
                       <div
                         key={opt.key}
-                        className={`flex items-center gap-1 px-2 py-1 rounded bg-stone-700 text-xs ${currency === opt.key ? 'text-amber-300' : 'text-stone-400'}`}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-sm bg-stone-700 text-xs ${currency === opt.key ? 'text-amber-300' : 'text-stone-400'}`}
                       >
                         <img src={opt.img} alt={opt.label} className="w-3.5 h-3.5 object-contain" />
                         <span className="font-mono tabular-nums">{selectedChar.currency[opt.key]}</span>

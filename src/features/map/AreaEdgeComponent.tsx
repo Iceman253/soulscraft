@@ -47,7 +47,7 @@ export function AreaEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sour
           onMouseLeave={() => setHovered(false)}
         >
           {(d?.edge?.label || travelDays !== undefined) && !editing && (
-            <span className="text-xs bg-stone-800 border border-stone-600 rounded px-1.5 py-0.5 text-stone-300 shadow whitespace-nowrap">
+            <span className="text-xs bg-stone-800 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-300 shadow-sm whitespace-nowrap">
               {d.edge.label}
               {travelDays !== undefined && (
                 <span className="text-stone-500">{d.edge.label ? ' · ' : ''}⏱ {travelDays}d</span>
@@ -62,7 +62,7 @@ export function AreaEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sour
                 onClick={e => { e.stopPropagation(); e.preventDefault(); setEditing(true) }}
                 onPointerDown={e => e.stopPropagation()}
                 style={{ opacity: showControls ? 1 : 0, pointerEvents: showControls ? 'auto' : 'none', transition: 'opacity 120ms' }}
-                className="w-5 h-5 rounded-full bg-stone-700 hover:bg-stone-600 border border-stone-500 flex items-center justify-center shadow"
+                className="w-5 h-5 rounded-full bg-stone-700 hover:bg-stone-600 border border-stone-500 flex items-center justify-center shadow-sm"
                 title="Edit route — label, danger, travel days"
               >
                 <Pencil size={9} className="text-stone-300" />
@@ -76,7 +76,7 @@ export function AreaEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sour
                 }}
                 onPointerDown={e => e.stopPropagation()}
                 style={{ opacity: showControls ? 1 : 0, pointerEvents: showControls ? 'auto' : 'none', transition: 'opacity 120ms' }}
-                className="w-5 h-5 rounded-full bg-stone-700 hover:bg-red-600 border border-stone-500 hover:border-red-400 flex items-center justify-center shadow"
+                className="w-5 h-5 rounded-full bg-stone-700 hover:bg-red-600 border border-stone-500 hover:border-red-400 flex items-center justify-center shadow-sm"
                 title="Delete connection"
               >
                 <X size={10} className="text-stone-300" />
@@ -93,7 +93,7 @@ export function AreaEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sour
             >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-stone-500 uppercase tracking-wider font-heading">Route</span>
-                <button onClick={() => setEditing(false)} className="p-0.5 rounded text-stone-500 hover:text-stone-200">
+                <button onClick={() => setEditing(false)} className="p-0.5 rounded-sm text-stone-500 hover:text-stone-200">
                   <X size={11} />
                 </button>
               </div>
@@ -101,14 +101,14 @@ export function AreaEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sour
                 value={d.edge.label ?? ''}
                 onChange={e => d.onUpdate({ label: e.target.value || undefined })}
                 placeholder="e.g. 3 days north by sea"
-                className="w-full bg-stone-800 border border-stone-700 rounded px-2 py-1 text-stone-200 text-xs outline-none focus:border-stone-500 placeholder:text-stone-600"
+                className="w-full bg-stone-800 border border-stone-700 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden focus:border-stone-500 placeholder:text-stone-600"
               />
               <div className="flex gap-1">
                 {(['safe', 'risky', 'deadly'] as const).map(danger => (
                   <button
                     key={danger}
                     onClick={() => d.onUpdate({ travelDanger: d.edge.travelDanger === danger ? undefined : danger })}
-                    className={`flex-1 px-1 py-1 rounded text-[10px] capitalize border transition-colors ${
+                    className={`flex-1 px-1 py-1 rounded-sm text-[10px] capitalize border transition-colors ${
                       d.edge.travelDanger === danger
                         ? 'border-current font-semibold'
                         : 'border-stone-700 text-stone-500 hover:border-stone-500'
@@ -129,7 +129,7 @@ export function AreaEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sour
                     const v = e.target.value
                     d.onUpdate({ travelDays: v === '' ? undefined : Math.max(0, parseFloat(v) || 0) })
                   }}
-                  className="w-14 bg-stone-800 border border-stone-700 rounded px-1.5 py-0.5 text-stone-200 text-xs outline-none focus:border-stone-500 font-mono tabular-nums placeholder:text-stone-600"
+                  className="w-14 bg-stone-800 border border-stone-700 rounded-sm px-1.5 py-0.5 text-stone-200 text-xs outline-hidden focus:border-stone-500 font-mono tabular-nums placeholder:text-stone-600"
                 />
               </div>
               <div className="text-[9px] text-stone-600 leading-snug">

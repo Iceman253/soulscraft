@@ -44,7 +44,7 @@ export function TabEffects({ character: c }: TabEffectsProps) {
                 healPerRound: qe.healPerRound,
                 unhealable: qe.unhealable,
               })}
-              className="px-2.5 py-1 rounded bg-stone-700 border border-stone-600 hover:border-purple-500/50 text-stone-300 text-xs"
+              className="px-2.5 py-1 rounded-sm bg-stone-700 border border-stone-600 hover:border-purple-500/50 text-stone-300 text-xs"
             >
               {qe.name}
             </button>
@@ -57,11 +57,11 @@ export function TabEffects({ character: c }: TabEffectsProps) {
         <div className="flex-1 min-w-28">
           <div className="text-xs text-stone-500 mb-1">Name</div>
           <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()}
-            placeholder="Magic Circle..." className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-purple-500/50" />
+            placeholder="Magic Circle..." className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden focus:border-purple-500/50" />
         </div>
         <div>
           <div className="text-xs text-stone-500 mb-1">Duration</div>
-          <select value={durType} onChange={e => setDurType(e.target.value as ActiveEffect['durationType'])} className="bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none">
+          <select value={durType} onChange={e => setDurType(e.target.value as ActiveEffect['durationType'])} className="bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden">
             <option value="scenes">Scenes</option>
             <option value="days">Days</option>
             <option value="until-rest">Until Rest</option>
@@ -73,12 +73,12 @@ export function TabEffects({ character: c }: TabEffectsProps) {
           <div>
             <div className="text-xs text-stone-500 mb-1">Amount</div>
             <input type="number" value={remaining} min={1} onChange={e => setRemaining(parseInt(e.target.value) || 1)}
-              className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none" />
+              className="w-16 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden" />
           </div>
         )}
         <div>
           <div className="text-xs text-stone-500 mb-1">Dmg/tick</div>
-          <select value={dmg} onChange={e => setDmg(e.target.value)} className="bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none">
+          <select value={dmg} onChange={e => setDmg(e.target.value)} className="bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden">
             <option value="none">None</option>
             <option value="1d4">1d4</option>
             <option value="1d6">1d6</option>
@@ -91,7 +91,7 @@ export function TabEffects({ character: c }: TabEffectsProps) {
         </div>
         <div>
           <div className="text-xs text-stone-500 mb-1">Heal/tick</div>
-          <select value={heal} onChange={e => setHeal(e.target.value)} className="bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none">
+          <select value={heal} onChange={e => setHeal(e.target.value)} className="bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden">
             <option value="none">None</option>
             <option value="1d4">1d4</option>
             <option value="1d6">1d6</option>
@@ -102,7 +102,7 @@ export function TabEffects({ character: c }: TabEffectsProps) {
             <option value="3d6">3d6</option>
           </select>
         </div>
-        <button onClick={submit} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm"><Plus size={13} /></button>
+        <button onClick={submit} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm"><Plus size={13} /></button>
       </div>
 
       {/* Active effects list */}

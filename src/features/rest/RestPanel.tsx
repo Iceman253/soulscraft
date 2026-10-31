@@ -41,7 +41,7 @@ export function RestPanel() {
           <div>
             <label className="text-xs text-stone-500 block mb-1">Where did they rest?</label>
             <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Camp by the river..."
-              className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50" />
+              className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden focus:border-gold/50" />
           </div>
 
           {/* Characters */}
@@ -50,7 +50,7 @@ export function RestPanel() {
             <div className="flex flex-wrap gap-1.5">
               {characters.map(c => (
                 <button key={c.id} onClick={() => toggleChar(c.id)}
-                  className={`px-2.5 py-1 rounded text-xs border transition-all ${selectedChars.includes(c.id) ? 'bg-emerald/20 border-emerald/50 text-emerald' : 'bg-stone-700 border-stone-600 text-stone-400 hover:text-stone-200'}`}>
+                  className={`px-2.5 py-1 rounded-sm text-xs border transition-all ${selectedChars.includes(c.id) ? 'bg-emerald/20 border-emerald/50 text-emerald' : 'bg-stone-700 border-stone-600 text-stone-400 hover:text-stone-200'}`}>
                   {selectedChars.includes(c.id) && '✓ '}{c.name}
                 </button>
               ))}
@@ -70,7 +70,7 @@ export function RestPanel() {
               ] as const).map(([key, label]) => (
                 <button key={key} onClick={() => toggleCond(key)}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${conditions[key] ? 'bg-emerald/10 border-emerald/40 text-stone-200' : 'bg-stone-700 border-stone-600 text-stone-400 hover:text-stone-200'}`}>
-                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${conditions[key] ? 'bg-emerald border-emerald' : 'border-stone-500'}`}>
+                  <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${conditions[key] ? 'bg-emerald border-emerald' : 'border-stone-500'}`}>
                     {conditions[key] && <Check size={10} className="text-stone-900" />}
                   </div>
                   {label}
@@ -138,7 +138,7 @@ export function RestPanel() {
                   <button
                     onClick={() => missRest(c.id)}
                     title="Record a missed rest"
-                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-orange-900/40 border border-orange-700/50 text-orange-400 hover:bg-orange-800/40 text-xs"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-sm bg-orange-900/40 border border-orange-700/50 text-orange-400 hover:bg-orange-800/40 text-xs"
                   >
                     <AlertTriangle size={10} /> Miss
                   </button>
@@ -146,7 +146,7 @@ export function RestPanel() {
                     <button
                       onClick={() => resetMissedRests(c.id)}
                       title="Reset missed rests"
-                      className="flex items-center gap-1 px-2 py-0.5 rounded bg-stone-700 border border-stone-600 text-stone-400 hover:text-stone-200 text-xs"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-sm bg-stone-700 border border-stone-600 text-stone-400 hover:text-stone-200 text-xs"
                     >
                       <RotateCcw size={10} /> Reset
                     </button>

@@ -81,14 +81,14 @@ export function PriceBoard({ market }: Props) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search wares…"
-            className="bg-stone-800 border border-stone-700 rounded-lg pl-7 pr-3 py-1.5 text-stone-200 text-xs outline-none focus:border-stone-500 w-44 placeholder:text-stone-600"
+            className="bg-stone-800 border border-stone-700 rounded-lg pl-7 pr-3 py-1.5 text-stone-200 text-xs outline-hidden focus:border-stone-500 w-44 placeholder:text-stone-600"
           />
         </div>
 
         <select
           value={category}
           onChange={e => setCategory(e.target.value as Good['category'] | 'all')}
-          className="bg-stone-800 border border-stone-700 rounded-lg px-2 py-1.5 text-stone-300 text-xs outline-none"
+          className="bg-stone-800 border border-stone-700 rounded-lg px-2 py-1.5 text-stone-300 text-xs outline-hidden"
         >
           <option value="all">All categories</option>
           {GOOD_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
@@ -244,7 +244,7 @@ function GoodRow({ good, market, listing, expanded, onToggleExpand, onBuy, onSto
                 <button
                   onClick={() => onUpdate({ stock: suggestStock(good, market) })}
                   title="Unlimited — click for finite stock"
-                  className="px-2 py-0.5 rounded text-stone-300 hover:bg-stone-700"
+                  className="px-2 py-0.5 rounded-sm text-stone-300 hover:bg-stone-700"
                 >
                   <InfinityIcon size={13} />
                 </button>
@@ -252,7 +252,7 @@ function GoodRow({ good, market, listing, expanded, onToggleExpand, onBuy, onSto
                 <input
                   type="number" min={0} value={listing.stock}
                   onChange={e => onUpdate({ stock: Math.max(0, parseInt(e.target.value) || 0) })}
-                  className="w-12 bg-stone-800 border border-stone-700 rounded px-1 py-0.5 text-stone-200 text-xs text-center outline-none focus:border-stone-500 font-mono tabular-nums"
+                  className="w-12 bg-stone-800 border border-stone-700 rounded-sm px-1 py-0.5 text-stone-200 text-xs text-center outline-hidden focus:border-stone-500 font-mono tabular-nums"
                 />
               )}
             </>
@@ -285,7 +285,7 @@ function GoodRow({ good, market, listing, expanded, onToggleExpand, onBuy, onSto
             title={stocked
               ? `In copper. Blank = use suggested. ${quote.overridden ? `Currently fixed at ${formatCopperLong(quote.final)}.` : ''}`
               : 'Stock this ware to set a price'}
-            className={`w-20 bg-stone-800 border rounded px-1.5 py-0.5 text-xs text-right outline-none font-mono tabular-nums disabled:opacity-40 ${
+            className={`w-20 bg-stone-800 border rounded-sm px-1.5 py-0.5 text-xs text-right outline-hidden font-mono tabular-nums disabled:opacity-40 ${
               quote.overridden ? 'border-amber-600/70 text-amber-200' : 'border-stone-700 text-stone-300 focus:border-stone-500 placeholder:text-stone-600'
             }`}
           />
@@ -303,7 +303,7 @@ function GoodRow({ good, market, listing, expanded, onToggleExpand, onBuy, onSto
               onUpdate({ sellOverride: v === '' ? undefined : Math.max(0, parseInt(v) || 0) })
             }}
             disabled={!stocked}
-            className={`w-16 bg-stone-800 border rounded px-1.5 py-0.5 text-xs text-right outline-none font-mono tabular-nums disabled:opacity-40 ${
+            className={`w-16 bg-stone-800 border rounded-sm px-1.5 py-0.5 text-xs text-right outline-hidden font-mono tabular-nums disabled:opacity-40 ${
               listing?.sellOverride !== undefined ? 'border-amber-600/70 text-amber-200' : 'border-stone-700 text-stone-500 focus:border-stone-500 placeholder:text-stone-600'
             }`}
           />
@@ -316,25 +316,25 @@ function GoodRow({ good, market, listing, expanded, onToggleExpand, onBuy, onSto
               <button
                 onClick={() => onUpdate({ locked: !listing.locked })}
                 title={listing.locked ? 'Locked — daily drift and restock skip this line' : 'Unlocked — drifts with the market'}
-                className={`p-1 rounded transition-colors ${listing.locked ? 'text-amber-400 hover:text-amber-300' : 'text-stone-600 hover:text-stone-400'}`}
+                className={`p-1 rounded-sm transition-colors ${listing.locked ? 'text-amber-400 hover:text-amber-300' : 'text-stone-600 hover:text-stone-400'}`}
               >
                 {listing.locked ? <Lock size={12} /> : <Unlock size={12} />}
               </button>
               <button
                 onClick={() => onBuy(quote)}
                 disabled={soldOut}
-                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-amber-900/40 border border-amber-700/50 text-amber-200 hover:bg-amber-800/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1 px-2 py-1 rounded-sm text-[11px] bg-amber-900/40 border border-amber-700/50 text-amber-200 hover:bg-amber-800/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <ShoppingCart size={10} /> {soldOut ? 'Sold out' : 'Buy'}
               </button>
-              <button onClick={onUnstock} title="Remove from this market's stock" className="p-1 rounded text-stone-600 hover:text-red-400">
+              <button onClick={onUnstock} title="Remove from this market's stock" className="p-1 rounded-sm text-stone-600 hover:text-red-400">
                 <X size={12} />
               </button>
             </>
           ) : (
             <button
               onClick={onStock}
-              className="px-2 py-1 rounded text-[11px] bg-stone-700 text-stone-300 hover:bg-stone-600 transition-colors"
+              className="px-2 py-1 rounded-sm text-[11px] bg-stone-700 text-stone-300 hover:bg-stone-600 transition-colors"
             >
               + Stock it
             </button>

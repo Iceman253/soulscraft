@@ -236,7 +236,7 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
           value={newSkillName}
           onChange={e => setNewSkillName(e.target.value)}
           placeholder="Skill name from roleplay..."
-          className="w-full bg-stone-700 border border-stone-600 rounded px-3 py-2 text-sm text-stone-100 placeholder-stone-500 focus:outline-none focus:border-amber-500"
+          className="w-full bg-stone-700 border border-stone-600 rounded-sm px-3 py-2 text-sm text-stone-100 placeholder-stone-500 focus:outline-hidden focus:border-amber-500"
         />
 
         {newSkillName.trim() && (
@@ -247,7 +247,7 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
               onChange={e => setNewSkillDesc(e.target.value)}
               placeholder="When does this skill apply? e.g. 'Climbing sheer walls or rough cliffs'"
               rows={2}
-              className="w-full bg-stone-700 border border-stone-600 rounded px-3 py-2 text-sm text-stone-100 placeholder-stone-500 focus:outline-none focus:border-amber-500 resize-none"
+              className="w-full bg-stone-700 border border-stone-600 rounded-sm px-3 py-2 text-sm text-stone-100 placeholder-stone-500 focus:outline-hidden focus:border-amber-500 resize-none"
             />
 
             {/* Combat roles (multi-select) */}
@@ -262,7 +262,7 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
                       type="button"
                       onClick={() => toggleRole(r.role)}
                       title={r.hint}
-                      className={`px-2.5 py-1 rounded border text-xs font-medium transition-colors ${
+                      className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
                         on
                           ? 'bg-amber-900/40 border-amber-500/70 text-amber-200'
                           : 'bg-stone-700 border-stone-600 text-stone-400 hover:text-stone-200 hover:border-stone-400'
@@ -282,7 +282,7 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
                 <button
                   type="button"
                   onClick={addBlankEffect}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-stone-700 border border-stone-600 text-stone-300 hover:border-amber-500/60 hover:text-amber-300 text-xs transition-colors"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-sm bg-stone-700 border border-stone-600 text-stone-300 hover:border-amber-500/60 hover:text-amber-300 text-xs transition-colors"
                 >
                   <Plus size={11} /> Add effect
                 </button>
@@ -297,12 +297,12 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
                   {newSkillEffects.map((eff, i) => {
                     const dur = DURATION_OPTIONS.find(d => d.value === (eff.durationType ?? 'manual'))!
                     return (
-                      <div key={i} className="bg-stone-700/50 border border-stone-600 rounded p-2 space-y-1.5">
+                      <div key={i} className="bg-stone-700/50 border border-stone-600 rounded-sm p-2 space-y-1.5">
                         <div className="flex items-center gap-1.5">
                           <select
                             value={eff.effectName}
                             onChange={e => updateEffect(i, { effectName: e.target.value })}
-                            className="flex-1 bg-stone-800 border border-stone-600 rounded px-2 py-1 text-stone-200 text-xs outline-none"
+                            className="flex-1 bg-stone-800 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden"
                           >
                             {STATUS_EFFECTS.map(s => (
                               <option key={s.name} value={s.name}>
@@ -325,7 +325,7 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
                           <select
                             value={eff.target}
                             onChange={e => updateEffect(i, { target: e.target.value as StatusEffectTarget })}
-                            className="bg-stone-800 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 outline-none"
+                            className="bg-stone-800 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-200 outline-hidden"
                           >
                             {ALL_TARGETS.map(t => <option key={t.target} value={t.target}>{t.label}</option>)}
                           </select>
@@ -334,7 +334,7 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
                           <select
                             value={eff.durationType ?? 'manual'}
                             onChange={e => updateEffect(i, { durationType: e.target.value as EffectDuration })}
-                            className="bg-stone-800 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 outline-none"
+                            className="bg-stone-800 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-200 outline-hidden"
                           >
                             {DURATION_OPTIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                           </select>
@@ -345,7 +345,7 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
                               min={1}
                               value={eff.remaining ?? 1}
                               onChange={e => updateEffect(i, { remaining: Math.max(1, parseInt(e.target.value) || 1) })}
-                              className="w-12 bg-stone-800 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 outline-none text-xs font-mono"
+                              className="w-12 bg-stone-800 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-200 outline-hidden text-xs font-mono"
                             />
                           )}
 
@@ -385,14 +385,14 @@ export function LevelUpModal({ character: c, onClose, initialState }: Props) {
       <div className="flex gap-2 justify-end">
         <button
           onClick={onClose}
-          className="px-4 py-2 text-sm rounded bg-stone-700 border border-stone-600 text-stone-300 hover:bg-stone-600 hover:text-stone-100 transition-colors"
+          className="px-4 py-2 text-sm rounded-sm bg-stone-700 border border-stone-600 text-stone-300 hover:bg-stone-600 hover:text-stone-100 transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleConfirm}
           disabled={confirmed}
-          className="px-5 py-2 text-sm rounded bg-amber-700 border border-amber-600 text-amber-100 font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-5 py-2 text-sm rounded-sm bg-amber-700 border border-amber-600 text-amber-100 font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {proposingSkill ? 'Send to GM' : 'Confirm Level Up'}
         </button>

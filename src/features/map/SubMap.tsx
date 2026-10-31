@@ -152,7 +152,7 @@ function SubNodeComponent({ data }: { data: unknown }) {
   const d = data as SubNodeData
   const { node, selected, onSelect, directChars, subtreeChars, hasChildren, canGoDeeper, onOpenSubMap, onCharNavigate, onDropCharacter } = d
   const [dragOver, setDragOver] = useState(false)
-  const hc = '!bg-stone-500 !w-2 !h-2 !border-stone-400'
+  const hc = 'bg-stone-500! w-2! h-2! border-stone-400!'
   return (
     <div
       onClick={onSelect}
@@ -252,7 +252,7 @@ function SubEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sourcePositi
               pointerEvents: showDelete ? 'auto' : 'none',
               transition: 'opacity 120ms',
             }}
-            className="w-5 h-5 rounded-full bg-stone-700 hover:bg-red-600 border border-stone-500 hover:border-red-400 flex items-center justify-center shadow"
+            className="w-5 h-5 rounded-full bg-stone-700 hover:bg-red-600 border border-stone-500 hover:border-red-400 flex items-center justify-center shadow-sm"
             title="Delete connection"
           >
             <X size={10} className="text-stone-300" />
@@ -543,7 +543,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
         <div className="ml-auto flex gap-2 shrink-0">
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-stone-700 border border-stone-600 text-stone-200 hover:border-gold/50 text-xs"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-stone-700 border border-stone-600 text-stone-200 hover:border-gold/50 text-xs"
           >
             <Plus size={12} /> Add
           </button>
@@ -597,7 +597,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
                       key={c.id}
                       draggable
                       onDragStart={e => { e.dataTransfer.setData(CHAR_DND, c.id); e.dataTransfer.effectAllowed = 'move' }}
-                      className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-stone-800 cursor-grab active:cursor-grabbing"
+                      className="flex items-center gap-2 px-1.5 py-1 rounded-sm hover:bg-stone-800 cursor-grab active:cursor-grabbing"
                       title="Drag onto a sub-location"
                     >
                       <TokenAvatar name={c.name} characterId={c.id} size={20} />
@@ -638,7 +638,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
                 <input
                   value={selectedNode.name}
                   onChange={e => updateSubNode(area.id, selectedNode.id, { name: e.target.value }, currentPath)}
-                  className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-xs outline-none focus:border-gold/50"
+                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-100 text-xs outline-hidden focus:border-gold/50"
                 />
               </div>
               <div>
@@ -646,7 +646,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
                 <select
                   value={selectedNode.type}
                   onChange={e => updateSubNode(area.id, selectedNode.id, { type: e.target.value as SubNode['type'] }, currentPath)}
-                  className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-xs outline-none"
+                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-xs outline-hidden"
                 >
                   {SUB_NODE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -657,21 +657,21 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
                   value={selectedNode.description ?? ''}
                   onChange={e => updateSubNode(area.id, selectedNode.id, { description: e.target.value }, currentPath)}
                   rows={4}
-                  className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-xs outline-none resize-none"
+                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-xs outline-hidden resize-none"
                 />
               </div>
               <div className="flex gap-2">
                 {navStack.length < MAX_DEPTH && (
                   <button
                     onClick={() => { setNavStack(prev => [...prev, { nodeId: selectedNode.id, nodeName: selectedNode.name }]); setSelectedNodeId(null) }}
-                    className="flex-1 px-2 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs"
+                    className="flex-1 px-2 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs"
                   >
                     Open Sub-map
                   </button>
                 )}
                 <button
                   onClick={() => setPlaceModal({ subNodeId: selectedNode.id })}
-                  className="flex-1 px-2 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs"
+                  className="flex-1 px-2 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs"
                 >
                   Place Characters
                 </button>
@@ -726,23 +726,23 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
               <label className="block text-sm text-stone-400 mb-1">Name *</label>
               <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50"
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50"
                 placeholder="Iron Throne Room..." />
             </div>
             <div>
               <label className="block text-sm text-stone-400 mb-1">Type</label>
-              <select value={newType} onChange={e => setNewType(e.target.value as SubNode['type'])} className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
+              <select value={newType} onChange={e => setNewType(e.target.value as SubNode['type'])} className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden">
                 {SUB_NODE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm text-stone-400 mb-1">Notes</label>
               <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={2}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none resize-none" />
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden resize-none" />
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setShowAddModal(false)} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
-              <button onClick={handleAdd} disabled={!newName.trim()} className="px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm disabled:opacity-50">Add</button>
+              <button onClick={() => setShowAddModal(false)} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
+              <button onClick={handleAdd} disabled={!newName.trim()} className="px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm disabled:opacity-50">Add</button>
             </div>
           </div>
         </Modal>

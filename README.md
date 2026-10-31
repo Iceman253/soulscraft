@@ -89,7 +89,7 @@ Players do this on their own device, phone or desktop, and the GM signs off:
 | UI | React 19 |
 | State | Zustand (one store per feature module) |
 | Canvas | @xyflow/react v12 |
-| Styling | Tailwind CSS v3 |
+| Styling | Tailwind CSS v4 |
 | Icons | lucide-react |
 | IDs | `crypto.randomUUID()` |
 
@@ -200,5 +200,6 @@ Because all state lives in each browser's `localStorage`, the container itself i
 
 ## Notes
 - Tested in Chrome and Firefox. Safari should work but is untested.
+- Needs Safari or iOS 16.4+, Chrome 111+ or Firefox 128+, the minimums for Tailwind CSS 4.
 - localStorage has a ~5 MB limit per origin. A size warning appears in the campaign switcher if data approaches this limit. Image uploads are the main culprit; the map background is stored under a separate key so it can be cleared independently.
 - This is a personal/hobby project. The Soulscraft rulebook and its content belong to their respective creators.

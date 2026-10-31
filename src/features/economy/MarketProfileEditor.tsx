@@ -32,7 +32,7 @@ function ScaleInput({ label, field, value, onChange, hint }: {
             key={n}
             onClick={() => onChange(n)}
             title={SCALE_LABELS[field][n - 1]}
-            className={`flex-1 py-2 rounded text-sm font-mono transition-colors ${
+            className={`flex-1 py-2 rounded-sm text-sm font-mono transition-colors ${
               n === value
                 ? 'bg-amber-800/60 text-amber-100 border border-amber-600'
                 : n < value
@@ -89,7 +89,7 @@ export function MarketProfileEditor({ market }: Props) {
             <input
               value={market.name}
               onChange={e => set({ name: e.target.value })}
-              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500"
             />
           </div>
           <div>
@@ -97,7 +97,7 @@ export function MarketProfileEditor({ market }: Props) {
             <select
               value={market.areaId ?? ''}
               onChange={e => set({ areaId: e.target.value || null })}
-              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="">— Not on the map —</option>
               {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -118,7 +118,7 @@ export function MarketProfileEditor({ market }: Props) {
               onClick={suggestRemote}
               disabled={!market.areaId}
               title={market.areaId ? 'Walk the map: travel days × danger to the nearest size-4+ market' : 'Link this market to a map area first'}
-              className="mt-1.5 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="mt-1.5 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[11px] bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Wand2 size={11} /> Suggest from map routes
             </button>
@@ -167,7 +167,7 @@ export function MarketProfileEditor({ market }: Props) {
             <input
               type="number" min={-50} max={200} value={market.tariffPct}
               onChange={e => set({ tariffPct: Math.max(-50, Math.min(200, parseInt(e.target.value) || 0)) })}
-              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
             />
             <div className="text-[10px] text-stone-600 mt-1">Local tax on every purchase.</div>
           </div>
@@ -176,7 +176,7 @@ export function MarketProfileEditor({ market }: Props) {
             <input
               type="number" min={0} max={100} value={Math.round(market.sellRate * 100)}
               onChange={e => set({ sellRate: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) / 100 })}
-              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
             />
             <div className="text-[10px] text-stone-600 mt-1">What merchants pay for party goods.</div>
           </div>
@@ -185,7 +185,7 @@ export function MarketProfileEditor({ market }: Props) {
             <select
               value={market.factionId ?? ''}
               onChange={e => set({ factionId: e.target.value || null })}
-              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500"
+              className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="">— Independent —</option>
               {economy.factions.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
@@ -220,7 +220,7 @@ export function MarketProfileEditor({ market }: Props) {
             onChange={e => set({ notes: e.target.value })}
             rows={3}
             placeholder="Who runs the market, what's whispered in the stalls, what's not on display…"
-            className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none focus:border-stone-500 resize-none placeholder:text-stone-600"
+            className="w-full bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden focus:border-stone-500 resize-none placeholder:text-stone-600"
           />
         </div>
 

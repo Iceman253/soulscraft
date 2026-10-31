@@ -78,7 +78,7 @@ export function EventsPanel() {
                     <span>· {ev.remainingDays === null ? 'until ended' : `${ev.remainingDays} day${ev.remainingDays > 1 ? 's' : ''} left`}</span>
                   </div>
                 </div>
-                <button onClick={() => removeEvent(ev.id)} title="End this event now" className="p-1 rounded text-stone-500 hover:text-red-400 shrink-0">
+                <button onClick={() => removeEvent(ev.id)} title="End this event now" className="p-1 rounded-sm text-stone-500 hover:text-red-400 shrink-0">
                   <X size={13} />
                 </button>
               </div>
@@ -117,7 +117,7 @@ export function EventsPanel() {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Pick a preset above or write your own…"
-                className="w-full bg-stone-900 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 placeholder:text-stone-600"
+                className="w-full bg-stone-900 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 placeholder:text-stone-600"
               />
             </div>
             <div>
@@ -125,7 +125,7 @@ export function EventsPanel() {
               <input
                 type="number" step={0.05} min={0.1} max={10} value={multiplier}
                 onChange={e => setMultiplier(Math.max(0.1, Math.min(10, parseFloat(e.target.value) || 1)))}
-                className="w-full bg-stone-900 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+                className="w-full bg-stone-900 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
               />
             </div>
           </div>
@@ -157,7 +157,7 @@ export function EventsPanel() {
               <select
                 value={scope}
                 onChange={e => setScope(e.target.value)}
-                className="w-full bg-stone-900 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-none"
+                className="w-full bg-stone-900 border border-stone-700 rounded-lg px-3 py-2 text-stone-200 text-sm outline-hidden"
               >
                 <option value="global">🌍 Everywhere</option>
                 {areas.map(a => <option key={a.id} value={a.id}>📍 {a.name}</option>)}
@@ -170,7 +170,7 @@ export function EventsPanel() {
               <input
                 type="number" min={1} value={days}
                 onChange={e => setDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full bg-stone-900 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 font-mono tabular-nums"
+                className="w-full bg-stone-900 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
               />
             </div>
           </div>

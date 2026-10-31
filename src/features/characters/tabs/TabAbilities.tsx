@@ -28,7 +28,7 @@ export function TabAbilities({ character: c }: TabAbilitiesProps) {
           <div className="text-xs text-stone-500">Active powers that cost Soul Dice to activate</div>
         </div>
         <button onClick={() => addAbility(c.id, { name: '', sdCost: 1, description: '', recharge: 'rest' })}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">
           <Plus size={12} /> Add Ability
         </button>
       </div>
@@ -54,20 +54,20 @@ export function TabAbilities({ character: c }: TabAbilitiesProps) {
                   value={ab.name}
                   onChange={e => updateAbility(c.id, ab.id, { name: e.target.value })}
                   placeholder="Ability name..."
-                  className="flex-1 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-100 text-sm font-medium outline-none focus:border-gold/50"
+                  className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-100 text-sm font-medium outline-hidden focus:border-gold/50"
                 />
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="text-xs text-stone-500">SD</span>
                   <input
                     type="number" min={0} value={ab.sdCost}
                     onChange={e => updateAbility(c.id, ab.id, { sdCost: parseInt(e.target.value) || 0 })}
-                    className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-gold text-xs text-center outline-none"
+                    className="w-12 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-gold text-xs text-center outline-hidden"
                   />
                 </div>
                 <select
                   value={ab.recharge}
                   onChange={e => updateAbility(c.id, ab.id, { recharge: e.target.value as 'rest' | 'scene' | 'day' | 'none' })}
-                  className="bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none"
+                  className="bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden"
                 >
                   <option value="rest">Per Rest</option>
                   <option value="scene">Per Scene</option>
@@ -83,7 +83,7 @@ export function TabAbilities({ character: c }: TabAbilitiesProps) {
                 onChange={e => updateAbility(c.id, ab.id, { description: e.target.value })}
                 placeholder="Describe what this ability does..."
                 rows={2}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-400 text-xs outline-none resize-none focus:border-stone-500"
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-400 text-xs outline-hidden resize-none focus:border-stone-500"
               />
               {ab.sdCost > 0 && (
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
@@ -94,7 +94,7 @@ export function TabAbilities({ character: c }: TabAbilitiesProps) {
                     onClick={() => useAbility(ab.id, ab.name, ab.sdCost)}
                     disabled={!canAfford || !ab.name.trim()}
                     title={canAfford ? `Spend ${ab.sdCost} SD to use ${ab.name}` : `Not enough SD (need ${ab.sdCost}, have ${c.currentSd})`}
-                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded border text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed
+                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed
                       enabled:bg-gold/10 enabled:border-gold/40 enabled:text-gold enabled:hover:bg-gold/20"
                   >
                     <Zap size={11} /> Use ({ab.sdCost} SD)

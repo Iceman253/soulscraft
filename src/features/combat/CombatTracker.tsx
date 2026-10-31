@@ -288,16 +288,16 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
         <div className="ml-auto flex gap-2">
           {session.combatants.length > 0 && (
             <button onClick={startInitiativeRolls}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">
               <Dices size={12} /> Roll Initiative
             </button>
           )}
-          <button onClick={sortByInitiative} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">Sort</button>
-          <button onClick={nextTurn} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-xs">
+          <button onClick={sortByInitiative} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">Sort</button>
+          <button onClick={nextTurn} className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-xs">
             Next Turn <ArrowRight size={12} />
           </button>
-          <button onClick={endCombat} className="px-3 py-1.5 rounded bg-redstone/80 hover:bg-redstone text-white text-xs">End Combat</button>
-          <button onClick={onClose} className="p-1.5 rounded text-stone-400 hover:text-stone-100 hover:bg-stone-700"><X size={16} /></button>
+          <button onClick={endCombat} className="px-3 py-1.5 rounded-sm bg-redstone/80 hover:bg-redstone text-white text-xs">End Combat</button>
+          <button onClick={onClose} className="p-1.5 rounded-sm text-stone-400 hover:text-stone-100 hover:bg-stone-700"><X size={16} /></button>
         </div>
       </div>
 
@@ -319,7 +319,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                     <div className="text-xs text-stone-500">Init</div>
                     <input type="number" value={c.initiative}
                       onChange={e => setInitiative(c.id, parseInt(e.target.value) || 0)}
-                      className="w-12 bg-stone-900 border border-stone-600 rounded px-1 py-0.5 text-stone-200 text-sm text-center outline-none font-mono tabular-nums" />
+                      className="w-12 bg-stone-900 border border-stone-600 rounded-sm px-1 py-0.5 text-stone-200 text-sm text-center outline-hidden font-mono tabular-nums" />
                   </div>
 
                   {/* Avatar */}
@@ -339,7 +339,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                         <button
                           onClick={() => splitSlime(c.id)}
                           title="Split into 2 smaller versions"
-                          className="px-1.5 py-0.5 rounded text-xs border bg-emerald/10 border-emerald/40 text-emerald hover:bg-emerald/20 transition-colors"
+                          className="px-1.5 py-0.5 rounded-sm text-xs border bg-emerald/10 border-emerald/40 text-emerald hover:bg-emerald/20 transition-colors"
                         >
                           🟢 Split!
                         </button>
@@ -357,7 +357,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                         <button
                           onClick={() => toggleTough(c.id)}
                           title={c.isTough ? 'Tough: immune to instant kill — click to remove' : 'Mark as Tough (immune to instant kill)'}
-                          className={`px-1.5 py-0.5 rounded text-xs border transition-colors ${c.isTough ? 'bg-orange-900/40 border-orange-600/60 text-orange-300' : 'bg-stone-700 border-stone-600 text-stone-500 hover:text-stone-300'}`}
+                          className={`px-1.5 py-0.5 rounded-sm text-xs border transition-colors ${c.isTough ? 'bg-orange-900/40 border-orange-600/60 text-orange-300' : 'bg-stone-700 border-stone-600 text-stone-500 hover:text-stone-300'}`}
                         >
                           {c.isTough ? '🪨 Tough' : '+ Tough'}
                         </button>
@@ -375,14 +375,14 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                   {/* Attack button */}
                   <button onClick={() => openAttack(c)} disabled={session.combatants.length < 2}
                     title="Attack"
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-redstone/20 hover:bg-redstone/40 border border-redstone/30 text-red-400 text-xs shrink-0 disabled:opacity-30 disabled:cursor-not-allowed">
+                    className="flex items-center gap-1 px-2 py-1 rounded-sm bg-redstone/20 hover:bg-redstone/40 border border-redstone/30 text-red-400 text-xs shrink-0 disabled:opacity-30 disabled:cursor-not-allowed">
                     <Sword size={11} /> Attack
                   </button>
 
                   {/* Effect button */}
                   <button onClick={() => setEffectPickerFor(effectPickerFor === c.id ? null : c.id)}
                     title="Apply status effect"
-                    className={`flex items-center gap-1 px-2 py-1 rounded border text-xs shrink-0 transition-colors ${
+                    className={`flex items-center gap-1 px-2 py-1 rounded-sm border text-xs shrink-0 transition-colors ${
                       effectPickerFor === c.id
                         ? 'bg-purple-700/30 border-purple-500/50 text-purple-300'
                         : 'bg-stone-700 border-stone-600 text-stone-400 hover:text-stone-200 hover:border-stone-500'
@@ -392,8 +392,8 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
 
                   {/* HP +/− */}
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => adjustCombatantHp(c.id, -1)} className="w-7 h-7 rounded bg-redstone/20 hover:bg-redstone/40 text-red-400 text-sm">-</button>
-                    <button onClick={() => adjustCombatantHp(c.id, 1)} className="w-7 h-7 rounded bg-emerald/20 hover:bg-emerald/40 text-emerald text-sm">+</button>
+                    <button onClick={() => adjustCombatantHp(c.id, -1)} className="w-7 h-7 rounded-sm bg-redstone/20 hover:bg-redstone/40 text-red-400 text-sm">-</button>
+                    <button onClick={() => adjustCombatantHp(c.id, 1)} className="w-7 h-7 rounded-sm bg-emerald/20 hover:bg-emerald/40 text-emerald text-sm">+</button>
                   </div>
 
                   <button onClick={() => removeComabtant(c.id)} className="p-1 text-stone-600 hover:text-red-400 shrink-0">
@@ -405,7 +405,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                 {c.activeEffects.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {c.activeEffects.map(e => (
-                      <span key={e.id} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${
+                      <span key={e.id} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-xs border ${
                         e.damagePerRound
                           ? 'bg-redstone/20 border-redstone/40 text-red-300'
                           : STATUS_EFFECTS.find(s => s.name === e.name)?.harmful === false
@@ -437,7 +437,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                 )}
 
                 <input value={c.notes} onChange={e => updateCombatantNotes(c.id, e.target.value)}
-                  placeholder="Notes..." className="mt-2 w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-stone-400 text-xs outline-none" />
+                  placeholder="Notes..." className="mt-2 w-full bg-stone-900 border border-stone-700 rounded-sm px-2 py-1 text-stone-400 text-xs outline-hidden" />
               </div>
             ))}
 
@@ -455,7 +455,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
           <div className="space-y-1 mb-4">
             {characters.map(c => (
               <button key={c.id} onClick={() => addCharacterCombatant(c)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs text-left">
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs text-left">
                 <TokenAvatar name={c.name} characterId={c.id} size={20} />
                 <span className="flex-1 truncate">{c.name}</span>
                 <span className="text-stone-500 font-mono">{c.damageDie}</span>
@@ -481,7 +481,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                     const fakeBestiaryEntry = { id: npc.name, name: npc.name, hpTier: 'average' as const, size: 'medium' as const, creatureType: ['natural'], isCustom: false }
                     addCreatureCombatant(fakeBestiaryEntry, npc.name, npc.hp, npc.def, npc.die)
                   }}
-                  className="flex flex-col items-start px-2 py-1.5 rounded bg-stone-800 border border-stone-700 hover:border-stone-500 text-left text-xs transition-colors">
+                  className="flex flex-col items-start px-2 py-1.5 rounded-sm bg-stone-800 border border-stone-700 hover:border-stone-500 text-left text-xs transition-colors">
                   <span className="font-medium text-stone-200">{npc.name}</span>
                   <span className="text-stone-500 font-mono">{npc.hp}HP · {npc.die}</span>
                 </button>
@@ -502,7 +502,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
               return (
                 <div key={c.id} className="bg-stone-800 border border-stone-700 rounded-lg p-2">
                   <div className="flex items-center gap-1.5 mb-2">
-                    {img && <img src={img} className="w-5 h-5 rounded object-cover shrink-0" />}
+                    {img && <img src={img} className="w-5 h-5 rounded-sm object-cover shrink-0" />}
                     <span className="flex-1 truncate text-stone-200 text-xs font-medium">{c.name}</span>
                     <Badge variant={c.hpTier === 'mighty' ? 'red' : c.hpTier === 'strong' ? 'orange' : 'muted'}>{c.hpTier}</Badge>
                   </div>
@@ -511,14 +511,14 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                       <span className="text-xs text-stone-500 w-6">HP</span>
                       <input type="number" min={1} value={hpVal}
                         onChange={e => setHpOverride(prev => ({ ...prev, [c.id]: e.target.value }))}
-                        className="flex-1 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 text-xs outline-none font-mono tabular-nums" />
+                        className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-200 text-xs outline-hidden font-mono tabular-nums" />
                     </div>
                     <div className="flex items-center gap-1 flex-1">
                       <Shield size={11} className="text-blue-400 shrink-0" />
                       <span className="text-xs text-stone-500">DEF</span>
                       <input type="number" min={0} value={defVal}
                         onChange={e => setDefOverride(prev => ({ ...prev, [c.id]: e.target.value }))}
-                        className="flex-1 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-blue-300 text-xs outline-none font-mono tabular-nums" />
+                        className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-0.5 text-blue-300 text-xs outline-hidden font-mono tabular-nums" />
                     </div>
                   </div>
                   <button
@@ -527,7 +527,7 @@ export function CombatTracker({ onClose }: CombatTrackerProps) {
                       setHpOverride(prev => ({ ...prev, [c.id]: String(defaultHp) }))
                       setDefOverride(prev => ({ ...prev, [c.id]: '0' }))
                     }}
-                    className="w-full flex items-center justify-center gap-1 py-1 rounded bg-stone-700 hover:bg-stone-600 text-stone-300 text-xs">
+                    className="w-full flex items-center justify-center gap-1 py-1 rounded-sm bg-stone-700 hover:bg-stone-600 text-stone-300 text-xs">
                     <Plus size={10} /> Add to Combat
                   </button>
                 </div>

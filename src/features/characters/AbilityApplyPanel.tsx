@@ -438,7 +438,7 @@ export function AbilityApplyPanel({
                     type="button"
                     onClick={() => toggle(mod)}
                     title={(mod.detail ?? '') + effectTitle}
-                    className={`px-2 py-1 rounded border text-xs font-medium transition-colors ${colorFor(mod.source, isOn)}`}
+                    className={`px-2 py-1 rounded-sm border text-xs font-medium transition-colors ${colorFor(mod.source, isOn)}`}
                   >
                     {isOn ? '✓ ' : ''}{mod.name}
                     <span className="font-mono tabular-nums">{bonusLabel}{sdLabel}</span>

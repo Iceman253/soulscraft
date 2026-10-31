@@ -38,7 +38,7 @@ export function FactionsPanel() {
             onChange={e => setNewName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') create() }}
             placeholder="New faction name…"
-            className="flex-1 bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-none focus:border-stone-500 placeholder:text-stone-600"
+            className="flex-1 bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 placeholder:text-stone-600"
           />
           <button
             onClick={create}
@@ -66,7 +66,7 @@ export function FactionsPanel() {
                 <input
                   value={faction.name}
                   onChange={e => updateFaction(faction.id, { name: e.target.value })}
-                  className="flex-1 bg-transparent text-stone-100 text-sm font-semibold outline-none border-b border-transparent focus:border-stone-600 min-w-0"
+                  className="flex-1 bg-transparent text-stone-100 text-sm font-semibold outline-hidden border-b border-transparent focus:border-stone-600 min-w-0"
                 />
                 <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
                   rep >= 20 ? 'bg-emerald/15 text-emerald' : rep <= -20 ? 'bg-red-900/30 text-red-400' : 'bg-stone-700 text-stone-400'
@@ -76,7 +76,7 @@ export function FactionsPanel() {
                 {marketCount > 0 && (
                   <span className="text-[10px] text-stone-500 shrink-0">{marketCount} market{marketCount > 1 ? 's' : ''}</span>
                 )}
-                <button onClick={() => setConfirmDelete(faction)} className="p-1 rounded text-stone-600 hover:text-red-400 shrink-0">
+                <button onClick={() => setConfirmDelete(faction)} className="p-1 rounded-sm text-stone-600 hover:text-red-400 shrink-0">
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -95,7 +95,7 @@ export function FactionsPanel() {
                     <button
                       key={d}
                       onClick={() => adjustReputation(faction.id, d)}
-                      className={`px-1.5 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                      className={`px-1.5 py-0.5 rounded-sm text-[11px] font-mono transition-colors ${
                         d > 0 ? 'bg-emerald/10 text-emerald hover:bg-emerald/20' : 'bg-red-950/30 text-red-400 hover:bg-red-950/50'
                       }`}
                     >
@@ -109,7 +109,7 @@ export function FactionsPanel() {
                 value={faction.notes}
                 onChange={e => updateFaction(faction.id, { notes: e.target.value })}
                 placeholder="Notes — who they are, what they want…"
-                className="w-full bg-stone-900/60 border border-stone-700/50 rounded-lg px-3 py-1.5 text-stone-300 text-xs outline-none focus:border-stone-500 placeholder:text-stone-600"
+                className="w-full bg-stone-900/60 border border-stone-700/50 rounded-lg px-3 py-1.5 text-stone-300 text-xs outline-hidden focus:border-stone-500 placeholder:text-stone-600"
               />
             </div>
           )

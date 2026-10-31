@@ -186,7 +186,7 @@ function CharPickerSubmenu({ item, style, onClose, onMouseEnter, onMouseLeave }:
       <div className="border-t border-stone-700 mt-1 px-3 py-1.5 flex justify-end">
         <button
           onClick={apply}
-          className="text-xs px-2.5 py-1 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400"
+          className="text-xs px-2.5 py-1 rounded-sm bg-gold text-stone-900 font-semibold hover:bg-yellow-400"
         >
           Apply
         </button>

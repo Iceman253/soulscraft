@@ -1,116 +1,315 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss' source(none);
+@source '../index.html';
+@source '.';
 
-/* ── Custom properties ──────────────────────────────────────────────── */
-:root {
-  --bg-primary:   #0d0b08;
-  --bg-secondary: #17140e;
-  --bg-tertiary:  #2a2619;
-  --border:       #4a4332;
-  --text-primary: #d8ccb2;
-  --text-muted:   #aea18a;
-  --gold:         #cd8f22;
-  --redstone:     #bd2e14;
-  --emerald:      #1a9e56;
+/* Keep hover: firing on touch screens. Tailwind 4 limits it to devices with a
+   real pointer, which would hide tap-revealed controls on phones. */
+@custom-variant hover (&:hover);
+
+@theme {
+  /* Warm dark palette — replaces cold grey so every stone-* class reads warmer.
+     Mid-tones (500/600) bumped lighter so text- variants are actually legible
+     on the dark 800/900 backgrounds. border-* and bg-* uses just become a
+     little more visible, which is a net win — the old palette had borders
+     disappearing into the panel. */
+  --color-stone-50: #fafaf9;
+  --color-stone-950: #070604;
+  --color-stone-900: #0d0b08;   /* main app bg */
+  --color-stone-800: #17140e;   /* panels, cards, topbar */
+  --color-stone-700: #2a2619;   /* hover states, active backgrounds (was #221f17) */
+  --color-stone-600: #4a4332;   /* borders, low-emphasis bg (was #32301f — too dark) */
+  --color-stone-500: #857a5e;   /* tertiary text, dividers (was #524c3c — ~2.5:1 contrast → now ~5:1) */
+  --color-stone-400: #aea18a;   /* muted text (was #9e9282 — small lift) */
+  --color-stone-300: #c4b89e;   /* secondary text (was #bab09c) */
+  --color-stone-200: #d8ccb2;   /* primary text (was #d2c8b2) */
+  --color-stone-100: #ece1c3;   /* headings (was #e6dece) */
+
+  --color-gold: #cd8f22;        /* richer amber — less "emoji yellow", more aged metal */
+  --color-redstone: #bd2e14;
+  --color-overworld: #295e30;
+  --color-nether: #7a2100;
+  --color-end: #3a1869;
+
+  /* emerald is one colour here, not a scale. Clearing Tailwind's shades keeps
+     text-emerald-400 and friends doing nothing, as they always have. */
+  --color-emerald-*: initial;
+  --color-emerald: #1a9e56;
+
+  --color-teal-50: #f0fdfa;
+  --color-teal-100: #ccfbf1;
+  --color-teal-200: #99f6e4;
+  --color-teal-300: #5ecdbb;
+  --color-teal-400: #2bbdaa;
+  --color-teal-500: #1fa898;
+  --color-teal-600: #178a7e;
+  --color-teal-700: #0f766e;
+  --color-teal-800: #115e59;
+  --color-teal-900: #134e4a;
+  --color-teal-950: #042f2e;
+
+  /* Tailwind's stock shades as hex. Its OKLCH defaults are more saturated. */
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  --color-amber-950: #451a03;
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-950: #172554;
+  --color-cyan-50: #ecfeff;
+  --color-cyan-100: #cffafe;
+  --color-cyan-200: #a5f3fc;
+  --color-cyan-300: #67e8f9;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #06b6d4;
+  --color-cyan-600: #0891b2;
+  --color-cyan-700: #0e7490;
+  --color-cyan-800: #155e75;
+  --color-cyan-900: #164e63;
+  --color-cyan-950: #083344;
+  --color-green-50: #f0fdf4;
+  --color-green-100: #dcfce7;
+  --color-green-200: #bbf7d0;
+  --color-green-300: #86efac;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+  --color-green-700: #15803d;
+  --color-green-800: #166534;
+  --color-green-900: #14532d;
+  --color-green-950: #052e16;
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
+  --color-orange-600: #ea580c;
+  --color-orange-700: #c2410c;
+  --color-orange-800: #9a3412;
+  --color-orange-900: #7c2d12;
+  --color-orange-950: #431407;
+  --color-purple-50: #faf5ff;
+  --color-purple-100: #f3e8ff;
+  --color-purple-200: #e9d5ff;
+  --color-purple-300: #d8b4fe;
+  --color-purple-400: #c084fc;
+  --color-purple-500: #a855f7;
+  --color-purple-600: #9333ea;
+  --color-purple-700: #7e22ce;
+  --color-purple-800: #6b21a8;
+  --color-purple-900: #581c87;
+  --color-purple-950: #3b0764;
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  --color-red-950: #450a0a;
+  --color-yellow-50: #fefce8;
+  --color-yellow-100: #fef9c3;
+  --color-yellow-200: #fef08a;
+  --color-yellow-300: #fde047;
+  --color-yellow-400: #facc15;
+  --color-yellow-500: #eab308;
+  --color-yellow-600: #ca8a04;
+  --color-yellow-700: #a16207;
+  --color-yellow-800: #854d0e;
+  --color-yellow-900: #713f12;
+  --color-yellow-950: #422006;
+
+  --font-display: 'Press Start 2P', monospace;
+  --font-heading: Cinzel, Georgia, serif;
+  --font-sans: 'Crimson Pro', Georgia, serif;
+  --font-mono: VT323, monospace, ui-monospace;
+
+  /* Fixed line heights. Tailwind's defaults are ratios, which scale with any
+     inline font size and with the font size of child elements. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  /* ring-* with no colour of its own, which is otherwise currentColor now */
+  --default-ring-color: rgb(59 130 246 / 0.5);
 }
 
-* { box-sizing: border-box; }
-
-html, body, #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
+/* space-y as Tailwind 3 built it: a top margin on every child after the first.
+   Tailwind 4 uses a bottom margin on every child but the last, which child
+   margins and hidden or fixed children would shift. Its rule has no specificity,
+   so the reset in the utilities layer below clears it. */
+@utility space-y-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-top: calc(var(--spacing) * --value(number));
+    margin-bottom: 0;
+  }
 }
 
-body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: 'Crimson Pro', Georgia, serif;
-  font-size: 15px;
-  line-height: 1.55;
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  /* Defaults Tailwind 4 changed */
+  option {
+    padding: 0 2px 1px;
+  }
+  *, ::before, ::after, ::backdrop, ::file-selector-button {
+    border-color: #4a4332;
+  }
+  input::placeholder, textarea::placeholder {
+    color: #9ca3af;
+  }
+  button:not(:disabled), [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* ── Custom properties ──────────────────────────────────────────────── */
+  :root {
+    --bg-primary:   #0d0b08;
+    --bg-secondary: #17140e;
+    --bg-tertiary:  #2a2619;
+    --border:       #4a4332;
+    --text-primary: #d8ccb2;
+    --text-muted:   #aea18a;
+    --gold:         #cd8f22;
+    --redstone:     #bd2e14;
+    --emerald:      #1a9e56;
+  }
+
+  /* Tailwind 4 transitions outline-color, so the focus ring would fade in from
+     another colour without this. */
+  * { box-sizing: border-box; outline-color: var(--gold); }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 15px;
+    line-height: 1.55;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Grain overlay — adds warmth and stops the "flat digital" feel */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.028;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px;
+  }
+
+  /* ── Scrollbars ─────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar         { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track   { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb   { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #857a5e; }
+
+  /* ── Form controls ──────────────────────────────────────────────────────
+     Browsers reset font-family on form elements (buttons especially) to the
+     system UI font, which causes Tailwind's body font to silently fail on
+     anything that doesn't carry an explicit `font-*` class. Force inheritance
+     so unstyled buttons/inputs read in Crimson Pro by default. */
+  input, textarea, select, button {
+    font-family: inherit;
+    font-size: inherit;
+  }
+  input, textarea, select {
+    font-size: 15px;
+  }
 }
 
-/* Grain overlay — adds warmth and stops the "flat digital" feel */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.028;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px;
+/* These stay in the utilities layer, after Tailwind's own, so they keep winning
+   ties: the focus ring has to beat outline-hidden, for one. */
+@layer utilities {
+  /* Clears Tailwind 4's space-y margin; see @utility space-y-* above */
+  :where([class*='space-y-'] > *) {
+    margin-block: 0;
+  }
+
+  /* ── Global focus ring ──────────────────────────────────────────────── */
+  :focus-visible {
+    outline: 1px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  /* ── Cinzel heading utility ─────────────────────────────────────────── */
+  .font-heading { font-family: 'Cinzel', Georgia, serif; }
+
+  /* ── Bell wiggle ────────────────────────────────────────────────────── */
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25%       { transform: rotate(-12deg); }
+    75%       { transform: rotate(12deg); }
+  }
+
+  /* ── Rainbow name easter egg ────────────────────────────────────────── */
+  @keyframes rainbow-shift {
+    0%   { color: #ff4444; }
+    14%  { color: #ff9900; }
+    28%  { color: #ffee00; }
+    42%  { color: #44dd44; }
+    57%  { color: #44aaff; }
+    71%  { color: #8844ff; }
+    85%  { color: #ff44cc; }
+    100% { color: #ff4444; }
+  }
+  .rainbow-name {
+    animation: rainbow-shift 2s linear infinite;
+    font-weight: 700;
+  }
+
+  /* ── Dice tumble ────────────────────────────────────────────────────── */
+  @keyframes dice-tumble {
+    0%   { transform: rotateX(0deg)   rotateY(0deg);   }
+    15%  { transform: rotateX(180deg) rotateY(90deg);  }
+    30%  { transform: rotateX(90deg)  rotateY(270deg); }
+    45%  { transform: rotateX(270deg) rotateY(180deg); }
+    60%  { transform: rotateX(360deg) rotateY(90deg);  }
+    75%  { transform: rotateX(180deg) rotateY(360deg); }
+    90%  { transform: rotateX(90deg)  rotateY(180deg); }
+    100% { transform: rotateX(0deg)   rotateY(0deg);   }
+  }
+  .dice-rolling { animation: dice-tumble 0.8s ease-in-out; }
+
+  /* Panel separators — slightly warmer than raw tailwind defaults */
+  .panel-rule {
+    border-top: 1px solid var(--border);
+  }
 }
 
-/* ── Scrollbars ─────────────────────────────────────────────────────── */
-::-webkit-scrollbar         { width: 5px; height: 5px; }
-::-webkit-scrollbar-track   { background: var(--bg-primary); }
-::-webkit-scrollbar-thumb   { background: var(--border); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #857a5e; }
-
-/* ── Form controls ──────────────────────────────────────────────────────
-   Browsers reset font-family on form elements (buttons especially) to the
-   system UI font, which causes Tailwind's body font to silently fail on
-   anything that doesn't carry an explicit `font-*` class. Force inheritance
-   so unstyled buttons/inputs read in Crimson Pro by default. */
-input, textarea, select, button {
-  font-family: inherit;
-  font-size: inherit;
-}
-input, textarea, select {
-  font-size: 15px;
-}
-
-/* ── Global focus ring ──────────────────────────────────────────────── */
-:focus-visible {
-  outline: 1px solid var(--gold);
-  outline-offset: 2px;
-}
-
-/* ── Cinzel heading utility ─────────────────────────────────────────── */
-.font-heading { font-family: 'Cinzel', Georgia, serif; }
-
-/* ── Bell wiggle ────────────────────────────────────────────────────── */
-@keyframes wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25%       { transform: rotate(-12deg); }
-  75%       { transform: rotate(12deg); }
-}
-
-/* ── Rainbow name easter egg ────────────────────────────────────────── */
-@keyframes rainbow-shift {
-  0%   { color: #ff4444; }
-  14%  { color: #ff9900; }
-  28%  { color: #ffee00; }
-  42%  { color: #44dd44; }
-  57%  { color: #44aaff; }
-  71%  { color: #8844ff; }
-  85%  { color: #ff44cc; }
-  100% { color: #ff4444; }
-}
-.rainbow-name {
-  animation: rainbow-shift 2s linear infinite;
-  font-weight: 700;
-}
-
-/* ── Dice tumble ────────────────────────────────────────────────────── */
-@keyframes dice-tumble {
-  0%   { transform: rotateX(0deg)   rotateY(0deg);   }
-  15%  { transform: rotateX(180deg) rotateY(90deg);  }
-  30%  { transform: rotateX(90deg)  rotateY(270deg); }
-  45%  { transform: rotateX(270deg) rotateY(180deg); }
-  60%  { transform: rotateX(360deg) rotateY(90deg);  }
-  75%  { transform: rotateX(180deg) rotateY(360deg); }
-  90%  { transform: rotateX(90deg)  rotateY(180deg); }
-  100% { transform: rotateX(0deg)   rotateY(0deg);   }
-}
-.dice-rolling { animation: dice-tumble 0.8s ease-in-out; }
-
+/* Outside any layer: React Flow's stylesheet isn't in one, and would beat these. */
 /* ── React Flow overrides ───────────────────────────────────────────── */
 .react-flow__background { background-color: var(--bg-primary) !important; }
 
@@ -137,8 +336,3 @@ input, textarea, select {
   border-radius: 4px !important;
 }
 .react-flow__minimap-mask { fill: var(--bg-primary) !important; opacity: 0.7 !important; }
-
-/* Panel separators — slightly warmer than raw tailwind defaults */
-.panel-rule {
-  border-top: 1px solid var(--border);
-}

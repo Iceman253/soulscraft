@@ -224,14 +224,14 @@ function BuildRequestCard({ req }: { req: PlayerRequest }) {
   const areas = useWorldStore(s => s.areas)
   const proposal = parseBuildProposal(req.payload, req.characterId)
   return (
-    <div className="bg-stone-900/60 border border-stone-700 rounded p-2 space-y-2">
+    <div className="bg-stone-900/60 border border-stone-700 rounded-sm p-2 space-y-2">
       <div className="flex gap-2">
-        <div className="shrink-0 rounded border border-stone-600 bg-stone-950 p-1"><PixelIcon icon={proposal.icon} tier={proposal.tier} size={64} /></div>
+        <div className="shrink-0 rounded-sm border border-stone-600 bg-stone-950 p-1"><PixelIcon icon={proposal.icon} tier={proposal.tier} size={64} /></div>
         <div className="min-w-0 text-stone-200 leading-snug whitespace-pre-wrap">{proposal.description}</div>
       </div>
       <div className="text-stone-400">📍 {placementLabel(proposal, areas)}</div>
       {req.status === 'pending' && (
-        <div className="h-36 overflow-hidden rounded border border-stone-700">
+        <div className="h-36 overflow-hidden rounded-sm border border-stone-700">
           <PlaceMap level={levelOfPlacement(proposal, areas)} pin={{ position: proposal.position, icon: proposal.icon, tier: proposal.tier }} still />
         </div>
       )}
@@ -275,7 +275,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
           <span className="shrink-0">{TYPE_ICONS[req.type] ?? '📋'}</span>
           <span className="font-semibold text-stone-200 truncate">{req.characterName}</span>
           {!isPending && (
-            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+            <span className={`px-1.5 py-0.5 rounded-sm text-xs font-medium ${
               req.status === 'approved' ? 'bg-emerald/20 text-emerald' : 'bg-red-900/40 text-red-400'
             }`}>
               {req.status}
@@ -292,7 +292,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
 
       {/* Skill-approval detail card — shown to the GM in pending state so they can judge the proposal */}
       {req.type === 'skill-approval' && (
-        <div className="bg-stone-900/60 border border-stone-700 rounded p-2 space-y-1.5">
+        <div className="bg-stone-900/60 border border-stone-700 rounded-sm p-2 space-y-1.5">
           {req.payload.abilityName ? (
             <div className="text-stone-400">
               <span className="text-stone-500">Ability:</span>{' '}
@@ -317,7 +317,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
                 <div className="flex flex-wrap items-center gap-1">
                   <span className="text-[10px] text-stone-500 uppercase tracking-wider mr-0.5">Shows in</span>
                   {(req.payload.skillCombatRoles as string[]).map(role => (
-                    <span key={role} className="px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-900/30 text-amber-200 text-[10px] font-medium">
+                    <span key={role} className="px-1.5 py-0.5 rounded-sm border border-amber-500/40 bg-amber-900/30 text-amber-200 text-[10px] font-medium">
                       {role}
                     </span>
                   ))}
@@ -338,7 +338,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
 
       {/* Mining — the player has already rolled; the GM only awards the blocks */}
       {req.type === 'mine' && isPending && (
-        <div className="bg-stone-900/60 border border-stone-700 rounded p-2 space-y-1.5">
+        <div className="bg-stone-900/60 border border-stone-700 rounded-sm p-2 space-y-1.5">
           {req.payload.breakdown ? <div className="font-mono text-[11px] text-stone-400 leading-snug">{String(req.payload.breakdown)}</div> : null}
           <div className="text-stone-500 leading-snug">{MINING_OUTCOME_HINT[actionOutcome(Number(req.payload.total) || 0)]}</div>
           <div className="flex items-center justify-between gap-2">
@@ -347,7 +347,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
               type="number" min={0}
               value={Number(req.payload.gained) || 0}
               onChange={e => updateRequestPayload(req.id, { gained: Math.max(0, parseInt(e.target.value) || 0) })}
-              className="w-20 bg-stone-800 border border-stone-600 rounded px-1.5 py-0.5 text-stone-100 text-xs text-right outline-none focus:border-gold/50 font-mono tabular-nums"
+              className="w-20 bg-stone-800 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-100 text-xs text-right outline-hidden focus:border-gold/50 font-mono tabular-nums"
             />
           </div>
           {Array.isArray(req.payload.offList) && req.payload.offList.length > 0 && (
@@ -363,27 +363,27 @@ function RequestRow({ req }: { req: PlayerRequest }) {
 
       {/* Speed-up — the player's proposal stands unless the GM changes it */}
       {req.type === 'build-speedup' && isPending && (
-        <div className="bg-stone-900/60 border border-stone-700 rounded p-2 flex items-center justify-between gap-2">
+        <div className="bg-stone-900/60 border border-stone-700 rounded-sm p-2 flex items-center justify-between gap-2">
           <span className="text-stone-500">Days needed</span>
           <input
             type="number" min={0}
             value={Number(req.payload.days) || 0}
             onChange={e => updateRequestPayload(req.id, { days: Math.max(0, parseFloat(e.target.value) || 0) })}
-            className="w-20 bg-stone-800 border border-stone-600 rounded px-1.5 py-0.5 text-stone-100 text-xs text-right outline-none focus:border-gold/50 font-mono tabular-nums"
+            className="w-20 bg-stone-800 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-100 text-xs text-right outline-hidden focus:border-gold/50 font-mono tabular-nums"
           />
         </div>
       )}
 
       {/* Trade detail — the GM sets the FINAL unit price before approving */}
       {isTrade && isPending && (
-        <div className="bg-stone-900/60 border border-stone-700 rounded p-2 space-y-1.5">
+        <div className="bg-stone-900/60 border border-stone-700 rounded-sm p-2 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-stone-500">Unit price (copper)</span>
             <input
               type="number" min={0}
               value={Number(req.payload.unitPriceCopper) || 0}
               onChange={e => updateRequestPayload(req.id, { unitPriceCopper: Math.max(0, parseInt(e.target.value) || 0) })}
-              className="w-20 bg-stone-800 border border-amber-700/40 rounded px-1.5 py-0.5 text-amber-100 text-xs text-right outline-none focus:border-amber-600 font-mono tabular-nums"
+              className="w-20 bg-stone-800 border border-amber-700/40 rounded-sm px-1.5 py-0.5 text-amber-100 text-xs text-right outline-hidden focus:border-amber-600 font-mono tabular-nums"
             />
           </div>
           <div className="flex justify-between text-stone-500">
@@ -396,7 +396,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
       )}
 
       {failure && (
-        <div className="text-amber-300 bg-amber-900/20 border border-amber-800/40 rounded px-2 py-1.5 leading-snug">{failure}</div>
+        <div className="text-amber-300 bg-amber-900/20 border border-amber-800/40 rounded-sm px-2 py-1.5 leading-snug">{failure}</div>
       )}
 
       {/* Optional note */}
@@ -409,13 +409,13 @@ function RequestRow({ req }: { req: PlayerRequest }) {
         <div className="flex gap-2 pt-0.5">
           <button
             onClick={approve}
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald/20 border border-emerald/40 text-emerald hover:bg-emerald/30 transition-colors font-medium"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-sm bg-emerald/20 border border-emerald/40 text-emerald hover:bg-emerald/30 transition-colors font-medium"
           >
             <Check size={11} /> Approve
           </button>
           <button
             onClick={() => denyRequest(req.id)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-red-900/20 border border-red-800/40 text-red-400 hover:bg-red-900/30 transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-sm bg-red-900/20 border border-red-800/40 text-red-400 hover:bg-red-900/30 transition-colors"
           >
             <X size={11} /> Deny
           </button>
@@ -447,11 +447,11 @@ export function GMRequestsPanel({ onClose }: Props) {
         </div>
         <div className="flex items-center gap-1.5">
           {requests.length > 0 && (
-            <button onClick={clearAll} className="text-xs text-stone-500 hover:text-stone-300 transition-colors px-1.5 py-0.5 rounded hover:bg-stone-700">
+            <button onClick={clearAll} className="text-xs text-stone-500 hover:text-stone-300 transition-colors px-1.5 py-0.5 rounded-sm hover:bg-stone-700">
               Clear all
             </button>
           )}
-          <button onClick={onClose} className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-700 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-sm text-stone-500 hover:text-stone-300 hover:bg-stone-700 transition-colors">
             <X size={13} />
           </button>
         </div>

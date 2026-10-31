@@ -56,7 +56,7 @@ function HunterFeatures({ fs, onUpdate }: { fs: FS<'Hunter'>; onUpdate: (p: Reco
       <select
         value={fs.state.preyType ?? ''}
         onChange={e => onUpdate({ preyType: e.target.value || null })}
-        className="w-full bg-stone-800 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none"
+        className="w-full bg-stone-800 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden"
       >
         <option value="">— No Prey Selected —</option>
         {HUNTER_PREY_TYPES.map(pt => <option key={pt} value={pt}>{pt}</option>)}
@@ -64,7 +64,7 @@ function HunterFeatures({ fs, onUpdate }: { fs: FS<'Hunter'>; onUpdate: (p: Reco
       {fs.state.preyType && (
         <div className="mt-1.5 space-y-1">
           <Badge variant="red">🎯 Hunting: {fs.state.preyType}</Badge>
-          <div className="text-xs text-stone-500 bg-stone-800 rounded p-2 leading-snug">
+          <div className="text-xs text-stone-500 bg-stone-800 rounded-sm p-2 leading-snug">
             No roll needed to find signs of, track, or sense <strong className="text-stone-300">{fs.state.preyType}</strong> creatures if they are (or were recently) in your area.
           </div>
         </div>
@@ -91,7 +91,7 @@ function VindicatorFeatures({ fs, onUse, onUpdate }: { fs: FS<'Vindicator'>; onU
           {VINDICATOR_CAUSES.map(cause => (
             <button key={cause} type="button"
               onClick={() => onUpdate({ activeCause: cause })}
-              className={`px-2.5 py-1 rounded border text-xs transition-all ${fs.state.activeCause === cause ? 'bg-gold/20 border-gold/60 text-gold' : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'}`}>
+              className={`px-2.5 py-1 rounded-sm border text-xs transition-all ${fs.state.activeCause === cause ? 'bg-gold/20 border-gold/60 text-gold' : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'}`}>
               {cause}
             </button>
           ))}
@@ -100,10 +100,10 @@ function VindicatorFeatures({ fs, onUse, onUpdate }: { fs: FS<'Vindicator'>; onU
           value={isCustom ? fs.state.activeCause : ''}
           onChange={e => onUpdate({ activeCause: e.target.value })}
           placeholder="Or write a custom Cause…"
-          className="w-full bg-stone-800 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50"
+          className="w-full bg-stone-800 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden focus:border-gold/50"
         />
         {fs.state.activeCause && (
-          <div className="mt-1.5 text-xs text-stone-500 bg-stone-800 rounded p-2">
+          <div className="mt-1.5 text-xs text-stone-500 bg-stone-800 rounded-sm p-2">
             When acting in clear alignment with <strong className="text-stone-300">"{fs.state.activeCause}"</strong>, gain <strong className="text-gold">+1</strong> to the roll.
           </div>
         )}
@@ -131,16 +131,16 @@ function EnchanterFeatures({ character, fs, onUpdate }: { character: Character; 
         <div>
           <div className="text-xs text-stone-500 mb-1">Lapis Lazuli</div>
           <div className="flex gap-1">
-            <button onClick={() => onUpdate({ lapisCount: Math.max(0, fs.state.lapisCount - 1) })} className="w-6 h-6 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">-</button>
+            <button onClick={() => onUpdate({ lapisCount: Math.max(0, fs.state.lapisCount - 1) })} className="w-6 h-6 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">-</button>
             <span className="text-stone-100 font-bold w-6 text-center text-sm">{fs.state.lapisCount}</span>
-            <button onClick={() => onUpdate({ lapisCount: fs.state.lapisCount + 1 })} className="w-6 h-6 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">+</button>
+            <button onClick={() => onUpdate({ lapisCount: fs.state.lapisCount + 1 })} className="w-6 h-6 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">+</button>
           </div>
         </div>
         <div>
           <div className="text-xs text-stone-500 mb-1">Magic Circle</div>
           {fs.state.magicCircleActive ? (
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded text-sm bg-purple-700 text-purple-100 flex items-center gap-1.5">
+              <span className="px-3 py-1 rounded-sm text-sm bg-purple-700 text-purple-100 flex items-center gap-1.5">
                 <img src="/enchanted-book.png" className="w-4 h-4 object-contain" alt="" /> Active (1 day)
               </span>
               <button onClick={() => onUpdate({ magicCircleActive: false })} className="text-xs text-stone-500 hover:text-stone-300">Dismiss</button>
@@ -150,7 +150,7 @@ function EnchanterFeatures({ character, fs, onUpdate }: { character: Character; 
               onClick={() => setShowActivate(true)}
               disabled={!canActivate}
               title={!canActivate ? (fs.state.lapisCount < 5 ? 'Need 5 Lapis' : character.currentSd < 3 ? 'Need 3 SD' : '') : 'Activate Magic Circle'}
-              className="px-3 py-1 rounded text-sm bg-stone-700 text-stone-400 hover:bg-purple-800 hover:text-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1 rounded-sm text-sm bg-stone-700 text-stone-400 hover:bg-purple-800 hover:text-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Activate (5 Lapis, 3 SD)
             </button>
@@ -164,7 +164,7 @@ function EnchanterFeatures({ character, fs, onUpdate }: { character: Character; 
             const active = fs.state.tomeEntries.includes(sign)
             return (
               <button key={sign} onClick={() => onUpdate({ tomeEntries: active ? fs.state.tomeEntries.filter((s: string) => s !== sign) : [...fs.state.tomeEntries, sign] })}
-                className={`px-2.5 py-1 rounded text-xs border ${active ? 'bg-purple-700/40 border-purple-500/50 text-purple-200' : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-purple-500/30'}`}>
+                className={`px-2.5 py-1 rounded-sm text-xs border ${active ? 'bg-purple-700/40 border-purple-500/50 text-purple-200' : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-purple-500/30'}`}>
                 {sign}
               </button>
             )
@@ -231,12 +231,12 @@ function MagicCircleModal({ character, fs, onUpdate, onClose }: {
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="bg-stone-800 rounded p-2">
+          <div className="bg-stone-800 rounded-sm p-2">
             <span className="text-stone-500">SD cost: </span>
             <span className={character.currentSd >= 3 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>3 SD</span>
             <span className="text-stone-500"> (have {character.currentSd})</span>
           </div>
-          <div className="bg-stone-800 rounded p-2">
+          <div className="bg-stone-800 rounded-sm p-2">
             <span className="text-stone-500">Lapis cost: </span>
             <span className={fs.state.lapisCount >= 5 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>5 Lapis</span>
             <span className="text-stone-500"> (have {fs.state.lapisCount})</span>
@@ -250,7 +250,7 @@ function MagicCircleModal({ character, fs, onUpdate, onClose }: {
             <div className="flex flex-wrap gap-1.5 mb-2">
               {fs.state.tomeEntries.map(e => (
                 <button key={e} type="button" onClick={() => { setEnchantmentName(e); setCustomEnchantment('') }}
-                  className={`px-2.5 py-1 rounded border text-xs transition-all ${enchantmentName === e ? 'bg-purple-700/40 border-purple-500/50 text-purple-200' : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-purple-500/30'}`}>
+                  className={`px-2.5 py-1 rounded-sm border text-xs transition-all ${enchantmentName === e ? 'bg-purple-700/40 border-purple-500/50 text-purple-200' : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-purple-500/30'}`}>
                   {e}
                 </button>
               ))}
@@ -260,7 +260,7 @@ function MagicCircleModal({ character, fs, onUpdate, onClose }: {
             value={customEnchantment}
             onChange={e => { setCustomEnchantment(e.target.value); setEnchantmentName('') }}
             placeholder={fs.state.tomeEntries.length > 0 ? 'Or type a custom enchantment…' : 'Enchantment name…'}
-            className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-purple-500/50"
+            className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-purple-500/50"
           />
         </div>
 
@@ -269,11 +269,11 @@ function MagicCircleModal({ character, fs, onUpdate, onClose }: {
           <label className="block text-sm text-stone-400 mb-1.5">Affected Characters (up to 5 total)</label>
           <div className="space-y-1 max-h-40 overflow-y-auto">
             {/* Enchanter always included */}
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-purple-900/30 border border-purple-700/30 text-xs text-purple-300">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-purple-900/30 border border-purple-700/30 text-xs text-purple-300">
               <span className="text-purple-400">✦</span> {character.name} (caster — always inside)
             </div>
             {characters.filter(c => c.id !== character.id).map(c => (
-              <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded bg-stone-800 hover:bg-stone-700 cursor-pointer text-xs">
+              <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-stone-800 hover:bg-stone-700 cursor-pointer text-xs">
                 <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleChar(c.id)} className="accent-gold" />
                 <span className="text-stone-200">{c.name}</span>
                 {c.subLocationId === character.subLocationId && c.subLocationId && (
@@ -291,16 +291,16 @@ function MagicCircleModal({ character, fs, onUpdate, onClose }: {
             value={enemyText}
             onChange={e => setEnemyText(e.target.value)}
             placeholder="e.g. Zombie Horde, Cave Spider…"
-            className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50"
+            className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50"
           />
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
+          <button onClick={onClose} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
           <button
             onClick={handleConfirm}
             disabled={!finalEnchantment.trim()}
-            className="px-3 py-1.5 rounded bg-purple-700 text-white font-semibold hover:bg-purple-600 text-sm disabled:opacity-50"
+            className="px-3 py-1.5 rounded-sm bg-purple-700 text-white font-semibold hover:bg-purple-600 text-sm disabled:opacity-50"
           >
             Activate Circle
           </button>
@@ -336,7 +336,7 @@ function WildspeakerFeatures({ fs, onUpdate }: { fs: FS<'Wildspeaker'>; onUpdate
               const t: [TetherSlot, TetherSlot] = [fs.state.tethers[0], fs.state.tethers[1]]
               t[i] = { ...t[i], force: (e.target.value || null) as TetherSlot['force'] }
               onUpdate({ tethers: t })
-            }} className="flex-1 bg-stone-800 border border-stone-600 rounded px-2 py-1 text-stone-200 text-xs outline-none">
+            }} className="flex-1 bg-stone-800 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden">
               <option value="">— None —</option>
               {PRIMAL_FORCES.map(f => <option key={f} value={f}>{f}</option>)}
             </select>
@@ -344,7 +344,7 @@ function WildspeakerFeatures({ fs, onUpdate }: { fs: FS<'Wildspeaker'>; onUpdate
               const t: [TetherSlot, TetherSlot] = [fs.state.tethers[0], fs.state.tethers[1]]
               t[i] = { ...t[i], bonus: (e.target.value || null) as TetherSlot['bonus'] }
               onUpdate({ tethers: t })
-            }} className="flex-1 bg-stone-800 border border-stone-600 rounded px-2 py-1 text-stone-200 text-xs outline-none">
+            }} className="flex-1 bg-stone-800 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden">
               <option value="">— Bonus —</option>
               {TETHER_BONUSES.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
@@ -364,7 +364,7 @@ function EvokerFeatures({ fs, onUpdate }: { fs: FS<'Evoker'>; onUpdate: (p: Reco
     <div className="space-y-3">
       <div>
         <div className="text-xs text-stone-500 mb-1">Ward Type</div>
-        <select value={fs.state.wardType ?? ''} onChange={e => onUpdate({ wardType: e.target.value || null })} className="w-full bg-stone-800 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none">
+        <select value={fs.state.wardType ?? ''} onChange={e => onUpdate({ wardType: e.target.value || null })} className="w-full bg-stone-800 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden">
           <option value="">— No Ward —</option>
           {WARD_TYPES.map(w => <option key={w} value={w}>{w}</option>)}
         </select>
@@ -410,9 +410,9 @@ function AlchemistFeatures({ fs, onUpdate }: { fs: FS<'Alchemist'>; onUpdate: (p
           <div key={et} className="flex items-center gap-2">
             <span className="text-xs text-stone-300 capitalize w-24">{et}</span>
             <div className="flex items-center gap-1">
-              <button onClick={() => onUpdate({ essences: { ...essences, [et]: Math.max(0, essences[et] - 1) } })} className="w-5 h-5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">-</button>
+              <button onClick={() => onUpdate({ essences: { ...essences, [et]: Math.max(0, essences[et] - 1) } })} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">-</button>
               <span className="text-stone-100 w-4 text-center text-xs">{essences[et]}</span>
-              <button onClick={() => onUpdate({ essences: { ...essences, [et]: essences[et] + 1 } })} className="w-5 h-5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">+</button>
+              <button onClick={() => onUpdate({ essences: { ...essences, [et]: essences[et] + 1 } })} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs">+</button>
             </div>
           </div>
         ))}
@@ -423,7 +423,7 @@ function AlchemistFeatures({ fs, onUpdate }: { fs: FS<'Alchemist'>; onUpdate: (p
 
 function ToggleBtn({ label, active, onToggle }: { label: string; active: boolean; onToggle: () => void }) {
   return (
-    <button onClick={onToggle} className={`px-2.5 py-1 rounded text-xs border transition-all ${active ? 'bg-gold/20 border-gold/50 text-gold' : 'bg-stone-800 border-stone-600 text-stone-400 hover:text-stone-200'}`}>
+    <button onClick={onToggle} className={`px-2.5 py-1 rounded-sm text-xs border transition-all ${active ? 'bg-gold/20 border-gold/50 text-gold' : 'bg-stone-800 border-stone-600 text-stone-400 hover:text-stone-200'}`}>
       {label}: {active ? 'Used' : 'Ready'}
     </button>
   )
@@ -432,9 +432,9 @@ function ToggleBtn({ label, active, onToggle }: { label: string; active: boolean
 function CountControl({ value, max, onDecrement, onIncrement }: { value: number; max: number; onDecrement: () => void; onIncrement: () => void }) {
   return (
     <div className="flex items-center gap-1.5">
-      <button onClick={onDecrement} className="w-6 h-6 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">-</button>
+      <button onClick={onDecrement} className="w-6 h-6 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">-</button>
       <span className="text-stone-100 font-bold text-sm w-8 text-center">{value}/{max}</span>
-      <button onClick={onIncrement} className="w-6 h-6 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">+</button>
+      <button onClick={onIncrement} className="w-6 h-6 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">+</button>
     </div>
   )
 }

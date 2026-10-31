@@ -76,7 +76,7 @@ export function TabInventory({ character: c }: TabInventoryProps) {
                 value={c.currency[key]}
                 min={0}
                 onChange={e => setCurrency(c.id, { [key]: parseInt(e.target.value) || 0 })}
-                className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-200 text-sm outline-none focus:border-gold/50 font-mono tabular-nums"
+                className="w-16 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-sm outline-hidden focus:border-gold/50 font-mono tabular-nums"
               />
               <span className="text-xs text-stone-500">{label}</span>
             </div>
@@ -89,14 +89,14 @@ export function TabInventory({ character: c }: TabInventoryProps) {
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm text-stone-400">🍖 Rations</span>
         <div className="flex items-center gap-1.5">
-          <button onClick={() => setRations(c.id, Math.max(0, c.rations - 1))} className="w-6 h-6 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">-</button>
+          <button onClick={() => setRations(c.id, Math.max(0, c.rations - 1))} className="w-6 h-6 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">-</button>
           <span className="text-stone-100 font-bold w-6 text-center font-mono tabular-nums">{c.rations}</span>
-          <button onClick={() => setRations(c.id, c.rations + 1)} className="w-6 h-6 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">+</button>
+          <button onClick={() => setRations(c.id, c.rations + 1)} className="w-6 h-6 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">+</button>
         </div>
         {/* Equipment packs quick-start */}
         <div className="relative ml-auto">
           <button onClick={() => setShowPacks(v => !v)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-stone-700 border border-stone-600 text-stone-300 hover:bg-stone-600 text-xs transition-colors">
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-stone-700 border border-stone-600 text-stone-300 hover:bg-stone-600 text-xs transition-colors">
             <Package size={11} /> Equipment Pack
           </button>
           {showPacks && (
@@ -168,7 +168,7 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
         <div className="flex items-center gap-2">
           <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">{title}</div>
           {blockCount !== undefined && (
-            <span className={`text-xs font-mono px-1.5 py-0.5 rounded border ${
+            <span className={`text-xs font-mono px-1.5 py-0.5 rounded-sm border ${
               blocksFull
                 ? 'bg-red-900/40 border-red-700 text-red-400 font-bold'
                 : 'bg-stone-800 border-stone-700 text-stone-500'
@@ -177,7 +177,7 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
             </span>
           )}
         </div>
-        <button onClick={onAdd} className="p-1 rounded text-stone-500 hover:text-gold hover:bg-stone-700">
+        <button onClick={onAdd} className="p-1 rounded-sm text-stone-500 hover:text-gold hover:bg-stone-700">
           <Plus size={13} />
         </button>
       </div>
@@ -218,7 +218,7 @@ function ItemRow({ item, charId, onUpdate, onRemove, onMove, onGive, moveIcon, m
 
   return (
     <div className={`flex items-center gap-2 bg-stone-800 border rounded-lg px-2 py-1.5 ${gearInfo ? 'border-stone-600' : 'border-stone-700'}`}>
-      <label className="w-8 h-8 rounded bg-stone-700 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center">
+      <label className="w-8 h-8 rounded-sm bg-stone-700 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center">
         {img ? <img src={img} className="w-full h-full object-cover" /> : <span className="text-stone-500 text-lg">📦</span>}
         <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload} />
       </label>
@@ -227,12 +227,12 @@ function ItemRow({ item, charId, onUpdate, onRemove, onMove, onGive, moveIcon, m
         value={item.name}
         onChange={e => onUpdate(item.id, { name: e.target.value })}
         placeholder="Item name..."
-        className="flex-1 min-w-0 bg-transparent text-stone-200 text-sm outline-none placeholder:text-stone-600"
+        className="flex-1 min-w-0 bg-transparent text-stone-200 text-sm outline-hidden placeholder:text-stone-600"
       />
 
       {/* Gear slot badge */}
       {gearInfo && (
-        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gold/10 border border-gold/30 text-gold text-xs shrink-0">
+        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gold/10 border border-gold/30 text-gold text-xs shrink-0">
           {gearInfo.icon} {gearInfo.label}
         </span>
       )}
@@ -241,7 +241,7 @@ function ItemRow({ item, charId, onUpdate, onRemove, onMove, onGive, moveIcon, m
       <button
         onClick={() => onUpdate(item.id, { isBlock: !item.isBlock })}
         title={item.isBlock ? 'Mark as non-block' : 'Mark as block (counts to 10-block limit)'}
-        className={`text-xs px-1 py-0.5 rounded border shrink-0 transition-colors ${
+        className={`text-xs px-1 py-0.5 rounded-sm border shrink-0 transition-colors ${
           item.isBlock
             ? 'bg-amber-900/40 border-amber-700 text-amber-400'
             : 'bg-stone-900 border-stone-700 text-stone-600 hover:text-stone-400'
@@ -254,7 +254,7 @@ function ItemRow({ item, charId, onUpdate, onRemove, onMove, onGive, moveIcon, m
         value={item.quantity}
         min={1}
         onChange={e => onUpdate(item.id, { quantity: parseInt(e.target.value) || 1 })}
-        className="w-12 bg-stone-900 border border-stone-600 rounded px-1.5 py-0.5 text-stone-200 text-xs text-center outline-none font-mono tabular-nums"
+        className="w-12 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-200 text-xs text-center outline-hidden font-mono tabular-nums"
       />
 
       <button onClick={() => onMove(item.id)} title={moveTitle}

@@ -225,7 +225,7 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
           <Dices size={16} className="text-gold" />
           <span className="font-heading font-semibold text-stone-100 text-sm tracking-wide">Dice Roller</span>
         </div>
-        <button onClick={onClose} className="p-1 rounded text-stone-400 hover:text-stone-100 hover:bg-stone-700"><X size={14} /></button>
+        <button onClick={onClose} className="p-1 rounded-sm text-stone-400 hover:text-stone-100 hover:bg-stone-700"><X size={14} /></button>
       </div>
 
       <div className="p-4 space-y-3">
@@ -241,7 +241,7 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
         {mode !== 'hazard' && (
           <>
             {/* Character select */}
-            <select value={selectedCharId} onChange={e => { setSelectedCharId(e.target.value); setSdToSpend(0); setAppliedMods([]) }} className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none">
+            <select value={selectedCharId} onChange={e => { setSelectedCharId(e.target.value); setSdToSpend(0); setAppliedMods([]) }} className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden">
               <option value="">— No Character —</option>
               {characters.filter(c => !c.isDead).map(c => <option key={c.id} value={c.id}>{c.name} (SD: {c.currentSd}/{c.maxSd}{c.missedRests > 0 ? ` · −${c.missedRests}d4` : ''})</option>)}
             </select>
@@ -265,21 +265,21 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
             <div className="flex items-center gap-2">
               <span className="text-xs text-stone-400 shrink-0">Bonus</span>
               <div className="flex items-center gap-1">
-                <button onClick={() => setSkillBonus(v => v - 1)} className="w-5 h-5 rounded bg-stone-700 text-stone-300 text-xs">-</button>
+                <button onClick={() => setSkillBonus(v => v - 1)} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 text-xs">-</button>
                 <span className={`text-sm font-bold w-8 text-center font-mono tabular-nums ${skillBonus > 0 ? 'text-gold' : skillBonus < 0 ? 'text-red-400' : 'text-stone-400'}`}>{skillBonus > 0 ? `+${skillBonus}` : skillBonus}</span>
-                <button onClick={() => setSkillBonus(v => v + 1)} className="w-5 h-5 rounded bg-stone-700 text-stone-300 text-xs">+</button>
+                <button onClick={() => setSkillBonus(v => v + 1)} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 text-xs">+</button>
               </div>
-              <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label..." className="flex-1 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-200 text-xs outline-none" />
+              <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label..." className="flex-1 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden" />
             </div>
 
             {/* SD spend */}
             {selectedChar && maxSd > 0 && (
-              <div className="flex items-center gap-2 p-2 rounded bg-blue-950/30 border border-blue-800/40">
+              <div className="flex items-center gap-2 p-2 rounded-sm bg-blue-950/30 border border-blue-800/40">
                 <span className="text-xs text-blue-300 shrink-0">Spend SD</span>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setSdToSpend(v => Math.max(0, v - 1))} className="w-5 h-5 rounded bg-stone-700 text-stone-300 text-xs">-</button>
+                  <button onClick={() => setSdToSpend(v => Math.max(0, v - 1))} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 text-xs">-</button>
                   <span className="text-sm font-bold w-8 text-center text-blue-300 font-mono tabular-nums">{cappedSd}</span>
-                  <button onClick={() => setSdToSpend(v => Math.min(maxSd, v + 1))} className="w-5 h-5 rounded bg-stone-700 text-stone-300 text-xs">+</button>
+                  <button onClick={() => setSdToSpend(v => Math.min(maxSd, v + 1))} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 text-xs">+</button>
                 </div>
                 <span className="text-xs text-blue-400/70">+{cappedSd}d4 (declare before rolling)</span>
               </div>
@@ -287,7 +287,7 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
 
             {/* Missed-rest warning */}
             {selectedChar && missedRests > 0 && (
-              <div className="p-2 rounded bg-orange-950/30 border border-orange-700/40 text-xs text-orange-300">
+              <div className="p-2 rounded-sm bg-orange-950/30 border border-orange-700/40 text-xs text-orange-300">
                 ⚠️ {missedRests} missed rest{missedRests > 1 ? 's' : ''} — auto-rolling −{missedRests}d4 penalty.
               </div>
             )}
@@ -310,7 +310,7 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
                 <button
                   key={h.name}
                   onClick={() => doHazardRoll(h)}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded bg-stone-900 border border-stone-700 hover:border-orange-600/50 text-left transition-colors"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm bg-stone-900 border border-stone-700 hover:border-orange-600/50 text-left transition-colors"
                 >
                   <span className="text-orange-400 shrink-0">{h.icon}</span>
                   <div className="flex-1 min-w-0">
@@ -363,7 +363,7 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
                       awardXp(c.id, 1, 'double-six', 'Double 6 roll')
                       setDouble6Chars(prev => prev.filter(id => id !== c.id))
                     }}
-                    className="px-2 py-0.5 rounded bg-gold text-stone-900 text-xs font-bold hover:bg-yellow-400"
+                    className="px-2 py-0.5 rounded-sm bg-gold text-stone-900 text-xs font-bold hover:bg-yellow-400"
                   >
                     +1 XP
                   </button>
@@ -387,7 +387,7 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
               <button
                 key={die}
                 onClick={() => doCustomDieRoll(die)}
-                className="px-3 py-1 rounded bg-stone-700 border border-stone-600 hover:border-gold/60 hover:text-gold text-stone-200 font-heading text-sm tracking-wide transition-colors"
+                className="px-3 py-1 rounded-sm bg-stone-700 border border-stone-600 hover:border-gold/60 hover:text-gold text-stone-200 font-heading text-sm tracking-wide transition-colors"
               >
                 {die}
               </button>

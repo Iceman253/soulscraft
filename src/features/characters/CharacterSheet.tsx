@@ -93,7 +93,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                 <span className="text-xs text-red-400">{c.currentSd} SD available:</span>
                 {Array.from({ length: Math.min(c.currentSd, 6) }, (_, i) => i + 1).map(n => (
                   <button key={n} onClick={() => handleAvoidDeath(n)}
-                    className="px-2 py-1 rounded bg-red-800 hover:bg-red-700 text-red-100 text-xs font-bold border border-red-600 transition-colors">
+                    className="px-2 py-1 rounded-sm bg-red-800 hover:bg-red-700 text-red-100 text-xs font-bold border border-red-600 transition-colors">
                     -{n} SD → +{n} HP
                   </button>
                 ))}
@@ -101,7 +101,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                   <button
                     onClick={() => handleAvoidDeath(c.currentSd)}
                     title={`Sacrifice all ${c.currentSd} SD to restore ${c.currentSd} HP`}
-                    className="px-2.5 py-1 rounded bg-red-700 hover:bg-red-600 text-white text-xs font-bold border-2 border-red-400 transition-colors shadow-lg shadow-red-900/50"
+                    className="px-2.5 py-1 rounded-sm bg-red-700 hover:bg-red-600 text-white text-xs font-bold border-2 border-red-400 transition-colors shadow-lg shadow-red-900/50"
                   >
                     💀 Sacrifice All ({c.currentSd})
                   </button>
@@ -129,7 +129,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
             <div className="flex gap-2 flex-wrap shrink-0">
               <button
                 onClick={() => setGhost(c.id, !c.isGhost)}
-                className={`px-2.5 py-1 rounded text-xs border transition-colors ${
+                className={`px-2.5 py-1 rounded-sm text-xs border transition-colors ${
                   c.isGhost
                     ? 'bg-purple-900/40 border-purple-600/60 text-purple-300'
                     : 'bg-stone-700 border-stone-600 text-stone-400 hover:border-purple-600/60 hover:text-purple-300'
@@ -141,7 +141,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                 onClick={() => { if (resurrectionReady) resurrect(c.id) }}
                 disabled={!resurrectionReady}
                 title={resurrectionReady ? 'The Tower is complete — restore this character to life' : 'Complete the Tower of Trials first (Keepers agree + all trials cleared)'}
-                className={`px-2.5 py-1 rounded text-xs border transition-colors ${
+                className={`px-2.5 py-1 rounded-sm text-xs border transition-colors ${
                   resurrectionReady
                     ? 'bg-emerald/10 border-emerald/40 text-emerald hover:bg-emerald/20'
                     : 'border-stone-700 text-stone-600 cursor-not-allowed'
@@ -179,7 +179,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                 onClick={beginTowerTrials}
                 disabled={!partyHasEchoCompass}
                 title={partyHasEchoCompass ? 'Reveal the Tower of Trials on the map' : 'The party needs an Echo Compass first'}
-                className={`w-full py-1.5 rounded border text-xs font-medium transition-colors ${
+                className={`w-full py-1.5 rounded-sm border text-xs font-medium transition-colors ${
                   partyHasEchoCompass
                     ? 'border-amber-600/50 text-amber-300 hover:bg-amber-900/20'
                     : 'border-stone-700 text-stone-600 cursor-not-allowed'
@@ -207,7 +207,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                     <div key={f.id} className="flex items-center gap-2">
                       <button
                         onClick={() => toggleTowerFloor(f.id)}
-                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                        className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${
                           f.done ? 'bg-emerald/30 border-emerald/60 text-emerald' : 'border-stone-600 hover:border-stone-400'
                         }`}
                       >
@@ -225,7 +225,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                       onChange={e => setNewFloor(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && newFloor.trim()) { addTowerFloor(newFloor.trim()); setNewFloor('') } }}
                       placeholder="Add a trial…"
-                      className="flex-1 bg-stone-800 border border-stone-600 rounded px-2 py-1 text-stone-200 outline-none focus:border-amber-500/50"
+                      className="flex-1 bg-stone-800 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 outline-hidden focus:border-amber-500/50"
                     />
                     <button
                       onClick={() => { if (newFloor.trim()) { addTowerFloor(newFloor.trim()); setNewFloor('') } }}
@@ -267,7 +267,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
               <button
                 onClick={() => setInTower(c.id, !c.inTower)}
                 title={c.inTower ? 'In the Tower of Trials — cannot die (ejected at 0 HP)' : 'Enter the Tower of Trials (no death inside)'}
-                className={`px-2 py-0.5 rounded text-xs border transition-colors ${
+                className={`px-2 py-0.5 rounded-sm text-xs border transition-colors ${
                   c.inTower
                     ? 'bg-amber-900/40 border-amber-600/60 text-amber-300'
                     : 'text-stone-600 hover:text-amber-300 border-transparent hover:border-amber-600/40'
@@ -281,8 +281,8 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
             {!c.isDead && (confirmDeath ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-stone-400">Mark {c.name} as dead?</span>
-                <button onClick={() => { markDead(c.id); setConfirmDeath(false) }} className="px-2 py-0.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-semibold border border-stone-600">Yes</button>
-                <button onClick={() => setConfirmDeath(false)} className="px-2 py-0.5 rounded bg-stone-700 text-stone-400 text-xs">Cancel</button>
+                <button onClick={() => { markDead(c.id); setConfirmDeath(false) }} className="px-2 py-0.5 rounded-sm bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-semibold border border-stone-600">Yes</button>
+                <button onClick={() => setConfirmDeath(false)} className="px-2 py-0.5 rounded-sm bg-stone-700 text-stone-400 text-xs">Cancel</button>
               </div>
             ) : (
               <button onClick={() => setConfirmDeath(true)} className="flex items-center gap-1.5 text-xs text-stone-600 hover:text-stone-400 transition-colors" title="Mark this character as dead">
@@ -294,8 +294,8 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
             {confirmDelete ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-red-400">Delete {c.name}?</span>
-                <button onClick={handleDelete} className="px-2 py-0.5 rounded bg-red-700 hover:bg-red-600 text-white text-xs font-semibold">Yes, delete</button>
-                <button onClick={() => setConfirmDelete(false)} className="px-2 py-0.5 rounded bg-stone-700 hover:bg-stone-600 text-stone-300 text-xs">Cancel</button>
+                <button onClick={handleDelete} className="px-2 py-0.5 rounded-sm bg-red-700 hover:bg-red-600 text-white text-xs font-semibold">Yes, delete</button>
+                <button onClick={() => setConfirmDelete(false)} className="px-2 py-0.5 rounded-sm bg-stone-700 hover:bg-stone-600 text-stone-300 text-xs">Cancel</button>
               </div>
             ) : (
               <button onClick={() => setConfirmDelete(true)} className="flex items-center gap-1.5 text-xs text-stone-600 hover:text-red-400 transition-colors">
@@ -329,8 +329,8 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                 <span className="text-xs text-stone-500 shrink-0">HP</span>
                 <HpBar current={c.currentHp} max={c.maxHp} className="flex-1 min-w-24" />
                 <div className="flex gap-0.5">
-                  <button onClick={() => adjustHp(c.id, -1)} className="w-5 h-5 rounded bg-stone-700 text-stone-300 hover:bg-redstone/70 text-xs">-</button>
-                  <button onClick={() => adjustHp(c.id, 1)} className="w-5 h-5 rounded bg-stone-700 text-stone-300 hover:bg-emerald/50 text-xs">+</button>
+                  <button onClick={() => adjustHp(c.id, -1)} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 hover:bg-redstone/70 text-xs">-</button>
+                  <button onClick={() => adjustHp(c.id, 1)} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 hover:bg-emerald/50 text-xs">+</button>
                 </div>
               </div>
 
@@ -342,8 +342,8 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
                   adjustSd(c.id, newVal - c.currentSd)
                 }} />
                 <div className="flex gap-0.5">
-                  <button onClick={() => adjustSd(c.id, -1)} className="w-5 h-5 rounded bg-stone-700 text-stone-300 hover:bg-redstone/70 text-xs">-</button>
-                  <button onClick={() => adjustSd(c.id, 1)} className="w-5 h-5 rounded bg-stone-700 text-stone-300 hover:bg-emerald/50 text-xs">+</button>
+                  <button onClick={() => adjustSd(c.id, -1)} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 hover:bg-redstone/70 text-xs">-</button>
+                  <button onClick={() => adjustSd(c.id, 1)} className="w-5 h-5 rounded-sm bg-stone-700 text-stone-300 hover:bg-emerald/50 text-xs">+</button>
                 </div>
               </div>
 

@@ -58,13 +58,13 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
       <div className="flex items-center justify-between px-4 py-3 border-b border-stone-700 shrink-0">
         <h3 className="font-semibold text-stone-100 truncate max-w-48">{area.name}</h3>
         <div className="flex items-center gap-1">
-          <button onClick={onOpenSubMap} className="flex items-center gap-1 px-2 py-1 rounded text-xs text-stone-400 hover:text-gold hover:bg-stone-700">
+          <button onClick={onOpenSubMap} className="flex items-center gap-1 px-2 py-1 rounded-sm text-xs text-stone-400 hover:text-gold hover:bg-stone-700">
             Sub-map <ChevronRight size={12} />
           </button>
-          <button onClick={() => setConfirmDelete(true)} className="p-1.5 rounded text-stone-500 hover:text-red-400 hover:bg-stone-700">
+          <button onClick={() => setConfirmDelete(true)} className="p-1.5 rounded-sm text-stone-500 hover:text-red-400 hover:bg-stone-700">
             <Trash2 size={14} />
           </button>
-          <button onClick={onClose} className="p-1.5 rounded text-stone-500 hover:text-stone-100 hover:bg-stone-700">
+          <button onClick={onClose} className="p-1.5 rounded-sm text-stone-500 hover:text-stone-100 hover:bg-stone-700">
             <X size={14} />
           </button>
         </div>
@@ -77,20 +77,20 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
           <input
             value={area.name}
             onChange={e => updateArea(area.id, { name: e.target.value })}
-            className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-sm outline-none focus:border-gold/50"
+            className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-100 text-sm outline-hidden focus:border-gold/50"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="block text-xs text-stone-500 mb-1">Type</label>
-            <select value={area.type} onChange={e => updateArea(area.id, { type: e.target.value as Area['type'] })} className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-xs outline-none">
+            <select value={area.type} onChange={e => updateArea(area.id, { type: e.target.value as Area['type'] })} className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-xs outline-hidden">
               {AREA_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs text-stone-500 mb-1">Realm</label>
-            <select value={area.realm} onChange={e => updateArea(area.id, { realm: e.target.value as Area['realm'] })} className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-xs outline-none">
+            <select value={area.realm} onChange={e => updateArea(area.id, { realm: e.target.value as Area['realm'] })} className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-xs outline-hidden">
               {REALMS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
@@ -102,7 +102,7 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
             value={area.description}
             onChange={e => updateArea(area.id, { description: e.target.value })}
             rows={4}
-            className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50 resize-none"
+            className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden focus:border-gold/50 resize-none"
           />
         </div>
 
@@ -134,7 +134,7 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
             <div className="mt-2 space-y-1.5">
               <div className="flex flex-wrap gap-1">
                 {COMMON_MATERIALS.filter(m => !materials.some(x => x.toLowerCase() === m.toLowerCase())).map(m => (
-                  <button key={m} onClick={() => addMaterial(m)} className="px-1.5 py-0.5 rounded border border-stone-700 text-[11px] text-stone-400 hover:text-gold hover:border-gold/40">{m}</button>
+                  <button key={m} onClick={() => addMaterial(m)} className="px-1.5 py-0.5 rounded-sm border border-stone-700 text-[11px] text-stone-400 hover:text-gold hover:border-gold/40">{m}</button>
                 ))}
               </div>
               <input
@@ -142,7 +142,7 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
                 onChange={e => setNewMaterial(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { addMaterial(newMaterial); setNewMaterial('') } }}
                 placeholder="Other material, then Enter"
-                className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-100 text-xs outline-none focus:border-gold/50"
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-100 text-xs outline-hidden focus:border-gold/50"
               />
             </div>
           )}
@@ -165,7 +165,7 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
               {structures.map(st => {
                 const p = structureProgress(st)
                 return (
-                  <button key={st.id} onClick={() => onSelectStructure?.(st.id)} className="w-full flex items-center gap-2 px-1.5 py-1 rounded hover:bg-stone-700/60 text-left">
+                  <button key={st.id} onClick={() => onSelectStructure?.(st.id)} className="w-full flex items-center gap-2 px-1.5 py-1 rounded-sm hover:bg-stone-700/60 text-left">
                     <PixelIcon icon={st.icon} tier={st.tier} size={22} />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-stone-200 truncate">{st.name}</div>

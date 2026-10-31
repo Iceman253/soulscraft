@@ -12,8 +12,8 @@ import { PROJECT_TIERS, PROJECT_TIER_ORDER, projectRequirements, isArchitect, st
 import { allPlaceOptions, defaultPositionFor, placeOptionValue } from '../../lib/places'
 import type { ProjectTier } from '../../types'
 
-const inputCls = 'w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-sm outline-none focus:border-gold/50'
-const numCls = 'w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1 text-stone-100 text-xs font-mono outline-none focus:border-gold/50'
+const inputCls = 'w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-100 text-sm outline-hidden focus:border-gold/50'
+const numCls = 'w-16 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-100 text-xs font-mono outline-hidden focus:border-gold/50'
 const sectionCls = 'text-xs text-stone-500 mb-2 uppercase tracking-wider font-heading'
 
 function Bar({ label, have, need, unit }: { label: string; have: number; need: number; unit: string }) {
@@ -24,7 +24,7 @@ function Bar({ label, have, need, unit }: { label: string; have: number; need: n
         <span className="text-stone-400">{label}</span>
         <span className={`font-mono ${have >= need ? 'text-emerald' : 'text-stone-300'}`}>{have}/{need} {unit}</span>
       </div>
-      <div className="h-1.5 rounded bg-stone-900 overflow-hidden">
+      <div className="h-1.5 rounded-sm bg-stone-900 overflow-hidden">
         <div className={`h-full ${have >= need ? 'bg-emerald' : 'bg-amber-500'}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -83,10 +83,10 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
       <div className="flex items-center gap-2 px-4 py-3 border-b border-stone-700 shrink-0">
         <PixelIcon icon={s.icon} tier={s.tier} size={24} />
         <h3 className="font-semibold text-stone-100 truncate flex-1">{s.name}</h3>
-        <button onClick={() => setConfirmDelete(true)} className="p-1.5 rounded text-stone-500 hover:text-red-400 hover:bg-stone-700" title="Delete build">
+        <button onClick={() => setConfirmDelete(true)} className="p-1.5 rounded-sm text-stone-500 hover:text-red-400 hover:bg-stone-700" title="Delete build">
           <Trash2 size={14} />
         </button>
-        <button onClick={onClose} className="p-1.5 rounded text-stone-500 hover:text-stone-100 hover:bg-stone-700">
+        <button onClick={onClose} className="p-1.5 rounded-sm text-stone-500 hover:text-stone-100 hover:bg-stone-700">
           <X size={14} />
         </button>
       </div>
@@ -95,7 +95,7 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
         {/* Icon + name */}
         <div className="flex gap-3 items-start">
           <button onClick={() => setEditingIcon(true)} title="Draw this build's map icon"
-            className="group relative shrink-0 rounded border border-stone-600 bg-stone-900 p-1.5 hover:border-gold/60">
+            className="group relative shrink-0 rounded-sm border border-stone-600 bg-stone-900 p-1.5 hover:border-gold/60">
             <PixelIcon icon={s.icon} tier={s.tier} size={56} />
             <span className="absolute -bottom-1.5 -right-1.5 rounded-full bg-stone-700 border border-stone-500 p-1 text-stone-200 group-hover:text-gold"><Pencil size={10} /></span>
           </button>
@@ -122,7 +122,7 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
           <label className="block text-xs text-stone-500 mb-1">Description</label>
           <textarea value={s.description} onChange={e => updateStructure(s.id, { description: e.target.value })} rows={3}
             placeholder="Three high towers, a drawbridge and a moat…"
-            className="w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-200 text-sm outline-none focus:border-gold/50 resize-none" />
+            className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden focus:border-gold/50 resize-none" />
         </div>
 
         {/* Builders */}
@@ -177,14 +177,14 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
             <div className="bg-stone-900/60 border border-stone-700/60 rounded-lg p-2 space-y-1.5">
               <div className="text-[11px] text-stone-400">Put in blocks from a character's inventory</div>
               <div className="flex gap-1.5">
-                <select value={giver?.id ?? ''} onChange={e => setGiverId(e.target.value)} className="flex-1 min-w-0 bg-stone-900 border border-stone-600 rounded px-1.5 py-1 text-stone-200 text-xs outline-none">
+                <select value={giver?.id ?? ''} onChange={e => setGiverId(e.target.value)} className="flex-1 min-w-0 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
                   {[...builders, ...living.filter(c => !s.builderIds.includes(c.id))].map(c => (
                     <option key={c.id} value={c.id}>{c.name} ({countBlocks(c.storage.items) + countBlocks(c.onHand.items)} blocks)</option>
                   ))}
                 </select>
                 <input type="number" min={1} placeholder={String(Math.min(blocksLeft, giverBlocks))} value={giveAmount}
                   onChange={e => setGiveAmount(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))} className={numCls} />
-                <button onClick={give} disabled={giverBlocks === 0} className="px-2 rounded bg-amber-700/70 text-amber-50 text-xs hover:bg-amber-600 disabled:opacity-40">Put in</button>
+                <button onClick={give} disabled={giverBlocks === 0} className="px-2 rounded-sm bg-amber-700/70 text-amber-50 text-xs hover:bg-amber-600 disabled:opacity-40">Put in</button>
               </div>
               {flash && <div className="text-[11px] text-emerald">{flash}</div>}
             </div>
@@ -196,18 +196,18 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
             <div className="flex flex-wrap gap-2 text-xs text-stone-400">
               <span className="flex items-center gap-1">
                 <input type="number" placeholder="blocks" value={extraBlocks} onChange={e => setExtraBlocks(e.target.value === '' ? '' : parseInt(e.target.value) || 0)} className={numCls} />
-                <button onClick={() => { if (extraBlocks) addProgress(s.id, { blocks: extraBlocks }); setExtraBlocks('') }} className="px-1.5 py-1 rounded border border-stone-600 hover:border-gold/50">+ blocks</button>
+                <button onClick={() => { if (extraBlocks) addProgress(s.id, { blocks: extraBlocks }); setExtraBlocks('') }} className="px-1.5 py-1 rounded-sm border border-stone-600 hover:border-gold/50">+ blocks</button>
               </span>
               {s.redstoneRequired > 0 && (
                 <span className="flex items-center gap-1">
                   <input type="number" placeholder="dust" value={extraRedstone} onChange={e => setExtraRedstone(e.target.value === '' ? '' : parseInt(e.target.value) || 0)} className={numCls} />
-                  <button onClick={() => { if (extraRedstone) addProgress(s.id, { redstone: extraRedstone }); setExtraRedstone('') }} className="px-1.5 py-1 rounded border border-stone-600 hover:border-gold/50">+ redstone</button>
+                  <button onClick={() => { if (extraRedstone) addProgress(s.id, { redstone: extraRedstone }); setExtraRedstone('') }} className="px-1.5 py-1 rounded-sm border border-stone-600 hover:border-gold/50">+ redstone</button>
                 </span>
               )}
               <span className="flex items-center gap-1">
-                <button onClick={() => addProgress(s.id, { days: 1 })} className="px-1.5 py-1 rounded border border-stone-600 hover:border-gold/50">+1 day</button>
+                <button onClick={() => addProgress(s.id, { days: 1 })} className="px-1.5 py-1 rounded-sm border border-stone-600 hover:border-gold/50">+1 day</button>
                 <input type="number" placeholder="days" value={extraDays} onChange={e => setExtraDays(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)} className={numCls} />
-                <button onClick={() => { if (extraDays) addProgress(s.id, { days: extraDays }); setExtraDays('') }} className="px-1.5 py-1 rounded border border-stone-600 hover:border-gold/50">+ days</button>
+                <button onClick={() => { if (extraDays) addProgress(s.id, { days: extraDays }); setExtraDays('') }} className="px-1.5 py-1 rounded-sm border border-stone-600 hover:border-gold/50">+ days</button>
               </span>
             </div>
           </div>
@@ -218,7 +218,7 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
               <button onClick={() => setCompleted(s.id, false)} className="text-[11px] text-stone-400 hover:text-stone-200">Reopen</button>
             </div>
           ) : (
-            <button onClick={() => setCompleted(s.id, true)} className="w-full py-1.5 rounded border border-dashed border-stone-600 text-xs text-stone-400 hover:text-emerald hover:border-emerald/60">
+            <button onClick={() => setCompleted(s.id, true)} className="w-full py-1.5 rounded-sm border border-dashed border-stone-600 text-xs text-stone-400 hover:text-emerald hover:border-emerald/60">
               Mark complete now (GM's call)
             </button>
           )}

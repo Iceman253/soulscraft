@@ -157,8 +157,8 @@ export function PlayerCombatView({ focusedCharacterId }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`font-medium text-base md:text-sm ${isDefeated ? 'text-stone-500' : 'text-stone-100'}`}>{c.name}{isMe ? ' (you)' : ''}</span>
-                      {isActive && !isDefeated && <span className="text-sm md:text-xs bg-gold/20 border border-gold/40 text-gold px-2 py-0.5 md:px-1.5 rounded font-medium">⚡ Active</span>}
-                      {isNext && !isDefeated && !isActive && <span className="text-sm md:text-xs bg-stone-700 border border-stone-600 text-stone-400 px-2 py-0.5 md:px-1.5 rounded">Up next</span>}
+                      {isActive && !isDefeated && <span className="text-sm md:text-xs bg-gold/20 border border-gold/40 text-gold px-2 py-0.5 md:px-1.5 rounded-sm font-medium">⚡ Active</span>}
+                      {isNext && !isDefeated && !isActive && <span className="text-sm md:text-xs bg-stone-700 border border-stone-600 text-stone-400 px-2 py-0.5 md:px-1.5 rounded-sm">Up next</span>}
                       <Badge variant={c.kind === 'character' ? 'blue' : 'red'}>{c.kind}</Badge>
                       {isDefeated && <span className="text-sm md:text-xs text-stone-500">💀 Defeated</span>}
                     </div>
@@ -169,7 +169,7 @@ export function PlayerCombatView({ focusedCharacterId }: Props) {
                 {c.activeEffects.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 md:gap-1">
                     {c.activeEffects.map(e => (
-                      <span key={e.id} className={`inline-flex items-center gap-1 px-2 py-1 md:px-1.5 md:py-0.5 rounded text-sm md:text-xs border ${
+                      <span key={e.id} className={`inline-flex items-center gap-1 px-2 py-1 md:px-1.5 md:py-0.5 rounded-sm text-sm md:text-xs border ${
                         e.damagePerRound ? 'bg-red-900/30 border-red-800/50 text-red-300' : 'bg-purple-900/30 border-purple-700/40 text-purple-300'
                       }`}>{e.damagePerRound && '🩸'}{e.name}</span>
                     ))}

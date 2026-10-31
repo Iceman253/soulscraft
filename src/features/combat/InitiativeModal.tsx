@@ -29,7 +29,7 @@ export function InitiativeModal({ rolls, revealedCount, rolling, onApply, onDisc
           </div>
           {!rolling && (
             <button onClick={onDiscard}
-              className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-700">
+              className="p-1 rounded-sm text-stone-500 hover:text-stone-300 hover:bg-stone-700">
               <X size={14} />
             </button>
           )}
@@ -64,11 +64,11 @@ export function InitiativeModal({ rolls, revealedCount, rolling, onApply, onDisc
 
         <div className="px-4 py-3 border-t border-stone-700 flex gap-2 justify-end">
           <button onClick={onDiscard}
-            className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
+            className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
             Discard
           </button>
           <button onClick={onApply} disabled={!allRevealed}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gold text-stone-900 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Check size={14} /> Apply & Sort
           </button>
         </div>

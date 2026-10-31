@@ -65,7 +65,7 @@ export function SessionMilestoneModal({ onClose }: Props) {
                   : 'bg-stone-800 border-stone-700 text-stone-400 hover:border-stone-500'
               }`}
             >
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+              <div className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${
                 answered[q.id] ? 'bg-gold border-gold' : 'border-stone-500'
               }`}>
                 {answered[q.id] && <Check size={12} className="text-stone-900" />}
@@ -89,7 +89,7 @@ export function SessionMilestoneModal({ onClose }: Props) {
             <div className="flex flex-wrap gap-1.5">
               {pcs.map(c => (
                 <button key={c.id} onClick={() => toggleChar(c.id)}
-                  className={`px-2.5 py-1 rounded border text-xs transition-all ${
+                  className={`px-2.5 py-1 rounded-sm border text-xs transition-all ${
                     selectedChars.has(c.id)
                       ? 'bg-gold/20 border-gold/50 text-gold'
                       : 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-400'
@@ -108,11 +108,11 @@ export function SessionMilestoneModal({ onClose }: Props) {
         </div>
 
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
+          <button onClick={onClose} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
             Cancel
           </button>
           <button onClick={handleAward} disabled={xpEarned === 0 || selectedChars.size === 0}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-gold text-stone-900 font-semibold text-sm disabled:opacity-40 hover:bg-yellow-400 transition-colors">
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold text-sm disabled:opacity-40 hover:bg-yellow-400 transition-colors">
             <Trophy size={13} /> Award {xpEarned > 0 ? `${xpEarned} XP` : 'XP'}
           </button>
         </div>

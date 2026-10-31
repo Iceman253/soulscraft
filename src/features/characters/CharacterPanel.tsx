@@ -148,7 +148,7 @@ export function CharacterPanel() {
         <h2 className="font-semibold text-stone-100 font-heading tracking-wide">Characters</h2>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm"
         >
           <UserPlus size={14} /> New Character
         </button>
@@ -158,7 +158,7 @@ export function CharacterPanel() {
         <div className="flex-1 flex items-center justify-center text-stone-500 flex-col gap-3">
           <UserPlus size={40} className="opacity-30" />
           <p>No characters yet</p>
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 rounded bg-stone-700 hover:bg-stone-600 text-stone-200 text-sm">
+          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 rounded-sm bg-stone-700 hover:bg-stone-600 text-stone-200 text-sm">
             <Plus size={14} /> Add Character
           </button>
         </div>
@@ -194,19 +194,19 @@ export function CharacterPanel() {
               <label className="block text-sm text-stone-400 mb-1">Name *</label>
               <input autoFocus value={name} onChange={e => setName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-100 text-sm outline-none focus:border-gold/50"
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50"
                 placeholder="Thorin Ironhand..." />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm text-stone-400 mb-1">Species</label>
-                <select value={species} onChange={e => handleSpeciesChange(e.target.value)} className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
+                <select value={species} onChange={e => handleSpeciesChange(e.target.value)} className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden">
                   {SPECIES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-stone-400 mb-1">Class</label>
-                <select value={characterClass} onChange={e => handleClassChange(e.target.value)} className="w-full bg-stone-900 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
+                <select value={characterClass} onChange={e => handleClassChange(e.target.value)} className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden">
                   {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
@@ -221,7 +221,7 @@ export function CharacterPanel() {
                     key={v.name}
                     type="button"
                     onClick={() => setVariant(v.name)}
-                    className={`px-2.5 py-1 rounded border text-xs transition-all ${variant === v.name ? 'bg-gold/20 border-gold/60 text-gold' : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'}`}
+                    className={`px-2.5 py-1 rounded-sm border text-xs transition-all ${variant === v.name ? 'bg-gold/20 border-gold/60 text-gold' : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'}`}
                   >
                     {v.name}
                   </button>
@@ -254,7 +254,7 @@ export function CharacterPanel() {
               <div className="flex flex-wrap gap-1.5">
                 {classDisciplines.map(d => (
                   <button key={d} type="button" onClick={() => setDiscipline(d)}
-                    className={`px-2.5 py-1 rounded border text-xs transition-all ${discipline === d ? 'bg-gold/20 border-gold/60 text-gold' : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'}`}>
+                    className={`px-2.5 py-1 rounded-sm border text-xs transition-all ${discipline === d ? 'bg-gold/20 border-gold/60 text-gold' : 'bg-stone-700 border-stone-600 text-stone-300 hover:border-stone-400'}`}>
                     {d}
                   </button>
                 ))}
@@ -294,8 +294,8 @@ export function CharacterPanel() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
-              <button onClick={handleCreate} disabled={!name.trim()} className="px-3 py-1.5 rounded bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm disabled:opacity-50">Create</button>
+              <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
+              <button onClick={handleCreate} disabled={!name.trim()} className="px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm disabled:opacity-50">Create</button>
             </div>
           </div>
         </Modal>

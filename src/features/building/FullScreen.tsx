@@ -32,5 +32,5 @@ export function FullScreen({ title, onClose, onBack, footer, children }: {
 }
 
 export const primaryBtn = 'w-full py-3.5 rounded-xl bg-gold text-stone-900 text-base font-bold active:bg-yellow-400 hover:bg-yellow-400 disabled:opacity-40'
-export const fieldCls = 'w-full bg-stone-900 border border-stone-600 rounded-xl px-3.5 py-3 text-base text-stone-100 outline-none focus:border-gold/50'
+export const fieldCls = 'w-full bg-stone-900 border border-stone-600 rounded-xl px-3.5 py-3 text-base text-stone-100 outline-hidden focus:border-gold/50'
 export const fieldLabelCls = 'block text-sm text-stone-400 mb-1.5'

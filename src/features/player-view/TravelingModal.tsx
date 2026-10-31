@@ -73,7 +73,7 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
             <MapPin size={16} className="text-amber-400" />
             <span className="font-bold text-stone-100">Mark as Traveling</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-700">
+          <button onClick={onClose} className="p-1 rounded-sm text-stone-500 hover:text-stone-300 hover:bg-stone-700">
             <X size={14} />
           </button>
         </div>
@@ -83,7 +83,7 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
           <div>
             <label className="text-xs text-stone-400 mb-1.5 block">Character</label>
             <select value={characterId} onChange={e => handleCharChange(e.target.value)}
-              className="w-full bg-stone-800 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
+              className="w-full bg-stone-800 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden">
               {characters.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -93,7 +93,7 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
           {/* From area (read-only) */}
           <div>
             <label className="text-xs text-stone-400 mb-1.5 block">Traveling from</label>
-            <div className="px-3 py-2 rounded bg-stone-800/50 border border-stone-700 text-stone-400 text-sm">
+            <div className="px-3 py-2 rounded-sm bg-stone-800/50 border border-stone-700 text-stone-400 text-sm">
               {fromArea ? `📍 ${fromArea.name}` : <span className="italic text-stone-500">No current location set</span>}
             </div>
           </div>
@@ -104,7 +104,7 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
               Destination <span className="text-stone-500">(hidden from players until they arrive)</span>
             </label>
             <select value={toAreaId} onChange={e => setToAreaId(e.target.value)}
-              className="w-full bg-stone-800 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
+              className="w-full bg-stone-800 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden">
               <option value="">— Select destination —</option>
               {areas.filter(a => a.id !== fromAreaId).map(a => (
                 <option key={a.id} value={a.id}>{a.name}</option>
@@ -119,7 +119,7 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
                 Road / path <span className="text-stone-500">(optional)</span>
               </label>
               <select value={edgeId} onChange={e => setEdgeId(e.target.value)}
-                className="w-full bg-stone-800 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none">
+                className="w-full bg-stone-800 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden">
                 <option value="">— Any path —</option>
                 {availableEdges.map(e => {
                   const other = areas.find(a => a.id === (e.sourceId === fromAreaId ? e.targetId : e.sourceId))
@@ -138,7 +138,7 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
               value={label}
               onChange={e => setLabel(e.target.value)}
               placeholder="e.g. 3 days north by sea…"
-              className="w-full bg-stone-800 border border-stone-600 rounded px-3 py-2 text-stone-200 text-sm outline-none placeholder:text-stone-600"
+              className="w-full bg-stone-800 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden placeholder:text-stone-600"
             />
           </div>
         </div>
@@ -146,24 +146,24 @@ export function TravelingModal({ preselectedCharacterId, onClose }: TravelingMod
         <div className="px-5 py-3 border-t border-stone-700 flex items-center gap-2">
           {existingMarker && (
             <button onClick={handleClearMarker}
-              className="px-3 py-1.5 rounded bg-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-600 text-sm">
+              className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-600 text-sm">
               Clear Marker
             </button>
           )}
           {existingMarker && toAreaId && (
             <button onClick={handleMarkArrived}
-              className="px-3 py-1.5 rounded bg-teal-700 hover:bg-teal-600 text-white font-medium text-sm">
+              className="px-3 py-1.5 rounded-sm bg-teal-700 hover:bg-teal-600 text-white font-medium text-sm">
               ✅ Mark Arrived
             </button>
           )}
           <div className="flex-1" />
-          <button onClick={onClose} className="px-3 py-1.5 rounded bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
+          <button onClick={onClose} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={!toAreaId || !fromAreaId}
-            className="px-4 py-1.5 rounded bg-amber-700 hover:bg-amber-600 text-white font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-1.5 rounded-sm bg-amber-700 hover:bg-amber-600 text-white font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Mark Traveling
           </button>
