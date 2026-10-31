@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { CharacterItem } from '../types'
+import type { CharacterItem, WeaponMaterial, WeaponType } from '../types'
 import {
   BLOCK_CARRY_LIMIT, countBlocks, MINING_AMOUNTS, miningDays, TOOL_BONUS,
   carriedMiningTools, resolveMiningTool, miningToolOptions,
@@ -46,7 +46,9 @@ describe('mining tools', () => {
     const { none, ...tools } = TOOL_BONUS
     expect(none).toBeLessThan(Math.min(...Object.values(tools)))
   })
-  const carrying = (...items: CharacterItem[]) => ({ onHand: { items } })
+  const carrying = (...items: CharacterItem[]) => ({ onHand: { items }, weaponLoadout: { mainHand: null, offHand: null } })
+  const inSlot = (type: WeaponType, material: WeaponMaterial, name: string) =>
+    ({ id: name, name, type, material, baseDamageBonus: 0, currentDamageBonus: 0, enchantments: [] })
 
   it('reads the tier from what is carried', () => {
     expect(carriedMiningTools(carrying(item('Iron Pickaxe')))).toEqual([{ tier: 'iron', itemName: 'Iron Pickaxe' }])
@@ -67,10 +69,24 @@ describe('mining tools', () => {
     expect(carriedMiningTools(carrying({ ...item('Pickaxe'), customName: 'Netherite Pick "Old Faithful"' }))[0]).toEqual({ tier: 'netherite', itemName: 'Netherite Pick "Old Faithful"' })
   })
 
-  it('never counts weapons, on hand or in a weapon slot', () => {
+  it('counts mining equipment in either weapon slot', () => {
+    const c = { onHand: { items: [] }, weaponLoadout: { mainHand: inSlot('pickaxe', 'diamond', 'Diamond Pickaxe'), offHand: inSlot('shovel', 'wood', 'Wooden Shovel') } }
+    expect(carriedMiningTools(c)).toEqual([{ tier: 'diamond', itemName: 'Diamond Pickaxe' }, { tier: 'wooden', itemName: 'Wooden Shovel' }])
+  })
+
+  it('never counts real weapons, on hand or in a weapon slot', () => {
     expect(carriedMiningTools(carrying(item('Diamond Sword'), item('Netherite Mace'), item('Iron Trident')))).toEqual([])
-    const slot = { name: 'Diamond Pickaxe', type: 'pickaxe', material: 'diamond' }
-    expect(carriedMiningTools({ ...carrying(), weaponLoadout: { mainHand: slot, offHand: null } } as never)).toEqual([])
+    const c = { onHand: { items: [] }, weaponLoadout: { mainHand: inSlot('sword', 'diamond', 'Diamond Sword'), offHand: inSlot('mace', 'netherite', 'Netherite Mace') } }
+    expect(carriedMiningTools(c)).toEqual([])
+  })
+
+  it('lists the same tier once when a tool is both carried and equipped', () => {
+    const c = { onHand: { items: [item('Iron Pickaxe')] }, weaponLoadout: { mainHand: inSlot('pickaxe', 'iron', 'Iron Pickaxe'), offHand: null } }
+    expect(carriedMiningTools(c)).toHaveLength(1)
+  })
+
+  it('copes with a character saved without weapon slots', () => {
+    expect(carriedMiningTools({ onHand: { items: [item('Iron Pickaxe')] } } as never)).toHaveLength(1)
   })
 
   it('does not count tools left in storage', () => {

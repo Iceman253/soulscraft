@@ -1,4 +1,4 @@
-import type { Character, CharacterItem, InventorySection, ProjectTier, Structure, Trait } from '../types'
+import type { Character, CharacterItem, InventorySection, ProjectTier, Structure, Trait, WeaponMaterial, WeaponType } from '../types'
 import { rollDiceSpec } from './dice'
 import { normalizeIcon } from './pixelArt'
 
@@ -57,15 +57,22 @@ const TIER_WORDS: [ToolTier, RegExp][] = [
   ['wooden', /\bwood(en)?\b/i],
 ]
 
+// Mining equipment that can sit in a weapon slot. Swords, maces and the like can't mine.
+const SLOT_TOOL_TYPES: WeaponType[] = ['pickaxe', 'axe', 'shovel']
+const TIER_OF_MATERIAL: Partial<Record<WeaponMaterial, ToolTier>> = {
+  wood: 'wooden', stone: 'stone', iron: 'iron', gold: 'gold', diamond: 'diamond', netherite: 'netherite',
+}
+
 export interface CarriedTool {
   tier: Exclude<ToolTier, 'none'>
   itemName: string
 }
 
 /** Mining tools a character actually has with them, best first: on-hand items whose
- *  name gives a tool and its material. Weapons don't count, and chests stay at base
- *  (p.7), so storage doesn't either. One entry per tier. */
-export function carriedMiningTools(c: Pick<Character, 'onHand'>): CarriedTool[] {
+ *  name gives a tool and its material, plus mining equipment in a weapon slot. Other
+ *  weapons don't count, and chests stay at base (p.7), so storage doesn't either.
+ *  One entry per tier. */
+export function carriedMiningTools(c: Pick<Character, 'onHand' | 'weaponLoadout'>): CarriedTool[] {
   const found = new Map<ToolTier, CarriedTool>()
   const add = (tier: ToolTier | undefined, itemName: string) => {
     if (tier && tier !== 'none' && !found.has(tier)) found.set(tier, { tier, itemName })
@@ -73,6 +80,9 @@ export function carriedMiningTools(c: Pick<Character, 'onHand'>): CarriedTool[] 
   for (const item of c.onHand.items) {
     const name = `${item.customName ?? ''} ${item.name}`
     if (TOOL_NAME.test(name)) add(TIER_WORDS.find(([, re]) => re.test(name))?.[0], item.customName ?? item.name)
+  }
+  for (const weapon of [c.weaponLoadout?.mainHand, c.weaponLoadout?.offHand]) {
+    if (weapon && SLOT_TOOL_TYPES.includes(weapon.type)) add(TIER_OF_MATERIAL[weapon.material], weapon.name)
   }
   return [...found.values()].sort((a, b) => TOOL_BONUS[b.tier] - TOOL_BONUS[a.tier])
 }
