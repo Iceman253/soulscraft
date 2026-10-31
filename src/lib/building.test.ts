@@ -41,6 +41,13 @@ describe('mining tools', () => {
   it('has the rulebook bonuses', () => {
     expect(TOOL_BONUS).toMatchObject({ wooden: -2, stone: -1, copper: 0, iron: 1, gold: 2, diamond: 3, netherite: 4 })
   })
+  it('never makes having no tool better than having any tool', () => {
+    const { none, ...tools } = TOOL_BONUS
+    expect(none).toBeLessThan(Math.min(...Object.values(tools)))
+  })
+  it('still prefers any real tool over none when detecting', () => {
+    expect(detectMiningTool([item('Wooden Pickaxe')]).tier).toBe('wooden')
+  })
   it('detects the tier from a carried pickaxe', () => {
     expect(detectMiningTool([item('Iron Pickaxe')])).toEqual({ tier: 'iron', itemName: 'Iron Pickaxe' })
     expect(detectMiningTool([item('Golden Pickaxe')]).tier).toBe('gold')
@@ -226,7 +233,7 @@ describe('mining on a phone', () => {
     expect(miningBreakdown({ dice: 9, tool: 'diamond', traits: ['Miner'], skill: { name: 'Delving', bonus: 2 }, other: 1, sdBoost: 3, penalty: 2 }))
       .toBe('9 (2d6) +3 Diamond tool +1 Miner +2 Delving +1 other +3 SD −2 missed rest')
     expect(miningBreakdown({ dice: 5, tool: 'wooden', traits: [] })).toBe('5 (2d6) −2 Wooden tool')
-    expect(miningBreakdown({ dice: 5, tool: 'none', traits: [] })).toBe('5 (2d6) no tool')
+    expect(miningBreakdown({ dice: 5, tool: 'none', traits: [] })).toBe('5 (2d6) −3 no tool')
   })
 
   it('knows when blocks would go over the carry limit', () => {

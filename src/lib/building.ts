@@ -32,10 +32,11 @@ export function miningDays(blocks: number): number {
 
 export type ToolTier = 'none' | 'wooden' | 'stone' | 'copper' | 'iron' | 'gold' | 'diamond' | 'netherite'
 
-/** Mining tool bonuses (p.82). 'none' = no suitable tool; the GM decides whether
- *  the material can be mined at all. */
+/** Mining tool bonuses (p.82). The Guidebook gives no value for having no tool, so
+ *  'none' is a house rule set one below its worst tool; the GM still decides
+ *  whether the material can be mined at all. */
 export const TOOL_BONUS: Record<ToolTier, number> = {
-  none: 0,
+  none: -3,
   wooden: -2,
   stone: -1,
   copper: 0,
@@ -128,7 +129,7 @@ export function miningBreakdown(parts: {
 }): string {
   const signed = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`
   const bits = [`${parts.dice} (2d6)`]
-  if (parts.tool === 'none') bits.push('no tool')
+  if (parts.tool === 'none') bits.push(`${signed(TOOL_BONUS.none)} no tool`)
   else bits.push(`${signed(TOOL_BONUS[parts.tool])} ${parts.tool[0].toUpperCase()}${parts.tool.slice(1)} tool`)
   for (const t of parts.traits) bits.push(`+1 ${t}`)
   if (parts.skill) bits.push(`+${parts.skill.bonus} ${parts.skill.name}`)
