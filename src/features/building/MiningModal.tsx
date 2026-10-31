@@ -5,7 +5,7 @@ import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
 import { useBuildStore } from './store'
 import {
-  MINING_AMOUNTS, miningDays, TOOL_BONUS, TOOL_TIERS, detectMiningTool, actionOutcome,
+  MINING_AMOUNTS, miningDays, TOOL_BONUS, carriedMiningTools, miningToolOptions, resolveMiningTool, actionOutcome,
   BLOCK_CARRY_LIMIT, countBlocks, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
 
@@ -40,9 +40,9 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const [materials, setMaterials] = useState<string[]>([])
   const [customMaterial, setCustomMaterial] = useState('')
   const [requested, setRequested] = useState(50)
-  const detected = useMemo(() => detectMiningTool(character?.onHand.items ?? []), [character])
+  const tools = useMemo(() => character ? carriedMiningTools(character) : [], [character])
   const [tool, setTool] = useState<ToolTier | null>(null)
-  const effectiveTool = tool ?? detected.tier
+  const effectiveTool = resolveMiningTool(tool, tools)
   const [skillId, setSkillId] = useState('')
   const [traitIds, setTraitIds] = useState<string[] | null>(null)
   const [otherBonus, setOtherBonus] = useState(0)
@@ -162,11 +162,9 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
           <div>
             <label className={labelCls}>Tool</label>
             <select value={effectiveTool} onChange={e => setTool(e.target.value as ToolTier)} className={inputCls}>
-              {TOOL_TIERS.map(t => (
-                <option key={t} value={t}>{t === 'none' ? 'No proper tool' : `${t[0].toUpperCase()}${t.slice(1)}`} ({TOOL_BONUS[t] >= 0 ? '+' : ''}{TOOL_BONUS[t]})</option>
-              ))}
+              {miningToolOptions(tools).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <div className="text-[10px] text-stone-500 mt-0.5">{detected.itemName ? `Carrying: ${detected.itemName}` : 'No mining tool on hand'}</div>
+            {tools.length === 0 && <div className="text-[10px] text-stone-500 mt-0.5">No mining tool with them</div>}
           </div>
           <div>
             <label className={labelCls}>Skill (one only)</label>

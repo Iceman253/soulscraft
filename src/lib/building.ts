@@ -46,8 +46,6 @@ export const TOOL_BONUS: Record<ToolTier, number> = {
   netherite: 4,
 }
 
-export const TOOL_TIERS: ToolTier[] = ['none', 'wooden', 'stone', 'copper', 'iron', 'gold', 'diamond', 'netherite']
-
 const TOOL_NAME = /\b(pickaxe|pick|axe|shovel|spade|hoe)\b/i
 const TIER_WORDS: [ToolTier, RegExp][] = [
   ['netherite', /\bnetherite\b/i],
@@ -59,17 +57,41 @@ const TIER_WORDS: [ToolTier, RegExp][] = [
   ['wooden', /\bwood(en)?\b/i],
 ]
 
-/** Best mining tool a character is carrying (on hand), e.g. "Iron Pickaxe" → iron. */
-export function detectMiningTool(items: CharacterItem[]): { tier: ToolTier; itemName: string | null } {
-  let best: { tier: ToolTier; itemName: string | null } = { tier: 'none', itemName: null }
-  for (const item of items) {
-    const name = `${item.customName ?? ''} ${item.name}`
-    if (!TOOL_NAME.test(name)) continue
-    const tier = TIER_WORDS.find(([, re]) => re.test(name))?.[0]
-    if (!tier) continue
-    if (best.tier === 'none' || TOOL_BONUS[tier] > TOOL_BONUS[best.tier]) best = { tier, itemName: item.name }
+export interface CarriedTool {
+  tier: Exclude<ToolTier, 'none'>
+  itemName: string
+}
+
+/** Mining tools a character actually has with them, best first: on-hand items whose
+ *  name gives a tool and its material. Weapons don't count, and chests stay at base
+ *  (p.7), so storage doesn't either. One entry per tier. */
+export function carriedMiningTools(c: Pick<Character, 'onHand'>): CarriedTool[] {
+  const found = new Map<ToolTier, CarriedTool>()
+  const add = (tier: ToolTier | undefined, itemName: string) => {
+    if (tier && tier !== 'none' && !found.has(tier)) found.set(tier, { tier, itemName })
   }
-  return best
+  for (const item of c.onHand.items) {
+    const name = `${item.customName ?? ''} ${item.name}`
+    if (TOOL_NAME.test(name)) add(TIER_WORDS.find(([, re]) => re.test(name))?.[0], item.customName ?? item.name)
+  }
+  return [...found.values()].sort((a, b) => TOOL_BONUS[b.tier] - TOOL_BONUS[a.tier])
+}
+
+/** The tool in use: what was picked if the character still has it, otherwise their
+ *  best tool. Choosing no tool is always allowed. */
+export function resolveMiningTool(picked: ToolTier | null, tools: CarriedTool[]): ToolTier {
+  if (picked === 'none') return 'none'
+  if (picked && tools.some(t => t.tier === picked)) return picked
+  return tools[0]?.tier ?? 'none'
+}
+
+/** The tool picker's choices: only tools the character has, plus no tool. */
+export function miningToolOptions(tools: CarriedTool[]): { value: ToolTier; label: string }[] {
+  const signed = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`
+  return [
+    ...tools.map(t => ({ value: t.tier as ToolTier, label: `${t.itemName} (${signed(TOOL_BONUS[t.tier])})` })),
+    { value: 'none' as const, label: `No tool (${signed(TOOL_BONUS.none)})` },
+  ]
 }
 
 export type ActionOutcome = 'success' | 'partial' | 'failure'

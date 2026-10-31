@@ -5,9 +5,9 @@ import { useCharacterStore } from '../characters/store'
 import { useRequestStore } from '../requests/store'
 import { FullScreen, fieldCls, fieldLabelCls, primaryBtn } from './FullScreen'
 import {
-  BLOCK_CARRY_LIMIT, MINING_AMOUNTS, TOOL_BONUS, TOOL_TIERS, actionOutcome, canBoostWithSd, detectMiningTool,
-  miningBreakdown, miningDays, miningEffectNotes, miningTraits, overCarryLimit, rollMiningCheck,
-  suggestedMiningBlocks, type ToolTier,
+  BLOCK_CARRY_LIMIT, MINING_AMOUNTS, TOOL_BONUS, actionOutcome, canBoostWithSd, carriedMiningTools,
+  miningBreakdown, miningDays, miningEffectNotes, miningToolOptions, miningTraits, overCarryLimit,
+  resolveMiningTool, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
 import type { Character } from '../../types'
 
@@ -39,8 +39,9 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const [custom, setCustom] = useState('')
   const [requested, setRequested] = useState(50)
 
-  const detected = useMemo(() => detectMiningTool(character.onHand.items), [character])
-  const [tool, setTool] = useState<ToolTier>(detected.tier)
+  const tools = useMemo(() => carriedMiningTools(character), [character])
+  const [pickedTool, setPickedTool] = useState<ToolTier | null>(null)
+  const tool = resolveMiningTool(pickedTool, tools)
   const [skillId, setSkillId] = useState('')
   const [traitIds, setTraitIds] = useState(() => miningTraits(character.traits).map(t => t.id))
   const [destination, setDestination] = useState<'storage' | 'onHand'>('storage')
@@ -116,12 +117,10 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
         <div className="space-y-5 p-4">
           <div>
             <label className={fieldLabelCls}>Tool</label>
-            <select value={tool} onChange={e => setTool(e.target.value as ToolTier)} className={fieldCls}>
-              {TOOL_TIERS.map(t => (
-                <option key={t} value={t}>{t === 'none' ? 'No proper tool' : `${t[0].toUpperCase()}${t.slice(1)}`} ({TOOL_BONUS[t] >= 0 ? '+' : ''}{TOOL_BONUS[t]})</option>
-              ))}
+            <select value={tool} onChange={e => setPickedTool(e.target.value as ToolTier)} className={fieldCls}>
+              {miningToolOptions(tools).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <div className="mt-1 text-sm text-stone-500">{detected.itemName ? `You're carrying: ${detected.itemName}` : 'No mining tool on hand'}</div>
+            {tools.length === 0 && <div className="mt-1 text-sm text-stone-500">You have no mining tool with you.</div>}
           </div>
           {character.skills.length > 0 && (
             <div>

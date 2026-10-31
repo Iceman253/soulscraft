@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import type { CharacterItem } from '../types'
 import {
-  BLOCK_CARRY_LIMIT, countBlocks, MINING_AMOUNTS, miningDays, TOOL_BONUS, detectMiningTool,
+  BLOCK_CARRY_LIMIT, countBlocks, MINING_AMOUNTS, miningDays, TOOL_BONUS,
+  carriedMiningTools, resolveMiningTool, miningToolOptions,
   actionOutcome, PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
   takeBlocks, addBlocks, minedStackName, miningTraits, suggestedMiningBlocks, rollMiningCheck,
   canBoostWithSd, miningEffectNotes, miningBreakdown, overCarryLimit, blocksPerUnit, looksLikeBlocks,
@@ -45,22 +46,63 @@ describe('mining tools', () => {
     const { none, ...tools } = TOOL_BONUS
     expect(none).toBeLessThan(Math.min(...Object.values(tools)))
   })
-  it('still prefers any real tool over none when detecting', () => {
-    expect(detectMiningTool([item('Wooden Pickaxe')]).tier).toBe('wooden')
+  const carrying = (...items: CharacterItem[]) => ({ onHand: { items } })
+
+  it('reads the tier from what is carried', () => {
+    expect(carriedMiningTools(carrying(item('Iron Pickaxe')))).toEqual([{ tier: 'iron', itemName: 'Iron Pickaxe' }])
+    expect(carriedMiningTools(carrying(item('Golden Pickaxe')))[0].tier).toBe('gold')
+    expect(carriedMiningTools(carrying(item('Wooden Shovel')))[0].tier).toBe('wooden')
   })
-  it('detects the tier from a carried pickaxe', () => {
-    expect(detectMiningTool([item('Iron Pickaxe')])).toEqual({ tier: 'iron', itemName: 'Iron Pickaxe' })
-    expect(detectMiningTool([item('Golden Pickaxe')]).tier).toBe('gold')
-    expect(detectMiningTool([item('Wooden Shovel')]).tier).toBe('wooden')
+
+  it('lists every carried tool, best first, once per tier', () => {
+    const tools = carriedMiningTools(carrying(item('Stone Pickaxe'), item('Diamond Pickaxe'), item('Iron Axe'), item('Stone Shovel')))
+    expect(tools.map(t => t.tier)).toEqual(['diamond', 'iron', 'stone'])
   })
-  it('picks the best tool when carrying several', () => {
-    expect(detectMiningTool([item('Stone Pickaxe'), item('Diamond Pickaxe'), item('Iron Axe')]).tier).toBe('diamond')
-  })
+
   it('ignores non-tools and tools with no known material', () => {
-    expect(detectMiningTool([item('Iron Sword'), item('Diamond'), item('Pickaxe')])).toEqual({ tier: 'none', itemName: null })
+    expect(carriedMiningTools(carrying(item('Iron Sword'), item('Diamond'), item('Pickaxe')))).toEqual([])
   })
-  it('reads a player custom name', () => {
-    expect(detectMiningTool([{ ...item('Pickaxe'), customName: 'Netherite Pick "Old Faithful"' }]).tier).toBe('netherite')
+
+  it('reads custom names', () => {
+    expect(carriedMiningTools(carrying({ ...item('Pickaxe'), customName: 'Netherite Pick "Old Faithful"' }))[0]).toEqual({ tier: 'netherite', itemName: 'Netherite Pick "Old Faithful"' })
+  })
+
+  it('never counts weapons, on hand or in a weapon slot', () => {
+    expect(carriedMiningTools(carrying(item('Diamond Sword'), item('Netherite Mace'), item('Iron Trident')))).toEqual([])
+    const slot = { name: 'Diamond Pickaxe', type: 'pickaxe', material: 'diamond' }
+    expect(carriedMiningTools({ ...carrying(), weaponLoadout: { mainHand: slot, offHand: null } } as never)).toEqual([])
+  })
+
+  it('does not count tools left in storage', () => {
+    const c = { ...carrying(), storage: { items: [item('Diamond Pickaxe')] } }
+    expect(carriedMiningTools(c)).toEqual([])
+  })
+
+  it('only offers tools the character has, plus no tool', () => {
+    const tools = carriedMiningTools(carrying(item('Iron Pickaxe')))
+    expect(miningToolOptions(tools)).toEqual([
+      { value: 'iron', label: 'Iron Pickaxe (+1)' },
+      { value: 'none', label: 'No tool (−3)' },
+    ])
+    expect(miningToolOptions([])).toEqual([{ value: 'none', label: 'No tool (−3)' }])
+  })
+
+  it('defaults to the best tool, or no tool without one', () => {
+    const tools = carriedMiningTools(carrying(item('Stone Pickaxe'), item('Iron Pickaxe')))
+    expect(resolveMiningTool(null, tools)).toBe('iron')
+    expect(resolveMiningTool(null, [])).toBe('none')
+  })
+
+  it('keeps a choice the character can make, including no tool', () => {
+    const tools = carriedMiningTools(carrying(item('Stone Pickaxe'), item('Iron Pickaxe')))
+    expect(resolveMiningTool('stone', tools)).toBe('stone')
+    expect(resolveMiningTool('none', tools)).toBe('none')
+  })
+
+  it('refuses a tool the character does not have', () => {
+    const tools = carriedMiningTools(carrying(item('Stone Pickaxe')))
+    expect(resolveMiningTool('netherite', tools)).toBe('stone')
+    expect(resolveMiningTool('diamond', [])).toBe('none')
   })
 })
 
