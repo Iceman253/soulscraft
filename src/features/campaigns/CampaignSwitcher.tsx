@@ -179,7 +179,7 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
               )}
 
               <button onClick={() => openEnter(meta.id, meta.name)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-stone-600 text-stone-300 hover:border-gold/50 hover:text-gold text-sm font-heading transition-all shrink-0 group-hover:border-stone-500"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-stone-600 text-stone-300 hover:text-gold text-sm font-heading transition-all shrink-0 group-hover:border-stone-500"
                 style={{ fontSize: '12px', letterSpacing: '0.06em' }}>
                 Enter <ChevronRight size={13} />
               </button>
