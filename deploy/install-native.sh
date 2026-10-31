@@ -43,7 +43,7 @@ apt-get update -qq
 apt-get install -y -qq ca-certificates curl git openssl nginx avahi-daemon build-essential python3 >/dev/null
 
 # Node 22 (via NodeSource) — needed to test and build the static bundle.
-# Vitest requires Node >= 22.12 (Vite >= 20.19); Debian's packaged Node (18) is
+# ESLint requires Node >= 22.13 (Vitest >= 22.12); Debian's packaged Node (18) is
 # too old, so we check the version, not just presence, and replace it if stale.
 NODE_MAJOR=0
 NODE_MINOR=0
@@ -53,7 +53,7 @@ if command -v node >/dev/null 2>&1; then
   [ -n "$NODE_MAJOR" ] || NODE_MAJOR=0
   [ -n "$NODE_MINOR" ] || NODE_MINOR=0
 fi
-if [ "$NODE_MAJOR" -lt 22 ] || { [ "$NODE_MAJOR" -eq 22 ] && [ "$NODE_MINOR" -lt 12 ]; }; then
+if [ "$NODE_MAJOR" -lt 22 ] || { [ "$NODE_MAJOR" -eq 22 ] && [ "$NODE_MINOR" -lt 13 ]; }; then
   msg "Installing Node.js 22 (current: $(node -v 2>/dev/null || echo none))…"
   # Remove any distro nodejs/npm first — they conflict with the NodeSource package.
   apt-get purge -y -qq nodejs npm >/dev/null 2>&1 || true
