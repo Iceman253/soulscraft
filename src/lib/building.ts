@@ -171,9 +171,33 @@ export function miningBreakdown(parts: {
   return bits.join(' ')
 }
 
-/** Would adding `adding` blocks put a character over the 10-block carry limit? (p.7) */
-export function overCarryLimit(items: CharacterItem[], adding: number): boolean {
-  return countBlocks(items) + adding > BLOCK_CARRY_LIMIT
+/** Blocks a character can still pick up before reaching the carry limit (p.7). */
+export function carryRoom(items: CharacterItem[]): number {
+  return Math.max(0, BLOCK_CARRY_LIMIT - countBlocks(items))
+}
+
+/** Hold a character to the 10-block carry limit (p.7): anything past it goes to
+ *  storage, which has no limit, so blocks are never lost. The newest stacks go first. */
+export function enforceCarryLimit(
+  c: Pick<Character, 'onHand' | 'storage'>,
+  newId: () => string,
+): { onHand: InventorySection; storage: InventorySection; moved: number } {
+  const moved = Math.max(0, countBlocks(c.onHand.items) - BLOCK_CARRY_LIMIT)
+  if (moved === 0) return { onHand: c.onHand, storage: c.storage, moved }
+  const items = [...c.onHand.items]
+  let storage = c.storage
+  let left = moved
+  for (let i = items.length - 1; i >= 0 && left > 0; i--) {
+    const item = items[i]
+    if (!item.isBlock) continue
+    const qty = item.quantity ?? 1
+    const take = Math.min(qty, left)
+    left -= take
+    storage = addBlocks(storage, item.name, take, newId)
+    if (take === qty) items.splice(i, 1)
+    else items[i] = { ...item, quantity: qty - take }
+  }
+  return { onHand: { items }, storage, moved }
 }
 
 /** Blocks in one unit of a market good: 10 for "stack of 10 blocks", 1 for "block",

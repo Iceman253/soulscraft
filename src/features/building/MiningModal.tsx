@@ -6,7 +6,7 @@ import { useWorldStore } from '../map/store'
 import { useBuildStore } from './store'
 import {
   MINING_AMOUNTS, miningDays, TOOL_BONUS, carriedMiningTools, miningToolOptions, resolveMiningTool, actionOutcome,
-  BLOCK_CARRY_LIMIT, countBlocks, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
+  BLOCK_CARRY_LIMIT, carryRoom, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
 
 const OUTCOME_TEXT = {
@@ -60,7 +60,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const outcome = total === null ? null : actionOutcome(total)
   const awarded = gained ?? (total === null ? 0 : suggestedMiningBlocks(total, requested))
   const offList = materials.filter(m => !areaMaterials.some(a => a.toLowerCase() === m.toLowerCase()))
-  const onHandAfter = (character ? countBlocks(character.onHand.items) : 0) + (destination === 'onHand' ? awarded : 0)
+  const room = character ? carryRoom(character.onHand.items) : 0
 
   const toggleMaterial = (m: string) => setMaterials(cur => cur.includes(m) ? cur.filter(x => x !== m) : [...cur, m])
   const addCustom = () => {
@@ -234,9 +234,9 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
                 <option value="onHand">On hand</option>
               </select>
             </div>
-            {destination === 'onHand' && onHandAfter > BLOCK_CARRY_LIMIT && (
+            {destination === 'onHand' && awarded > room && (
               <div className="col-span-2 text-[11px] text-amber-400">
-                ⚠️ {character?.name} would carry {onHandAfter} blocks — the limit is {BLOCK_CARRY_LIMIT} on hand (the GM may waive it).
+                {character?.name} can carry {BLOCK_CARRY_LIMIT} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest goes`} to storage.
               </div>
             )}
             {awarded > 0 && (

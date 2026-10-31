@@ -6,7 +6,7 @@ import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import {
   PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
-  takeBlocks, takeRedstone, addBlocks, minedStackName, miningDays, actionOutcome,
+  takeBlocks, takeRedstone, addBlocks, enforceCarryLimit, minedStackName, miningDays, actionOutcome,
 } from '../../lib/building'
 
 export interface MineParams {
@@ -194,10 +194,16 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       const c = charStore.characters.find(x => x.id === characterId)
       if (!c) return
       const qty = Math.max(0, Math.floor(gained))
+      let overflow = 0
       if (qty > 0) {
         const name = minedStackName(materials)
-        if (destination === 'onHand') charStore.updateCharacter(characterId, { onHand: addBlocks(c.onHand, name, qty, newId) })
-        else charStore.updateCharacter(characterId, { storage: addBlocks(c.storage, name, qty, newId) })
+        if (destination === 'onHand') {
+          const { onHand, storage, moved } = enforceCarryLimit({ ...c, onHand: addBlocks(c.onHand, name, qty, newId) }, newId)
+          overflow = moved
+          charStore.updateCharacter(characterId, { onHand, storage })
+        } else {
+          charStore.updateCharacter(characterId, { storage: addBlocks(c.storage, name, qty, newId) })
+        }
       }
       const days = miningDays(requested)
       const outcome = actionOutcome(total)
@@ -206,7 +212,7 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       log('building',
         `⛏️ ${c.name} mined for ${requested} blocks of ${what}${where} — rolled ${total} (${outcome}), ` +
         `${days} day${days === 1 ? '' : 's'}: gained ${qty} block${qty === 1 ? '' : 's'}` +
-        `${qty > 0 ? (destination === 'onHand' ? ' (on hand)' : ' (to storage)') : ''}.`)
+        `${qty > 0 ? (destination === 'storage' || overflow >= qty ? ' (to storage)' : overflow > 0 ? ` (${qty - overflow} on hand, ${overflow} to storage)` : ' (on hand)') : ''}.`)
       if (doubleSix) {
         charStore.awardXp(characterId, 1, 'double-six', 'Double 6 while mining')
         log('building', `⭐ ${c.name} rolled double 6s mining: +1 XP.`)

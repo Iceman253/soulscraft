@@ -13,6 +13,7 @@ import { WARRIOR_MANEUVERS, DELVER_EVASIONS, VINDICATOR_VOICES, CLASS_DAMAGE_DIC
 import type { DefaultSkill } from '../../lib/classes'
 import { CLASS_ABILITIES } from '../../lib/classAbilities'
 import { rollDiceSpec } from '../../lib/dice'
+import { BLOCK_CARRY_LIMIT, enforceCarryLimit } from '../../lib/building'
 
 // ── One-time hydration migration ───────────────────────────────────────
 // Re-syncs combatRoles and appliedEffects on stored abilities + the Discipline
@@ -231,6 +232,16 @@ function resolveDeathAtZero(chars: Character[], id: string): { characters: Chara
     characters: mapChar(chars, id, x => ({ ...x, isDead: true })),
     message: `💀 ${c.name} has fallen — no HP and no SD remaining.`,
   }
+}
+
+/** Apply the 10-block carry limit after anything that can add to on-hand items. */
+function withCarryLimit(chars: Character[], id: string): Character[] {
+  const c = chars.find(x => x.id === id)
+  if (!c) return chars
+  const { onHand, storage, moved } = enforceCarryLimit(c, newId)
+  if (moved === 0) return chars
+  log('character-move', `📦 ${c.name} can only carry ${BLOCK_CARRY_LIMIT} blocks, so ${moved} went to storage.`)
+  return mapChar(chars, id, x => ({ ...x, onHand, storage }))
 }
 
 function defaultClassFeatureState(characterClass: string): ClassFeatureState {
@@ -1111,17 +1122,17 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   addOnHandItem(id, item) {
     const itemId = newId()
-    const characters = mapChar(get().characters, id, c => ({
+    const characters = withCarryLimit(mapChar(get().characters, id, c => ({
       ...c, onHand: { items: [...c.onHand.items, { ...item, id: itemId }] },
-    }))
+    })), id)
     set({ characters }); save(characters, get().xpLog)
     return itemId
   },
 
   updateOnHandItem(id, itemId, patch) {
-    const characters = mapChar(get().characters, id, c => ({
+    const characters = withCarryLimit(mapChar(get().characters, id, c => ({
       ...c, onHand: { items: c.onHand.items.map(i => i.id === itemId ? { ...i, ...patch } : i) },
-    }))
+    })), id)
     set({ characters }); save(characters, get().xpLog)
   },
 
@@ -1167,7 +1178,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   moveItemToHand(id, itemId) {
-    const characters = mapChar(get().characters, id, c => {
+    const characters = withCarryLimit(mapChar(get().characters, id, c => {
       const item = c.storage.items.find(i => i.id === itemId)
       if (!item) return c
       return {
@@ -1175,7 +1186,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         storage: { items: c.storage.items.filter(i => i.id !== itemId) },
         onHand: { items: [...c.onHand.items, item] },
       }
-    })
+    }), id)
     set({ characters }); save(characters, get().xpLog)
   },
 
@@ -1197,9 +1208,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         : { ...c, storage: { items: c.storage.items.filter(i => i.id !== itemId) } }
     )
     // Add to target's onHand
-    characters = mapChar(characters, toId, c => ({
+    characters = withCarryLimit(mapChar(characters, toId, c => ({
       ...c, onHand: { items: [...c.onHand.items, { ...item, id: newItemId }] },
-    }))
+    })), toId)
     set({ characters }); save(characters, get().xpLog)
     log('item-transfer', `🎁 ${fromChar.name} gave ${item.name || 'an item'} to ${toChar.name}.`)
   },

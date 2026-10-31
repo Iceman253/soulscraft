@@ -5,7 +5,7 @@ import {
   carriedMiningTools, resolveMiningTool, miningToolOptions,
   actionOutcome, PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
   takeBlocks, addBlocks, minedStackName, miningTraits, suggestedMiningBlocks, rollMiningCheck,
-  canBoostWithSd, miningEffectNotes, miningBreakdown, overCarryLimit, blocksPerUnit, looksLikeBlocks,
+  canBoostWithSd, miningEffectNotes, miningBreakdown, carryRoom, enforceCarryLimit, blocksPerUnit, looksLikeBlocks,
   countRedstone, takeRedstone, parseBuildProposal,
 } from './building'
 
@@ -294,9 +294,45 @@ describe('mining on a phone', () => {
     expect(miningBreakdown({ dice: 5, tool: 'none', traits: [] })).toBe('5 (2d6) −3 no tool')
   })
 
-  it('knows when blocks would go over the carry limit', () => {
-    expect(overCarryLimit([item('Stone', 8, true)], 2)).toBe(false)
-    expect(overCarryLimit([item('Stone', 8, true)], 3)).toBe(true)
+  it('knows how many more blocks can be carried', () => {
+    expect(carryRoom([item('Stone', 8, true), item('Torch', 5)])).toBe(2)
+    expect(carryRoom([item('Stone', 10, true)])).toBe(0)
+    expect(carryRoom([item('Stone', 40, true)])).toBe(0)
+  })
+})
+
+describe('enforcing the carry limit', () => {
+  const ids = () => 'new-id'
+  const empty = { items: [] }
+
+  it('leaves 10 or fewer blocks alone', () => {
+    const onHand = { items: [item('Stone', 10, true), item('Torch', 50)] }
+    const result = enforceCarryLimit({ onHand, storage: empty }, ids)
+    expect(result).toEqual({ onHand, storage: empty, moved: 0 })
+    expect(result.onHand).toBe(onHand)
+  })
+
+  it('moves everything past 10 to storage, so nothing is lost', () => {
+    const { onHand, storage, moved } = enforceCarryLimit({ onHand: { items: [item('Stone', 25, true)] }, storage: empty }, ids)
+    expect(moved).toBe(15)
+    expect(onHand.items).toEqual([item('Stone', 10, true)])
+    expect(storage.items).toEqual([{ id: 'new-id', name: 'Stone', quantity: 15, isBlock: true }])
+  })
+
+  it('takes the newest stacks first and removes emptied ones', () => {
+    const { onHand, storage } = enforceCarryLimit({ onHand: { items: [item('Stone', 8, true), item('Dirt', 4, true), item('Sand', 3, true)] }, storage: empty }, ids)
+    expect(onHand.items).toEqual([item('Stone', 8, true), item('Dirt', 2, true)])
+    expect(storage.items.map(i => [i.name, i.quantity])).toEqual([['Sand', 3], ['Dirt', 2]])
+  })
+
+  it('stacks onto matching blocks in storage', () => {
+    const { storage } = enforceCarryLimit({ onHand: { items: [item('Stone', 12, true)] }, storage: { items: [item('Stone', 5, true)] } }, ids)
+    expect(storage.items).toEqual([item('Stone', 7, true)])
+  })
+
+  it('never touches items that are not blocks', () => {
+    const { onHand } = enforceCarryLimit({ onHand: { items: [item('Stone', 11, true), item('Torch', 99)] }, storage: empty }, ids)
+    expect(onHand.items).toEqual([item('Stone', 10, true), item('Torch', 99)])
   })
 })
 

@@ -5,8 +5,8 @@ import { useCharacterStore } from '../characters/store'
 import { useRequestStore } from '../requests/store'
 import { FullScreen, fieldCls, fieldLabelCls, primaryBtn } from './FullScreen'
 import {
-  BLOCK_CARRY_LIMIT, MINING_AMOUNTS, TOOL_BONUS, actionOutcome, canBoostWithSd, carriedMiningTools,
-  miningBreakdown, miningDays, miningEffectNotes, miningToolOptions, miningTraits, overCarryLimit,
+  BLOCK_CARRY_LIMIT, MINING_AMOUNTS, TOOL_BONUS, actionOutcome, canBoostWithSd, carriedMiningTools, carryRoom,
+  miningBreakdown, miningDays, miningEffectNotes, miningToolOptions, miningTraits,
   resolveMiningTool, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
 import type { Character } from '../../types'
@@ -52,7 +52,8 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const skill = character.skills.find(s => s.id === skillId)
   const bonus = TOOL_BONUS[tool] + traitIds.length + (skill?.bonus ?? 0) + otherBonus
   const canBoost = canBoostWithSd(character)
-  const overLimit = destination === 'onHand' && overCarryLimit(character.onHand.items, requested)
+  const room = carryRoom(character.onHand.items)
+  const overLimit = destination === 'onHand' && requested > room
   const toggleMaterial = (m: string) => setMaterials(cur => cur.includes(m) ? cur.filter(x => x !== m) : [...cur, m])
   const addCustom = () => {
     const m = custom.trim()
@@ -163,7 +164,7 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
               <button onClick={() => setDestination('storage')} className={chip(destination === 'storage')}>In storage</button>
               <button onClick={() => setDestination('onHand')} className={chip(destination === 'onHand')}>On hand</button>
             </div>
-            {overLimit && <div className="mt-2 text-sm text-amber-300">⚠️ That's over the {BLOCK_CARRY_LIMIT}-block carry limit unless your GM waives it.</div>}
+            {overLimit && <div className="mt-2 text-sm text-amber-300">You can carry {BLOCK_CARRY_LIMIT} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest goes`} to storage.</div>}
           </div>
           {character.missedRests > 0 && (
             <div className="rounded-xl border border-orange-700/40 bg-orange-900/20 px-3.5 py-2.5 text-base text-orange-300">

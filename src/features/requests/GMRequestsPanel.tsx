@@ -353,7 +353,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
           {Array.isArray(req.payload.offList) && req.payload.offList.length > 0 && (
             <div className="text-amber-400 text-[11px] leading-snug">⚠️ Not listed for this area: {(req.payload.offList as string[]).join(', ')}</div>
           )}
-          {req.payload.overLimit === true && <div className="text-amber-400 text-[11px] leading-snug">⚠️ Going on hand, over the 10-block limit. You can waive this.</div>}
+          {req.payload.overLimit === true && <div className="text-stone-500 text-[11px] leading-snug">Past the 10-block carry limit, so the rest goes to storage.</div>}
           {Array.isArray(req.payload.effects) && req.payload.effects.length > 0 && (
             <div className="text-amber-400 text-[11px] leading-snug">⚠️ Check these effects: {(req.payload.effects as string[]).join(', ')}</div>
           )}

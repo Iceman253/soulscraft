@@ -24,9 +24,15 @@ beforeEach(() => {
 
 describe('buying blocks', () => {
   it('turns a stack into real blocks a build can use', () => {
-    expect(economy().buy('m', 'stone-blocks', 2, 'c1', 50)).toEqual({ ok: true })
-    expect(char().onHand.items).toEqual([expect.objectContaining({ name: 'Stone Blocks', quantity: 20, isBlock: true })])
-    expect(stock()).toBe(3)
+    expect(economy().buy('m', 'stone-blocks', 1, 'c1', 50)).toEqual({ ok: true })
+    expect(char().onHand.items).toEqual([expect.objectContaining({ name: 'Stone Blocks', quantity: 10, isBlock: true })])
+    expect(stock()).toBe(4)
+  })
+
+  it('sends blocks past the carry limit to storage', () => {
+    economy().buy('m', 'stone-blocks', 2, 'c1', 50)
+    expect(char().onHand.items).toEqual([expect.objectContaining({ quantity: 10, isBlock: true })])
+    expect(char().storage.items).toEqual([expect.objectContaining({ name: 'Stone Blocks', quantity: 10, isBlock: true })])
   })
 
   it('leaves goods that are not blocks alone', () => {

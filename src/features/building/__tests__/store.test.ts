@@ -231,6 +231,22 @@ describe('mine', () => {
     expect(char().storage.items).toEqual([blocks('Stone blocks', 35)])
   })
 
+  it('sends whatever will not fit on hand to storage', () => {
+    useCharacterStore.setState({ characters: [makeChar({ onHand: { items: [blocks('Stone blocks', 6)] } })] })
+    build().mine({ characterId: 'c1', materials: ['Stone'], requested: 100, total: 10, gained: 100, destination: 'onHand' })
+    expect(char().onHand.items).toEqual([blocks('Stone blocks', 10)])
+    expect(char().storage.items).toEqual([expect.objectContaining({ name: 'Stone blocks', quantity: 96, isBlock: true })])
+    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 100 blocks (4 on hand, 96 to storage).'))
+  })
+
+  it('sends it all to storage when the character is already full', () => {
+    useCharacterStore.setState({ characters: [makeChar({ onHand: { items: [blocks('Dirt', 10)] } })] })
+    build().mine({ characterId: 'c1', materials: ['Stone'], requested: 25, total: 10, gained: 25, destination: 'onHand' })
+    expect(char().onHand.items).toEqual([blocks('Dirt', 10)])
+    expect(char().storage.items).toEqual([expect.objectContaining({ quantity: 25 })])
+    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 25 blocks (to storage).'))
+  })
+
   it('can put blocks on hand instead', () => {
     useCharacterStore.setState({ characters: [makeChar()] })
     build().mine({ characterId: 'c1', materials: ['Wood'], requested: 25, total: 10, gained: 10, destination: 'onHand' })
