@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Eye, Edit3, Check, Swords, Map as MapIcon } from 'lucide-react'
+import { useCampaignStore } from '../campaigns/store'
+import { useCharacterStore } from '../characters/store'
 import { useCombatStore } from '../combat/store'
 import { useWorldStore } from '../map/store'
 import { useIsPhone } from '../../lib/useIsPhone'
+import { playerNeedsCharacter } from '../../lib/playerRole'
 import { PlayerMap } from './PlayerMap'
 import { PlayerCombatView } from './PlayerCombatView'
 import { PlayerCharacterPanel } from './PlayerCharacterPanel'
@@ -20,6 +23,8 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
   const combatActive = useCombatStore(s => s.session !== null && !s.session.ended)
   const combatSession = useCombatStore(s => s.session)
   const { sessionNote, setSessionNote } = useWorldStore()
+  const exitToSwitcher = useCampaignStore(s => s.exitToSwitcher)
+  const boundChar = useCharacterStore(s => s.characters.find(c => c.id === focusedCharacterId))
 
   // Only show combat by default when this player is in the fight; others can opt
   // to watch. Reset the watch flag when the battle ends.
@@ -44,8 +49,9 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
   }
 
   // Phones (iPhone/Android) get a purpose-built, large-type, bottom-nav layout.
-  // iPad and desktop keep the two-column view below.
-  if (isPhone) {
+  // iPad and desktop keep the two-column view below, except for a player who has
+  // no living character yet: creating or adopting one lives in the mobile layout.
+  if (isPhone || (isPlayerMode && playerNeedsCharacter(boundChar))) {
     return (
       <PlayerMobileView
         onClose={onClose}
@@ -104,14 +110,12 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
           )}
         </div>
 
-        {!isPlayerMode && (
-          <button
-            onClick={onClose}
-            className="text-xs text-stone-500 hover:text-stone-300 transition-colors shrink-0 ml-2"
-          >
-            ← GM View
-          </button>
-        )}
+        <button
+          onClick={isPlayerMode ? exitToSwitcher : onClose}
+          className="text-xs text-stone-500 hover:text-stone-300 transition-colors shrink-0 ml-2"
+        >
+          {isPlayerMode ? '← Campaigns' : '← GM View'}
+        </button>
       </div>
 
       {/* Session note banner — shown to players when set */}

@@ -14,6 +14,7 @@ import { PlayerRequestModal } from './PlayerRequestModal'
 import { PlayerMap } from './PlayerMap'
 import { PlayerCombatView } from './PlayerCombatView'
 import { MobileCharacterCreate } from './MobileCharacterCreate'
+import { playerNeedsCharacter } from '../../lib/playerRole'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 import { computeDef } from '../../lib/armor'
 import { CURRENCY_OPTIONS } from '../../lib/currency'
@@ -73,7 +74,7 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
   // Phone players are bound to one character. If they have none — or theirs has
   // died — surface the create/adopt flow instead of a character sheet.
   const boundChar = focusedCharacterId ? characters.find(c => c.id === focusedCharacterId) : undefined
-  const needsCharacter = !!isPlayerMode && (!boundChar || !!boundChar.isDead)
+  const needsCharacter = !!isPlayerMode && playerNeedsCharacter(boundChar)
   const livingOthers = characters.filter(c => !c.isDead && c.id !== boundChar?.id)
   const activeChar = boundChar ?? characters.find(c => c.id === activeTab) ?? characters[0]
   const isOwnChar = !focusedCharacterId || focusedCharacterId === activeChar?.id

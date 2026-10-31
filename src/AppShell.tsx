@@ -25,7 +25,23 @@ interface Props {
 }
 
 export function AppShell({ playerCharacterId, onAdoptCharacter }: Props) {
-  const isPlayerMode = playerCharacterId !== null
+  // A player device gets only the player UI, with no GM screens mounted beneath it.
+  if (playerCharacterId !== null) {
+    return (
+      <div className="fixed inset-0 bg-stone-950">
+        <PlayerView
+          onClose={() => {}}   // Only the GM preview has a way out
+          isPlayerMode
+          focusedCharacterId={playerCharacterId || undefined}
+          onAdoptCharacter={onAdoptCharacter}
+        />
+      </div>
+    )
+  }
+  return <GMShell />
+}
+
+function GMShell() {
   const [tab, setTab] = useState<Tab>('map')
   const [showCombat, setShowCombat] = useState(false)
   const [showDice, setShowDice] = useState(false)
@@ -35,9 +51,9 @@ export function AppShell({ playerCharacterId, onAdoptCharacter }: Props) {
   // Fires only on the false→true transition, so a manual close stays closed.
   const battleActive = useCombatStore(s => s.session !== null && !s.session.ended)
   useEffect(() => {
-    if (battleActive && !isPlayerMode) setShowCombat(true)
-  }, [battleActive, isPlayerMode])
-  const [showPlayerView, setShowPlayerView] = useState(isPlayerMode)
+    if (battleActive) setShowCombat(true)
+  }, [battleActive])
+  const [showPlayerView, setShowPlayerView] = useState(false)
 
   return (
     <div className="h-screen flex flex-col bg-stone-900 overflow-hidden">
@@ -75,15 +91,10 @@ export function AppShell({ playerCharacterId, onAdoptCharacter }: Props) {
         </div>
       </div>
 
-      {/* Player View overlay — sits below combat (z-40) and dice (z-30) */}
+      {/* GM's Player View preview — sits below combat (z-40) and dice (z-30) */}
       {showPlayerView && (
         <div className="fixed inset-0 z-20 bg-stone-950">
-          <PlayerView
-            onClose={() => setShowPlayerView(false)}
-            isPlayerMode={isPlayerMode}
-            focusedCharacterId={playerCharacterId || undefined}
-            onAdoptCharacter={onAdoptCharacter}
-          />
+          <PlayerView onClose={() => setShowPlayerView(false)} />
         </div>
       )}
 

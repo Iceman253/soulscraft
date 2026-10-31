@@ -15,6 +15,7 @@ import { useBuildStore } from './features/building/store'
 import { CampaignSwitcher } from './features/campaigns/CampaignSwitcher'
 import { AppShell } from './AppShell'
 import { useIsPhone } from './lib/useIsPhone'
+import { resolvePlayerRole } from './lib/playerRole'
 import { connectSync, disconnectSync } from './lib/sync'
 import { hydrateImages } from './lib/imageCache'
 import type { CampaignData } from './types'
@@ -124,16 +125,15 @@ export default function App() {
       <CampaignSwitcher
         playerOnly={isPhone}
         onPlay={async (_campaignId, characterId) => {
-          await commitStaged()
+          // Set the role first: committing renders the app, and a player must
+          // never mount the GM shell, even for a frame.
           setPlayerCharacterId(characterId)
           savePlayerRole(characterId)
+          await commitStaged()
         }}
       />
     )
   }
 
-  // Phones are forced into player mode ('' = player without a character yet).
-  const effectivePlayerId = isPhone ? (playerCharacterId ?? '') : playerCharacterId
-
-  return <AppShell playerCharacterId={effectivePlayerId} onAdoptCharacter={adoptCharacter} />
+  return <AppShell playerCharacterId={resolvePlayerRole(isPhone, playerCharacterId)} onAdoptCharacter={adoptCharacter} />
 }
