@@ -7,6 +7,7 @@ import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import { log } from '../log/store'
 import { GOODS_CATALOG } from '../../lib/goods'
+import { blocksPerUnit } from '../../lib/building'
 import { emptyEconomy, tickEconomyDay } from '../../lib/economyEngine'
 import { toCopper, fromCopper, addToWallet, formatCopper } from '../../lib/currency'
 
@@ -220,7 +221,9 @@ export const useEconomyStore = create<EconomyStore>((set, get) => {
 
       // Pay (force empties the wallet when short) and re-coin the remainder.
       charStore.setCurrency(characterId, fromCopper(Math.max(0, have - total)))
-      charStore.addOnHandItem(characterId, { name: good.name, quantity: qty, isBlock: false })
+      // Goods sold by the stack arrive as real blocks, usable in builds (p.83's mason).
+      const perUnit = blocksPerUnit(good.unit)
+      charStore.addOnHandItem(characterId, { name: good.name, quantity: qty * (perUnit || 1), isBlock: perUnit > 0 })
 
       if (listing && listing.stock > 0) {
         get().upsertListing(marketId, { ...listing, stock: Math.max(0, listing.stock - qty) })
@@ -251,11 +254,13 @@ export const useEconomyStore = create<EconomyStore>((set, get) => {
       // If the merchant recognises the item as a known good, it joins their stock.
       const good = allGoods(economy).find(g => g.name.toLowerCase() === item.name.toLowerCase())
       if (good) {
+        // Stock counts market units, so loose blocks only add whole stacks.
+        const added = item.isBlock ? Math.floor(qty / (blocksPerUnit(good.unit) || 1)) : qty
         const listing = market.listings.find(l => l.goodId === good.id)
         if (listing && listing.stock >= 0) {
-          get().upsertListing(marketId, { ...listing, stock: listing.stock + qty })
+          get().upsertListing(marketId, { ...listing, stock: listing.stock + added })
         } else if (!listing) {
-          get().upsertListing(marketId, { goodId: good.id, stock: qty })
+          get().upsertListing(marketId, { goodId: good.id, stock: added })
         }
       }
 

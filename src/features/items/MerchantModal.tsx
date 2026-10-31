@@ -3,6 +3,7 @@ import { X, ShoppingCart } from 'lucide-react'
 import { useItemStore } from './store'
 import { useCharacterStore } from '../characters/store'
 import { log } from '../log/store'
+import { looksLikeBlocks } from '../../lib/building'
 import { CURRENCY_OPTIONS, COIN_VALUE, toCopper, fromCopper, formatCopper } from '../../lib/currency'
 import type { CurrencyKey } from '../../lib/currency'
 
@@ -46,7 +47,7 @@ export function MerchantModal({ onClose }: Props) {
     if (insufficient && !forceShort) return
 
     setCurrency(charId, fromCopper(Math.max(0, walletCopper - priceCopper)))
-    addOnHandItem(charId, { name: selectedItem, quantity, isBlock: false })
+    addOnHandItem(charId, { name: selectedItem, quantity, isBlock: looksLikeBlocks(selectedItem) })
 
     const currLabel = CURRENCY_OPTIONS.find(c => c.key === currency)?.label ?? currency
     const shortNote = insufficient ? ' (purse emptied — GM waived the shortfall)' : ''

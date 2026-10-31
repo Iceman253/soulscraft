@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Dices } from 'lucide-react'
 import { useWorldStore } from '../map/store'
+import { useCharacterStore } from '../characters/store'
 import { useRequestStore } from '../requests/store'
 import { FullScreen, fieldCls, fieldLabelCls, primaryBtn } from './FullScreen'
 import {
-  MINING_AMOUNTS, TOOL_BONUS, TOOL_TIERS, actionOutcome, detectMiningTool, miningDays, miningTraits,
-  rollMiningCheck, suggestedMiningBlocks, type ToolTier,
+  BLOCK_CARRY_LIMIT, MINING_AMOUNTS, TOOL_BONUS, TOOL_TIERS, actionOutcome, canBoostWithSd, detectMiningTool,
+  miningBreakdown, miningDays, miningEffectNotes, miningTraits, overCarryLimit, rollMiningCheck,
+  suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
 import type { Character } from '../../types'
 
@@ -26,6 +28,7 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const allAreas = useWorldStore(s => s.areas)
   const visibleIds = useWorldStore(s => s.playerVisibleAreaIds)
   const addRequest = useRequestStore(s => s.addRequest)
+  const adjustSd = useCharacterStore(s => s.adjustSd)
   const areas = useMemo(() => allAreas.filter(a => visibleIds.includes(a.id)), [allAreas, visibleIds])
 
   const [step, setStep] = useState<Step>('where')
@@ -41,10 +44,14 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const [skillId, setSkillId] = useState('')
   const [traitIds, setTraitIds] = useState(() => miningTraits(character.traits).map(t => t.id))
   const [destination, setDestination] = useState<'storage' | 'onHand'>('storage')
-  const [result, setResult] = useState<{ dice: number; penalty: number; total: number; bonus: number } | null>(null)
+  const [otherBonus, setOtherBonus] = useState(0)
+  const [spendSd, setSpendSd] = useState(false)
+  const [result, setResult] = useState<{ total: number; breakdown: string; doubleSix: boolean } | null>(null)
 
   const skill = character.skills.find(s => s.id === skillId)
-  const bonus = TOOL_BONUS[tool] + traitIds.length + (skill?.bonus ?? 0)
+  const bonus = TOOL_BONUS[tool] + traitIds.length + (skill?.bonus ?? 0) + otherBonus
+  const canBoost = canBoostWithSd(character)
+  const overLimit = destination === 'onHand' && overCarryLimit(character.onHand.items, requested)
   const toggleMaterial = (m: string) => setMaterials(cur => cur.includes(m) ? cur.filter(x => x !== m) : [...cur, m])
   const addCustom = () => {
     const m = custom.trim()
@@ -53,9 +60,15 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   }
 
   const rollAndSend = () => {
-    const check = rollMiningCheck(bonus, character.missedRests)
+    const boost = spendSd && canBoost
+    if (boost) adjustSd(character.id, -1)   // declared and spent before the roll (p.8)
+    const check = rollMiningCheck(bonus, character.missedRests, { boost })
     const outcome = actionOutcome(check.total)
     const what = materials.join(' & ')
+    const breakdown = miningBreakdown({
+      dice: check.dice, tool, skill, other: otherBonus, sdBoost: check.sdBoost, penalty: check.penalty,
+      traits: character.traits.filter(t => traitIds.includes(t.id)).map(t => t.name),
+    })
     addRequest({
       characterId: character.id,
       characterName: character.name,
@@ -63,12 +76,13 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
       payload: {
         areaName: area?.name, materials, requested, total: check.total,
         gained: suggestedMiningBlocks(check.total, requested), destination,
+        breakdown, doubleSix: check.doubleSix, overLimit, effects: miningEffectNotes(character),
         // Anything not on the area's list is the GM's call, so flag it on their card.
         offList: area ? materials.filter(m => !tagged.some(t => t.toLowerCase() === m.toLowerCase())) : [],
       },
       label: `Mined ${requested} ${what}${area ? ` at ${area.name}` : ''}: rolled ${check.total} (${OUTCOME[outcome].label})`,
     })
-    setResult({ ...check, bonus })
+    setResult({ total: check.total, breakdown, doubleSix: check.doubleSix })
     setStep('sent')
   }
 
@@ -78,11 +92,10 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
       <FullScreen title="Sent to the GM" onClose={onClose} footer={<button onClick={onClose} className={primaryBtn}>Done</button>}>
         <div className="space-y-4 p-6 text-center">
           <div className="text-6xl font-bold font-mono text-stone-100">{result.total}</div>
-          <div className="font-mono text-base text-stone-400">
-            {result.dice} (2d6) {result.bonus >= 0 ? '+' : '−'} {Math.abs(result.bonus)}{result.penalty > 0 ? ` − ${result.penalty} (missed rest)` : ''}
-          </div>
+          <div className="font-mono text-base text-stone-400">{result.breakdown}</div>
           <div className={`rounded-xl border px-4 py-3 text-lg font-semibold ${outcome.cls}`}>{outcome.label}</div>
-          <p className="text-base text-stone-400">Your GM will narrate what happens and add the blocks to your {destination === 'onHand' ? 'pack' : 'storage'}.</p>
+          {result.doubleSix && <div className="text-lg font-semibold text-gold">⭐ Double 6s! You'll gain 1 XP when the GM signs off.</div>}
+          <p className="text-base text-stone-400">Your GM will narrate what happens and decide what you find.</p>
         </div>
       </FullScreen>
     )
@@ -132,11 +145,26 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
             </div>
           )}
           <div>
+            <div className={fieldLabelCls}>Other bonus</div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setOtherBonus(n => n - 1)} aria-label="Lower bonus" className="h-11 w-11 rounded-xl border border-stone-600 text-xl">−</button>
+              <span className="w-10 text-center font-mono text-xl">{otherBonus >= 0 ? '+' : ''}{otherBonus}</span>
+              <button onClick={() => setOtherBonus(n => n + 1)} aria-label="Raise bonus" className="h-11 w-11 rounded-xl border border-stone-600 text-xl">+</button>
+              <span className="min-w-0 flex-1 text-sm text-stone-500">Such as a Tecton-made tool. The GM sees it.</span>
+            </div>
+          </div>
+          <button onClick={() => setSpendSd(v => !v)} disabled={!canBoost}
+            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-base disabled:opacity-40 ${spendSd && canBoost ? 'border-blue-500/70 bg-blue-950/40 text-blue-200' : 'border-stone-600 text-stone-300'}`}>
+            <span>Spend 1 Souls Die for +1d4</span>
+            <span className="font-mono text-sm text-stone-400">{character.currentSd} SD</span>
+          </button>
+          <div>
             <div className={fieldLabelCls}>Put the blocks</div>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setDestination('storage')} className={chip(destination === 'storage')}>In storage</button>
               <button onClick={() => setDestination('onHand')} className={chip(destination === 'onHand')}>On hand</button>
             </div>
+            {overLimit && <div className="mt-2 text-sm text-amber-300">⚠️ That's over the {BLOCK_CARRY_LIMIT}-block carry limit unless your GM waives it.</div>}
           </div>
           {character.missedRests > 0 && (
             <div className="rounded-xl border border-orange-700/40 bg-orange-900/20 px-3.5 py-2.5 text-base text-orange-300">

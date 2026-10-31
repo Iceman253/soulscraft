@@ -4,10 +4,9 @@ import { Modal } from '../../ui/Modal'
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
 import { useBuildStore } from './store'
-import { rollDiceSpec } from '../../lib/dice'
 import {
   MINING_AMOUNTS, miningDays, TOOL_BONUS, TOOL_TIERS, detectMiningTool, actionOutcome,
-  BLOCK_CARRY_LIMIT, countBlocks, minedStackName, miningTraits, suggestedMiningBlocks, type ToolTier,
+  BLOCK_CARRY_LIMIT, countBlocks, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
 
 const OUTCOME_TEXT = {
@@ -48,6 +47,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const [traitIds, setTraitIds] = useState<string[] | null>(null)
   const [otherBonus, setOtherBonus] = useState(0)
   const [roll, setRoll] = useState<number | ''>('')
+  const [penalty, setPenalty] = useState(0)   // missed-rest penalty, rolled with the dice
   const [gained, setGained] = useState<number | null>(null)
   const [destination, setDestination] = useState<'storage' | 'onHand'>('storage')
 
@@ -56,7 +56,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const checkedTraits = traitIds ?? autoTraits
   const skill = character?.skills.find(s => s.id === skillId)
   const bonus = TOOL_BONUS[effectiveTool] + checkedTraits.length + (skill?.bonus ?? 0) + otherBonus
-  const total = roll === '' ? null : roll + bonus
+  const total = roll === '' ? null : roll + bonus - penalty
   const outcome = total === null ? null : actionOutcome(total)
   const awarded = gained ?? (total === null ? 0 : suggestedMiningBlocks(total, requested))
   const offList = materials.filter(m => !areaMaterials.some(a => a.toLowerCase() === m.toLowerCase()))
@@ -71,14 +71,14 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
 
   const switchCharacter = (id: string) => {
     setCharacterId(id)
-    setTool(null); setSkillId(''); setTraitIds(null)
+    setTool(null); setSkillId(''); setTraitIds(null); setPenalty(0)
     const c = living.find(x => x.id === id)
     if (c?.locationId && !initialAreaId) setAreaId(c.locationId)
   }
 
   const apply = () => {
     if (!character || total === null) return
-    mine({ characterId: character.id, areaName: area?.name, materials, requested, total, gained: awarded, destination })
+    mine({ characterId: character.id, areaName: area?.name, materials, requested, total, gained: awarded, destination, doubleSix: roll === 12 })
     onClose()
   }
 
@@ -198,9 +198,9 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
           <div>
             <label className={labelCls}>2d6 roll</label>
             <div className="flex gap-1.5">
-              <input type="number" value={roll} onChange={e => { setRoll(e.target.value === '' ? '' : parseInt(e.target.value) || 0); setGained(null) }}
+              <input type="number" value={roll} onChange={e => { setRoll(e.target.value === '' ? '' : parseInt(e.target.value) || 0); setPenalty(0); setGained(null) }}
                 className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-sm font-mono outline-none focus:border-gold/50" />
-              <button onClick={() => { setRoll(rollDiceSpec('2d6')); setGained(null) }} className="flex items-center gap-1 px-2.5 rounded border border-stone-600 text-xs text-stone-300 hover:border-gold/50">
+              <button onClick={() => { const check = rollMiningCheck(0, character?.missedRests ?? 0); setRoll(check.dice); setPenalty(check.penalty); setGained(null) }} className="flex items-center gap-1 px-2.5 rounded border border-stone-600 text-xs text-stone-300 hover:border-gold/50">
                 <Dices size={13} /> Roll
               </button>
             </div>
@@ -211,7 +211,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
               className="w-16 bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-sm font-mono outline-none" />
           </div>
           <div className="text-sm text-stone-400 pb-1.5 font-mono">
-            {roll === '' ? '?' : roll} {bonus >= 0 ? '+' : '−'} {Math.abs(bonus)} = <span className="text-stone-100 font-semibold">{total ?? '?'}</span>
+            {roll === '' ? '?' : roll} {bonus >= 0 ? '+' : '−'} {Math.abs(bonus)}{penalty > 0 ? ` − ${penalty} (missed rest)` : ''} = <span className="text-stone-100 font-semibold">{total ?? '?'}</span>
           </div>
         </div>
 
@@ -219,6 +219,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
           <div className={`rounded border px-3 py-2 text-xs ${OUTCOME_TEXT[outcome].cls}`}>
             <div className="font-semibold">{OUTCOME_TEXT[outcome].label}</div>
             <div className="opacity-80">{OUTCOME_TEXT[outcome].hint}</div>
+            {roll === 12 && <div className="mt-1 font-semibold text-gold">⭐ Double 6s: +1 XP</div>}
           </div>
         )}
 

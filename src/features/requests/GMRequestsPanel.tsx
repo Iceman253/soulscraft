@@ -8,7 +8,7 @@ import { useEconomyStore } from '../economy/store'
 import { useBuildStore } from '../building/store'
 import { PixelIcon } from '../building/PixelIcon'
 import { PlaceMap } from '../building/PlaceMap'
-import { parseBuildProposal } from '../../lib/building'
+import { actionOutcome, looksLikeBlocks, parseBuildProposal } from '../../lib/building'
 import { levelOfPlacement, placementLabel } from '../../lib/places'
 import { log } from '../log/store'
 import { CURRENCY_OPTIONS, formatCopper } from '../../lib/currency'
@@ -54,7 +54,7 @@ function useExecute() {
         break
       }
       case 'item': {
-        addOnHandItem(charId, { name: String(p.itemName), quantity: Number(p.quantity) || 1 })
+        addOnHandItem(charId, { name: String(p.itemName), quantity: Number(p.quantity) || 1, isBlock: looksLikeBlocks(String(p.itemName)) })
         log('character-move', `🎒 ${req.characterName} received ${p.quantity}× ${p.itemName}.`)
         break
       }
@@ -147,6 +147,7 @@ function useExecute() {
           total: Number(p.total) || 0,
           gained: Number(p.gained) || 0,
           destination: p.destination === 'onHand' ? 'onHand' : 'storage',
+          doubleSix: p.doubleSix === true,
         })
         break
       }
@@ -209,6 +210,13 @@ function useExecute() {
     }
     return true
   }
+}
+
+/** What each outcome means for the GM's call (Guidebook p.4). */
+const MINING_OUTCOME_HINT = {
+  success: 'Full success: they get what they wanted, maybe more.',
+  partial: 'Partial: they succeed, with a cost, complication or choice.',
+  failure: 'Failure: they fall short, and you add a complication.',
 }
 
 // ── Build sign-off: the icon, what it's for and where it goes ─────────────────
@@ -331,6 +339,8 @@ function RequestRow({ req }: { req: PlayerRequest }) {
       {/* Mining — the player has already rolled; the GM only awards the blocks */}
       {req.type === 'mine' && isPending && (
         <div className="bg-stone-900/60 border border-stone-700 rounded p-2 space-y-1.5">
+          {req.payload.breakdown ? <div className="font-mono text-[11px] text-stone-400 leading-snug">{String(req.payload.breakdown)}</div> : null}
+          <div className="text-stone-500 leading-snug">{MINING_OUTCOME_HINT[actionOutcome(Number(req.payload.total) || 0)]}</div>
           <div className="flex items-center justify-between gap-2">
             <span className="text-stone-500">Blocks gained</span>
             <input
@@ -343,6 +353,11 @@ function RequestRow({ req }: { req: PlayerRequest }) {
           {Array.isArray(req.payload.offList) && req.payload.offList.length > 0 && (
             <div className="text-amber-400 text-[11px] leading-snug">⚠️ Not listed for this area: {(req.payload.offList as string[]).join(', ')}</div>
           )}
+          {req.payload.overLimit === true && <div className="text-amber-400 text-[11px] leading-snug">⚠️ Going on hand, over the 10-block limit. You can waive this.</div>}
+          {Array.isArray(req.payload.effects) && req.payload.effects.length > 0 && (
+            <div className="text-amber-400 text-[11px] leading-snug">⚠️ Check these effects: {(req.payload.effects as string[]).join(', ')}</div>
+          )}
+          {req.payload.doubleSix === true && <div className="text-gold text-[11px] font-semibold">⭐ Double 6s: approving gives +1 XP</div>}
         </div>
       )}
 

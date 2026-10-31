@@ -245,6 +245,19 @@ describe('mine', () => {
     expect(log).toHaveBeenCalledWith('building', expect.stringContaining('rolled 5 (failure), 1 day: gained 0 blocks.'))
   })
 
+  it('gives 1 XP for double 6s, even on a failed trip', () => {
+    useCharacterStore.setState({ characters: [makeChar()] })
+    build().mine({ characterId: 'c1', materials: ['Stone'], requested: 25, total: 8, gained: 0, destination: 'storage', doubleSix: true })
+    expect(char().xp).toBe(1)
+    expect(log).toHaveBeenCalledWith('building', '⭐ Steve rolled double 6s mining: +1 XP.')
+  })
+
+  it('gives no XP otherwise', () => {
+    useCharacterStore.setState({ characters: [makeChar()] })
+    build().mine({ characterId: 'c1', materials: ['Stone'], requested: 25, total: 10, gained: 25, destination: 'storage' })
+    expect(char().xp).toBe(0)
+  })
+
   it('ignores an unknown character', () => {
     build().mine({ characterId: 'ghost', materials: [], requested: 25, total: 10, gained: 25, destination: 'storage' })
     expect(log).not.toHaveBeenCalled()

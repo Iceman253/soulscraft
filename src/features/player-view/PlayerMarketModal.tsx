@@ -3,6 +3,7 @@ import { X, ShoppingCart, Coins, Send } from 'lucide-react'
 import { useEconomyStore, allGoods } from '../economy/store'
 import { useRequestStore } from '../requests/store'
 import { quoteGood } from '../../lib/economyEngine'
+import { blocksPerUnit } from '../../lib/building'
 import { toCopper, formatCopper } from '../../lib/currency'
 import { GOOD_CATEGORIES } from '../../lib/goods'
 import type { Character, MarketProfile, Good } from '../../types'
@@ -68,7 +69,9 @@ export function PlayerMarketModal({ character: c, market, onClose }: Props) {
     const good = goods.find(g => g.name.toLowerCase() === sellItem.name.toLowerCase())
     if (!good) return null
     const listing = market.listings.find(l => l.goodId === good.id)
-    return quoteGood(good, market, economy, listing).sellFinal
+    // Quotes are per market unit; loose blocks sell for their share of a stack.
+    const offer = quoteGood(good, market, economy, listing).sellFinal
+    return sellItem.isBlock ? Math.round(offer / (blocksPerUnit(good.unit) || 1)) : offer
   }, [sellItem, goods, market, economy])
 
   const requestSell = () => {

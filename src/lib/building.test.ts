@@ -4,6 +4,7 @@ import {
   BLOCK_CARRY_LIMIT, countBlocks, MINING_AMOUNTS, miningDays, TOOL_BONUS, detectMiningTool,
   actionOutcome, PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
   takeBlocks, addBlocks, minedStackName, miningTraits, suggestedMiningBlocks, rollMiningCheck,
+  canBoostWithSd, miningEffectNotes, miningBreakdown, overCarryLimit, blocksPerUnit, looksLikeBlocks,
   countRedstone, takeRedstone, parseBuildProposal,
 } from './building'
 
@@ -182,14 +183,71 @@ describe('mining on a phone', () => {
     expect(suggestedMiningBlocks(6, 100)).toBe(0)
   })
 
+  it('does not mistake other words for mining traits', () => {
+    const trait = (name: string) => ({ id: name, name, description: '' })
+    expect(miningTraits([trait('Dignified'), trait('Prodigy'), trait('Minor Noble'), trait('Digger'), trait('Mine Foreman')]).map(t => t.name))
+      .toEqual(['Digger', 'Mine Foreman'])
+  })
+
   it('rolls 2d6 plus bonuses', () => {
     const roll = (spec: string) => { expect(spec).toBe('2d6'); return 8 }
-    expect(rollMiningCheck(3, 0, roll)).toEqual({ dice: 8, penalty: 0, total: 11 })
+    expect(rollMiningCheck(3, 0, { roll })).toEqual({ dice: 8, sdBoost: 0, penalty: 0, total: 11, doubleSix: false })
   })
 
   it('takes 1d4 per missed rest off the roll', () => {
     const roll = (spec: string) => spec === '2d4' ? 5 : 9
-    expect(rollMiningCheck(1, 2, roll)).toEqual({ dice: 9, penalty: 5, total: 5 })
+    expect(rollMiningCheck(1, 2, { roll })).toMatchObject({ dice: 9, penalty: 5, total: 5 })
+  })
+
+  it('adds 1d4 only when a Souls Die was spent', () => {
+    const roll = (spec: string) => spec === '1d4' ? 3 : 7
+    expect(rollMiningCheck(0, 0, { roll, boost: true })).toMatchObject({ sdBoost: 3, total: 10 })
+    expect(rollMiningCheck(0, 0, { roll })).toMatchObject({ sdBoost: 0, total: 7 })
+  })
+
+  it('spots double 6s on the dice alone, whatever the bonuses', () => {
+    expect(rollMiningCheck(-2, 0, { roll: () => 12 }).doubleSix).toBe(true)
+    expect(rollMiningCheck(5, 0, { roll: () => 11 }).doubleSix).toBe(false)
+  })
+
+  it('blocks a Souls Die boost with no SD or while Fatigued', () => {
+    const fatigue = { id: 'f', name: 'Fatigue', durationType: 'manual' as const }
+    expect(canBoostWithSd({ currentSd: 1, activeEffects: [] })).toBe(true)
+    expect(canBoostWithSd({ currentSd: 0, activeEffects: [] })).toBe(false)
+    expect(canBoostWithSd({ currentSd: 3, activeEffects: [fatigue] })).toBe(false)
+  })
+
+  it('flags effects that change the roll for the GM', () => {
+    const fx = (name: string) => ({ id: name, name, durationType: 'manual' as const })
+    expect(miningEffectNotes({ activeEffects: [fx('Poison'), fx('Cursed'), fx('Luck'), fx('Fatigue')] })).toEqual(['Cursed', 'Luck', 'Fatigue'])
+  })
+
+  it('spells out the roll', () => {
+    expect(miningBreakdown({ dice: 9, tool: 'diamond', traits: ['Miner'], skill: { name: 'Delving', bonus: 2 }, other: 1, sdBoost: 3, penalty: 2 }))
+      .toBe('9 (2d6) +3 Diamond tool +1 Miner +2 Delving +1 other +3 SD −2 missed rest')
+    expect(miningBreakdown({ dice: 5, tool: 'wooden', traits: [] })).toBe('5 (2d6) −2 Wooden tool')
+    expect(miningBreakdown({ dice: 5, tool: 'none', traits: [] })).toBe('5 (2d6) no tool')
+  })
+
+  it('knows when blocks would go over the carry limit', () => {
+    expect(overCarryLimit([item('Stone', 8, true)], 2)).toBe(false)
+    expect(overCarryLimit([item('Stone', 8, true)], 3)).toBe(true)
+  })
+})
+
+describe('recognizing blocks', () => {
+  it('reads how many blocks a market unit holds', () => {
+    expect(blocksPerUnit('stack of 10 blocks')).toBe(10)
+    expect(blocksPerUnit('block')).toBe(1)
+    expect(blocksPerUnit('each')).toBe(0)
+    expect(blocksPerUnit(undefined)).toBe(0)
+  })
+
+  it('reads block names from free text', () => {
+    expect(looksLikeBlocks('Stone Blocks')).toBe(true)
+    expect(looksLikeBlocks('stone block')).toBe(true)
+    expect(looksLikeBlocks('Blockade Runner Map')).toBe(false)
+    expect(looksLikeBlocks('Iron Sword')).toBe(false)
   })
 })
 

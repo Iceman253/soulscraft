@@ -20,6 +20,8 @@ export interface MineParams {
   /** Blocks the GM awards after narrating the outcome. */
   gained: number
   destination: 'storage' | 'onHand'
+  /** Rolled double 6s: worth 1 XP on any action roll (p.8). */
+  doubleSix?: boolean
 }
 
 interface BuildStore {
@@ -187,7 +189,7 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       })
     },
 
-    mine({ characterId, areaName, materials, requested, total, gained, destination }) {
+    mine({ characterId, areaName, materials, requested, total, gained, destination, doubleSix }) {
       const charStore = useCharacterStore.getState()
       const c = charStore.characters.find(x => x.id === characterId)
       if (!c) return
@@ -205,6 +207,10 @@ export const useBuildStore = create<BuildStore>((set, get) => {
         `⛏️ ${c.name} mined for ${requested} blocks of ${what}${where} — rolled ${total} (${outcome}), ` +
         `${days} day${days === 1 ? '' : 's'}: gained ${qty} block${qty === 1 ? '' : 's'}` +
         `${qty > 0 ? (destination === 'onHand' ? ' (on hand)' : ' (to storage)') : ''}.`)
+      if (doubleSix) {
+        charStore.awardXp(characterId, 1, 'double-six', 'Double 6 while mining')
+        log('building', `⭐ ${c.name} rolled double 6s mining: +1 XP.`)
+      }
     },
   }
 })

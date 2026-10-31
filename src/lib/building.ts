@@ -82,7 +82,7 @@ export function actionOutcome(total: number): ActionOutcome {
 
 /** Traits that sound like mining, such as a Deep Dwymir's "Miner" (+1 each). */
 export function miningTraits(traits: Trait[]): Trait[] {
-  return traits.filter(t => /\bmin(e|er|ing)\b|excavat|dig/i.test(t.name))
+  return traits.filter(t => /\b(min(e|er|ers|ing)|excavat\w*|dig(s|ger|gers|ging)?)\b/i.test(t.name))
 }
 
 /** Blocks the GM is offered by default: what was asked for, or nothing on a failure. */
@@ -90,11 +90,71 @@ export function suggestedMiningBlocks(total: number, requested: number): number 
   return actionOutcome(total) === 'failure' ? 0 : requested
 }
 
-/** A mining action roll: 2d6 + bonuses, minus the missed-rest penalty (1d4 each, p.90). */
-export function rollMiningCheck(bonus: number, missedRests: number, roll: (spec: string) => number = rollDiceSpec) {
+/** A mining action roll (p.4): 2d6 + bonuses, plus 1d4 if a Souls Die was spent,
+ *  minus the missed-rest penalty (1d4 each, p.90). A natural 12 is double 6s, worth
+ *  1 XP on any action roll (p.8). */
+export function rollMiningCheck(
+  bonus: number,
+  missedRests: number,
+  { boost = false, roll = rollDiceSpec }: { boost?: boolean; roll?: (spec: string) => number } = {},
+) {
   const dice = roll('2d6')
+  const sdBoost = boost ? roll('1d4') : 0
   const penalty = missedRests > 0 ? roll(`${missedRests}d4`) : 0
-  return { dice, penalty, total: dice + bonus - penalty }
+  return { dice, sdBoost, penalty, total: dice + bonus + sdBoost - penalty, doubleSix: dice === 12 }
+}
+
+/** Can this character spend a Souls Die on a roll? Fatigue forbids it (p.79). */
+export function canBoostWithSd(c: Pick<Character, 'currentSd' | 'activeEffects'>): boolean {
+  return c.currentSd > 0 && !c.activeEffects.some(e => /fatigue/i.test(e.name))
+}
+
+/** Effects that change an action roll or what a character can do, for the GM to rule
+ *  on: Cursed rerolls successes for the worse result, Luck allows a reroll, and
+ *  Fatigue forbids impactful physical effort (pp.79-80). */
+export function miningEffectNotes(c: Pick<Character, 'activeEffects'>): string[] {
+  return c.activeEffects.filter(e => /^(cursed|luck|fatigue)$/i.test(e.name.trim())).map(e => e.name)
+}
+
+/** The roll spelled out for the GM, e.g. "9 (2d6) +1 Iron tool +1 Miner +2 Delving". */
+export function miningBreakdown(parts: {
+  dice: number
+  tool: ToolTier
+  traits: string[]
+  skill?: { name: string; bonus: number }
+  other?: number
+  sdBoost?: number
+  penalty?: number
+}): string {
+  const signed = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`
+  const bits = [`${parts.dice} (2d6)`]
+  if (parts.tool === 'none') bits.push('no tool')
+  else bits.push(`${signed(TOOL_BONUS[parts.tool])} ${parts.tool[0].toUpperCase()}${parts.tool.slice(1)} tool`)
+  for (const t of parts.traits) bits.push(`+1 ${t}`)
+  if (parts.skill) bits.push(`+${parts.skill.bonus} ${parts.skill.name}`)
+  if (parts.other) bits.push(`${signed(parts.other)} other`)
+  if (parts.sdBoost) bits.push(`+${parts.sdBoost} SD`)
+  if (parts.penalty) bits.push(`−${parts.penalty} missed rest`)
+  return bits.join(' ')
+}
+
+/** Would adding `adding` blocks put a character over the 10-block carry limit? (p.7) */
+export function overCarryLimit(items: CharacterItem[], adding: number): boolean {
+  return countBlocks(items) + adding > BLOCK_CARRY_LIMIT
+}
+
+/** Blocks in one unit of a market good: 10 for "stack of 10 blocks", 1 for "block",
+ *  0 if it isn't sold as blocks. */
+export function blocksPerUnit(unit: string | undefined): number {
+  if (!unit) return 0
+  const stack = unit.match(/stack of (\d+) blocks?/i)
+  if (stack) return parseInt(stack[1])
+  return /\bblocks?\b/i.test(unit) ? 1 : 0
+}
+
+/** Does a free-text item name mean building blocks, like "Stone Blocks"? */
+export function looksLikeBlocks(name: string): boolean {
+  return /\bblocks?\b/i.test(name)
 }
 
 // ── Building ────────────────────────────────────────────────────────────
