@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import postcss from 'postcss'
 import tailwind from '@tailwindcss/postcss'
@@ -33,6 +33,14 @@ describe('index.css under Tailwind 4', () => {
     expect(css).toContain('--color-emerald: #1a9e56')
     expect(rule('.text-emerald-400')).toBe('')
     expect(css).not.toMatch(/--color-emerald-\d/)
+  })
+
+  it('never uses a numbered emerald class, which would show no colour', () => {
+    const src = fileURLToPath(new URL('.', import.meta.url))
+    const files = readdirSync(src, { recursive: true, encoding: 'utf8' }).filter(f => f.endsWith('.tsx'))
+    expect(files.length).toBeGreaterThan(50)
+    const offenders = files.filter(f => /-emerald-\d/.test(readFileSync(`${src}/${f}`, 'utf8')))
+    expect(offenders).toEqual([])
   })
 
   it('keeps the stock shades as hex rather than OKLCH', () => {

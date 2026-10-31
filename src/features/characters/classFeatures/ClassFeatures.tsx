@@ -233,12 +233,12 @@ function MagicCircleModal({ character, fs, onUpdate, onClose }: {
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="bg-stone-800 rounded-sm p-2">
             <span className="text-stone-500">SD cost: </span>
-            <span className={character.currentSd >= 3 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>3 SD</span>
+            <span className={character.currentSd >= 3 ? 'text-emerald font-bold' : 'text-red-400 font-bold'}>3 SD</span>
             <span className="text-stone-500"> (have {character.currentSd})</span>
           </div>
           <div className="bg-stone-800 rounded-sm p-2">
             <span className="text-stone-500">Lapis cost: </span>
-            <span className={fs.state.lapisCount >= 5 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>5 Lapis</span>
+            <span className={fs.state.lapisCount >= 5 ? 'text-emerald font-bold' : 'text-red-400 font-bold'}>5 Lapis</span>
             <span className="text-stone-500"> (have {fs.state.lapisCount})</span>
           </div>
         </div>

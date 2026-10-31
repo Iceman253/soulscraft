@@ -156,7 +156,7 @@ function PotionCard({ potion: p }: { potion: PotionRecipe }) {
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-stone-700/50 transition-colors text-left"
       >
-        <FlaskConical size={15} className={`shrink-0 ${isHarmful ? 'text-red-400' : p.name.includes('Awkward') || p.name.includes('Dragon') ? 'text-stone-500' : 'text-emerald-400'}`} />
+        <FlaskConical size={15} className={`shrink-0 ${isHarmful ? 'text-red-400' : p.name.includes('Awkward') || p.name.includes('Dragon') ? 'text-stone-500' : 'text-emerald'}`} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-stone-100 font-heading tracking-wide">{p.name}</div>
           <div className="text-xs text-stone-500 truncate">{p.effect}</div>

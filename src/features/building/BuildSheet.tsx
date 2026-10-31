@@ -153,16 +153,15 @@ export function BuildSheet({ structureId, character, onClose }: { structureId: s
               ))}
             </div>
           )}
-
-          {drawing && (
-            <FullScreen title={`Draw: ${s.name}`} onClose={() => setDrawing(false)}>
-              <div className="p-4">
-                <PixelEditor initial={s.icon} onCancel={() => setDrawing(false)} onSave={icon => { updateStructure(s.id, { icon }); setDrawing(false) }} />
-              </div>
-            </FullScreen>
-          )}
         </div>
       </div>
+      {drawing && (
+        <FullScreen title={`Draw: ${s.name}`} onClose={() => setDrawing(false)}>
+          <div className="p-4">
+            <PixelEditor initial={s.icon} onCancel={() => setDrawing(false)} onSave={icon => { updateStructure(s.id, { icon }); setDrawing(false) }} />
+          </div>
+        </FullScreen>
+      )}
     </div>
   )
 }
