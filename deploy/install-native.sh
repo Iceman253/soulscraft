@@ -66,6 +66,8 @@ fi
 # Fetch / update source.
 if [ -d "$APP_DIR/.git" ]; then
   msg "Updating existing checkout in ${APP_DIR}…"
+  # npm audit fix below rewrites these on every deploy; drop that so the pull can apply.
+  git -C "$APP_DIR" checkout -- package.json package-lock.json
   git -C "$APP_DIR" pull --ff-only
 else
   msg "Cloning ${REPO_URL} → ${APP_DIR}…"
