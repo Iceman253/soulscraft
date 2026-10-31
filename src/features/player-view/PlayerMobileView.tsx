@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import {
   User, Map as MapIcon, Swords, Send, Sparkles, Hourglass, RotateCcw,
-  ChevronDown, ChevronRight, Trash2, Package, Coins, Heart, Zap, Shield, LogOut,
+  ChevronDown, ChevronRight, Trash2, Package, Coins, Heart, Zap, Shield, LogOut, Hammer,
 } from 'lucide-react'
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
 import { useCombatStore } from '../combat/store'
 import { useRequestStore } from '../requests/store'
-import { MyBuilds } from '../building/MyBuilds'
+import { BuildHub } from '../building/BuildHub'
 import { useCampaignStore } from '../campaigns/store'
 import { LevelUpModal, type LevelUpInitialState } from '../characters/LevelUpModal'
 import { PlayerRequestModal } from './PlayerRequestModal'
@@ -27,7 +27,7 @@ interface Props {
   onAdoptCharacter?: (characterId: string) => void
 }
 
-type Pane = 'character' | 'world'
+type Pane = 'character' | 'world' | 'build'
 
 function rollD6()  { return Math.floor(Math.random() * 6)  + 1 }
 function rollD12() { return Math.floor(Math.random() * 12) + 1 }
@@ -181,7 +181,11 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
       <div className="flex-1 min-h-0 overflow-y-auto">
         {pane === 'world' ? (
           <div className="h-full">
-            {combatActive ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap />}
+            {combatActive ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap focusedCharacterId={focusedCharacterId} />}
+          </div>
+        ) : pane === 'build' && activeChar && !needsCharacter ? (
+          <div className="px-4 py-4">
+            <BuildHub character={activeChar} />
           </div>
         ) : needsCharacter ? (
           <div className="pb-6">
@@ -452,13 +456,6 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
               </Section>
             )}
 
-            {/* Builds — own character draws their builds' map icons */}
-            {isOwnChar && (
-              <Section title="Builds">
-                <MyBuilds characterId={activeChar.id} />
-              </Section>
-            )}
-
             {/* Notes — own character only */}
             {isOwnChar && (
               <Section title="Notes">
@@ -508,6 +505,7 @@ export function PlayerMobileView({ onClose, isPlayerMode, focusedCharacterId, on
           label={combatActive ? 'Combat' : 'Map'}
           alert={combatActive}
         />
+        <NavButton active={pane === 'build'} onClick={() => setPane('build')} icon={<Hammer size={22} />} label="Build" />
         <NavButton active={false} onClick={exitToSwitcher} icon={<LogOut size={22} />} label="Campaigns" />
         {!isPlayerMode && (
           <NavButton active={false} onClick={onClose} icon={<ChevronRight size={22} />} label="GM View" />

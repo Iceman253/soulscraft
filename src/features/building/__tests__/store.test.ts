@@ -58,6 +58,21 @@ describe('addStructure', () => {
   })
 })
 
+describe('a player-designed build', () => {
+  it('keeps the icon, purpose and sub-location from the proposal', () => {
+    const icon = 'a'.repeat(256)
+    const id = build().addStructure({ name: 'Keep', tier: 'small', description: 'Guards the pass', icon, areaId: 'town', subNodeId: 'market', position: at, builderIds: ['c1'] })
+    expect(structure(id)).toMatchObject({ description: 'Guards the pass', icon, areaId: 'town', subNodeId: 'market', builderIds: ['c1'] })
+  })
+
+  it('keeps null (inside the area) distinct from unset (on the world map)', () => {
+    const inside = build().addStructure({ areaId: 'town', subNodeId: null, position: at })
+    const beside = build().addStructure({ areaId: 'town', position: at })
+    expect(structure(inside).subNodeId).toBeNull()
+    expect('subNodeId' in structure(beside)).toBe(false)
+  })
+})
+
 describe('tiers and requirements', () => {
   it('setTier resets requirements to the new tier', () => {
     const id = build().addStructure({ tier: 'small', areaId: null, position: at })
@@ -107,6 +122,36 @@ describe('commitBlocks', () => {
     expect(build().commitBlocks(id, 'c1', 0)).toBe(0)
     expect(build().commitBlocks('nope', 'c1', 10)).toBe(0)
     expect(structure(id).blocksCommitted).toBe(0)
+  })
+})
+
+describe('commitRedstone', () => {
+  const dust = (quantity: number): CharacterItem => ({ id: 'd', name: 'Redstone Dust', quantity })
+
+  it('moves dust from the inventory and can finish a redstone project', () => {
+    useCharacterStore.setState({ characters: [makeChar({ storage: { items: [dust(12)] } })] })
+    const id = build().addStructure({ tier: 'redstone', areaId: null, position: at })
+    build().addProgress(id, { blocks: 25, days: 1 })
+    expect(build().commitRedstone(id, 'c1', 10)).toBe(10)
+    expect(structure(id).completedAt).toBeDefined()
+    expect(char().storage.items).toEqual([dust(2)])
+  })
+
+  it('does nothing without dust', () => {
+    useCharacterStore.setState({ characters: [makeChar()] })
+    const id = build().addStructure({ tier: 'redstone', areaId: null, position: at })
+    expect(build().commitRedstone(id, 'c1', 10)).toBe(0)
+    expect(build().commitRedstone('nope', 'c1', 10)).toBe(0)
+    expect(structure(id).redstoneCommitted).toBe(0)
+  })
+})
+
+describe('joinBuild', () => {
+  it('adds a builder once', () => {
+    const id = build().addStructure({ tier: 'small', areaId: null, position: at, builderIds: ['c1'] })
+    build().joinBuild(id, 'c2')
+    build().joinBuild(id, 'c2')
+    expect(structure(id).builderIds).toEqual(['c1', 'c2'])
   })
 })
 

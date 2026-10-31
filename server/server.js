@@ -9,6 +9,7 @@ import { createServer } from 'http'
 import { mkdirSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
+import { mergeCampaign } from './merge.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT) || 8787
@@ -77,10 +78,14 @@ app.post('/api/campaigns/:id/enter', (req, res) => {
 
 // Update — validate the code, persist, then broadcast to other subscribers.
 app.put('/api/campaigns/:id', (req, res) => {
-  const { code, data } = req.body || {}
+  const { code, data: fullData, patch } = req.body || {}
   const row = qCode.get(req.params.id)
   if (!row) return res.status(404).json({ error: 'not found' })
   if (row.code !== (code ?? '')) return res.status(403).json({ error: 'bad code' })
+  // Normal saves send only the fields that changed, merged here so two devices
+  // saving together can't wipe out each other's work in unrelated fields.
+  // Whole-campaign saves (`data`) remain for clients that haven't reloaded yet.
+  const data = patch ? mergeCampaign(JSON.parse(qGet.get(req.params.id).data), patch) : fullData
   const updatedAt = Date.now()
   qUpdate.run(data?.name ?? 'Campaign', JSON.stringify(data), updatedAt, req.params.id)
   send(req.params.id, { type: 'update', campaignId: req.params.id, data, updatedAt }, req.get('x-client-id') || '')

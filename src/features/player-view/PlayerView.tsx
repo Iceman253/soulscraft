@@ -125,7 +125,7 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
       <div className="flex flex-1 min-h-0">
         {/* Left: map or combat (combat only forced when this player is in it) */}
         <div className="flex-1 min-w-0 min-h-0 relative">
-          {showCombat ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap />}
+          {showCombat ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap focusedCharacterId={focusedCharacterId} />}
 
           {/* Watch/return toggle for non-combatants while a battle is on */}
           {combatActive && !myInCombat && (

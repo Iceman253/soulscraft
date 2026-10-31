@@ -41,8 +41,9 @@ export const enterCampaign = (id: string, code: string) =>
   req<{ id: string; name: string; data: CampaignData; updatedAt: number }>(
     `/api/campaigns/${id}/enter`, { method: 'POST', body: JSON.stringify({ code }) })
 
-export const putCampaign = (id: string, code: string, data: CampaignData) =>
-  req<{ updatedAt: number }>(`/api/campaigns/${id}`, { method: 'PUT', body: JSON.stringify({ code, data }) })
+/** Save only the fields that changed; the server merges them into the campaign. */
+export const patchCampaign = (id: string, code: string, patch: Partial<CampaignData>) =>
+  req<{ updatedAt: number }>(`/api/campaigns/${id}`, { method: 'PUT', body: JSON.stringify({ code, patch }) })
 
 export const deleteCampaignOnServer = (id: string, code: string) =>
   req<{ ok: true }>(`/api/campaigns/${id}`, { method: 'DELETE', body: JSON.stringify({ code }) })

@@ -101,7 +101,10 @@ export interface Structure {
   description: string
   /** Area it stands in, or null for a free-standing build on the world map. */
   areaId: string | null
-  /** World-map position (flow coordinates). */
+  /** The map it stands on. Absent = the world map; null = inside its area (the
+   *  area's top-level sub-map); an id = inside that sub-location's map. */
+  subNodeId?: string | null
+  /** Position on that map (flow coordinates). */
   position: { x: number; y: number }
   builderIds: string[]
   /** Requirements — start at the rulebook values for the tier (halved for an

@@ -10,6 +10,7 @@ import { AREA_TYPES, REALMS } from '../../lib/constants'
 import { defaultMarketForArea } from '../../lib/economyEngine'
 import { COMMON_MATERIALS, PROJECT_TIERS, structureProgress } from '../../lib/building'
 import { useBuildStore } from '../building/store'
+import { placementLabel } from '../../lib/places'
 import { PixelIcon } from '../building/PixelIcon'
 import type { Area } from '../../types'
 
@@ -169,7 +170,7 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-stone-200 truncate">{st.name}</div>
                       <div className="text-[10px] text-stone-500">
-                        {PROJECT_TIERS[st.tier].label} · {p.status === 'complete' ? 'complete' : `${Math.round(p.fraction * 100)}% built`}
+                        {PROJECT_TIERS[st.tier].label} · {st.subNodeId !== undefined ? `${placementLabel(st, areas)} · ` : ''}{p.status === 'complete' ? 'complete' : `${Math.round(p.fraction * 100)}% built`}
                       </div>
                     </div>
                   </button>

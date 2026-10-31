@@ -13,16 +13,16 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { CHAR_DND } from './AreaNode'
 import { PlaceCharactersModal } from '../../ui/PlaceCharactersModal'
 import type { Area, SubNode, SubEdge, Character } from '../../types'
+import { useBuildStore } from '../building/store'
+import { StructureNode } from '../building/StructureNode'
+import { StructurePanel } from '../building/StructurePanel'
+import { MAX_SUBMAP_DEPTH, SUB_TYPE_ICONS, structuresOnLevel } from '../../lib/places'
 import { SUB_NODE_TYPES } from '../../lib/constants'
 import { Modal } from '../../ui/Modal'
 import { ContextMenu, type ContextMenuItem } from '../../ui/ContextMenu'
 
-const MAX_DEPTH = 3
-
-const TYPE_ICONS: Record<string, string> = {
-  'rest-spot': '🛏️', dungeon: '⚔️', merchant: '🛒',
-  shrine: '✨', hazard: '💀', secret: '🔮', other: '📍',
-}
+const MAX_DEPTH = MAX_SUBMAP_DEPTH
+const TYPE_ICONS = SUB_TYPE_ICONS
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -212,7 +212,7 @@ function SubNodeComponent({ data }: { data: unknown }) {
   )
 }
 
-const subNodeTypes = { subnode: SubNodeComponent as never }
+const subNodeTypes = { subnode: SubNodeComponent as never, structure: StructureNode }
 
 // ── Sub-edge with delete button ───────────────────────────────────────────
 function SubEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected }: EdgeProps) {
@@ -277,6 +277,10 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
   const { addSubNode, moveSubNode, deleteSubNode, addSubEdge, updateSubEdge, deleteSubEdge, updateSubNode } = useWorldStore()
   const characters = useCharacterStore(s => s.characters)
   const { setLocation, setSubLocation } = useCharacterStore()
+  const areas = useWorldStore(s => s.areas)
+  const allStructures = useBuildStore(s => s.structures)
+  const moveStructure = useBuildStore(s => s.moveStructure)
+  const [selectedStructureId, setSelectedStructureId] = useState<string | null>(null)
 
   const [navStack, setNavStack] = useState<NavEntry[]>(() => {
     if (!initialSubNodeId) return []
@@ -308,6 +312,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
 
   const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
     e.preventDefault()
+    if (node.id.startsWith('st:')) { setSelectedStructureId(node.id.slice(3)); return }
     setCtxMenu({ x: e.clientX, y: e.clientY, nodeId: node.id })
   }, [])
 
@@ -341,7 +346,17 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
     ).map(c => c.id),
   [characters, area.id])
 
-  const baseNodes: Node[] = useMemo(() => currentNodes.map(node => {
+  // Builds standing on this level, drawn over the sub-locations like on the world map.
+  const structureNodes: Node[] = useMemo(() => structuresOnLevel(allStructures, { areaId: area.id, path: currentPath }, areas).map(st => ({
+    id: 'st:' + st.id,
+    type: 'structure',
+    position: st.position,
+    data: { structure: st, selected: st.id === selectedStructureId },
+    draggable: true,
+    zIndex: 5,
+  })), [allStructures, area.id, currentPath, areas, selectedStructureId])
+
+  const placeNodes: Node[] = useMemo(() => currentNodes.map(node => {
     const directChars = characters.filter(c => c.subLocationId === node.id)
     const subtreeChars = getSubtreeCharacters(node, characters)
     return {
@@ -354,7 +369,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
         onSelect: () => setSelectedNodeId(node.id),
         directChars,
         subtreeChars,
-        hasChildren: (node.subNodes?.length ?? 0) > 0,
+        hasChildren: (node.subNodes?.length ?? 0) > 0 || allStructures.some(st => st.subNodeId === node.id),
         canGoDeeper: navStack.length < MAX_DEPTH,
         onOpenSubMap: () => { setNavStack(prev => [...prev, { nodeId: node.id, nodeName: node.name }]); setSelectedNodeId(null) },
         onCharNavigate: navigateToChar,
@@ -363,7 +378,9 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
       } satisfies SubNodeData,
       draggable: true,
     }
-  }), [currentNodes, selectedNodeId, characters, navStack.length, navigateToChar, area.id, setLocation, setSubLocation])
+  }), [currentNodes, selectedNodeId, characters, allStructures, navStack.length, navigateToChar, area.id, setLocation, setSubLocation])
+
+  const baseNodes = useMemo(() => [...placeNodes, ...structureNodes], [placeNodes, structureNodes])
 
   // Local state so ReactFlow can apply mid-drag position changes without round-tripping the store.
   const [rfNodes, setRfNodes] = useState<Node[]>(baseNodes)
@@ -386,10 +403,11 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
     // Store update only on drag end.
     for (const change of changes) {
       if (change.type === 'position' && change.position && change.dragging === false) {
-        moveSubNode(area.id, change.id, change.position, currentPath)
+        if (change.id.startsWith('st:')) moveStructure(change.id.slice(3), change.position)
+        else moveSubNode(area.id, change.id, change.position, currentPath)
       }
     }
-  }, [area.id, moveSubNode, currentPath])
+  }, [area.id, moveSubNode, moveStructure, currentPath])
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     setSelectedEdgeIds(prev => {
@@ -545,7 +563,8 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
             onConnect={onConnect}
             onReconnect={onReconnect}
             edgesReconnectable
-            onPaneClick={() => { setSelectedNodeId(null); setCtxMenu(null); setSelectedEdgeIds(new Set()) }}
+            onPaneClick={() => { setSelectedNodeId(null); setSelectedStructureId(null); setCtxMenu(null); setSelectedEdgeIds(new Set()) }}
+            onNodeClick={(_, node) => { if (node.id.startsWith('st:')) { setSelectedStructureId(node.id.slice(3)); setSelectedNodeId(null) } }}
             onNodeContextMenu={onNodeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
             connectionMode={ConnectionMode.Loose}
@@ -594,8 +613,15 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
           )}
         </div>
 
+        {/* Selected build */}
+        {selectedStructureId && allStructures.some(st => st.id === selectedStructureId) && (
+          <div className="w-80 shrink-0">
+            <StructurePanel structureId={selectedStructureId} onClose={() => setSelectedStructureId(null)} />
+          </div>
+        )}
+
         {/* Selected node side panel */}
-        {selectedNode && (
+        {selectedNode && !selectedStructureId && (
           <div className="w-64 shrink-0 border-l border-stone-700 bg-stone-800 p-4 overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <span className="font-semibold text-stone-100 text-sm">{selectedNode.name}</span>

@@ -3,7 +3,8 @@ import type { CharacterItem } from '../types'
 import {
   BLOCK_CARRY_LIMIT, countBlocks, MINING_AMOUNTS, miningDays, TOOL_BONUS, detectMiningTool,
   actionOutcome, PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
-  takeBlocks, addBlocks, minedStackName,
+  takeBlocks, addBlocks, minedStackName, miningTraits, suggestedMiningBlocks, rollMiningCheck,
+  countRedstone, takeRedstone, parseBuildProposal,
 } from './building'
 
 const item = (name: string, quantity = 1, isBlock = false, id = name): CharacterItem => ({ id, name, quantity, isBlock })
@@ -165,5 +166,75 @@ describe('minedStackName', () => {
   it('joins materials', () => {
     expect(minedStackName(['Stone', ' Iron '])).toBe('Stone & Iron blocks')
     expect(minedStackName([])).toBe('Blocks')
+  })
+})
+
+describe('mining on a phone', () => {
+  it('finds traits that sound like mining', () => {
+    const trait = (name: string) => ({ id: name, name, description: '' })
+    expect(miningTraits([trait('Miner'), trait('Excavator'), trait('Silver Tongue'), trait('Mining Lore')]).map(t => t.name))
+      .toEqual(['Miner', 'Excavator', 'Mining Lore'])
+  })
+
+  it('suggests the blocks asked for, or none on a failure', () => {
+    expect(suggestedMiningBlocks(10, 100)).toBe(100)
+    expect(suggestedMiningBlocks(7, 100)).toBe(100)
+    expect(suggestedMiningBlocks(6, 100)).toBe(0)
+  })
+
+  it('rolls 2d6 plus bonuses', () => {
+    const roll = (spec: string) => { expect(spec).toBe('2d6'); return 8 }
+    expect(rollMiningCheck(3, 0, roll)).toEqual({ dice: 8, penalty: 0, total: 11 })
+  })
+
+  it('takes 1d4 per missed rest off the roll', () => {
+    const roll = (spec: string) => spec === '2d4' ? 5 : 9
+    expect(rollMiningCheck(1, 2, roll)).toEqual({ dice: 9, penalty: 5, total: 5 })
+  })
+})
+
+describe('redstone dust', () => {
+  const c = {
+    storage: { items: [item('Redstone Dust', 6), item('Redstone Block', 4, true)] },
+    onHand: { items: [item('Redstone', 3), item('Torch', 2)] },
+  }
+
+  it('counts dust, not redstone blocks', () => {
+    expect(countRedstone(c)).toBe(9)
+  })
+
+  it('takes from storage first and only as much as there is', () => {
+    const { storage, onHand, taken } = takeRedstone(c, 7)
+    expect(taken).toBe(7)
+    expect(storage.items).toEqual([item('Redstone Block', 4, true)])
+    expect(onHand.items).toEqual([item('Redstone', 2), item('Torch', 2)])
+    expect(takeRedstone(c, 99).taken).toBe(9)
+  })
+})
+
+describe('reading a build proposal', () => {
+  const good = {
+    name: 'Keep', description: 'Holds the pass', tier: 'large', icon: 'a'.repeat(256),
+    areaId: 'town', subNodeId: 'market', position: { x: 5, y: 6 }, builderIds: ['c2'],
+  }
+
+  it('keeps a good proposal and always counts the proposer as a builder', () => {
+    expect(parseBuildProposal(good, 'c1')).toEqual({ ...good, builderIds: ['c1', 'c2'] })
+  })
+
+  it('does not list the proposer twice', () => {
+    expect(parseBuildProposal({ ...good, builderIds: ['c1', 'c1'] }, 'c1').builderIds).toEqual(['c1'])
+  })
+
+  it('keeps the difference between beside an area and inside it', () => {
+    expect('subNodeId' in parseBuildProposal({ ...good, subNodeId: undefined }, 'c1')).toBe(false)
+    expect(parseBuildProposal({ ...good, subNodeId: null }, 'c1').subNodeId).toBeNull()
+  })
+
+  it('falls back safely on bad data', () => {
+    expect(parseBuildProposal({ tier: 'colossal', icon: 'nope', position: 'x', builderIds: 'x' }, 'c1')).toEqual({
+      name: '', description: '', tier: 'small', icon: '.'.repeat(256), areaId: null,
+      position: { x: 0, y: 0 }, builderIds: ['c1'],
+    })
   })
 })

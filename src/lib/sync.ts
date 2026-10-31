@@ -6,11 +6,13 @@ import type { CampaignData } from '../types'
 export type SyncMessage =
   | { type: 'update'; campaignId: string; data: CampaignData | null; updatedAt: number }
   | { type: 'image'; campaignId: string; key: string; deleted?: boolean }
+  | { type: 'reconnected'; campaignId: string }   // updates may have been missed while offline
 
 let ws: WebSocket | null = null
 let currentCampaignId: string | null = null
 let handler: ((msg: SyncMessage) => void) | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let connectedBefore = false
 
 function wsUrl(): string {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -25,6 +27,8 @@ function open() {
 
   ws.onopen = () => {
     ws?.send(JSON.stringify({ type: 'subscribe', campaignId: currentCampaignId, clientId: getClientId() }))
+    if (connectedBefore && currentCampaignId) handler?.({ type: 'reconnected', campaignId: currentCampaignId })
+    connectedBefore = true
   }
   ws.onmessage = (e) => {
     try {
@@ -46,6 +50,7 @@ export function connectSync(campaignId: string, onMessage: (msg: SyncMessage) =>
   disconnectSync()
   currentCampaignId = campaignId
   handler = onMessage
+  connectedBefore = false
   open()
 }
 

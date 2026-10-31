@@ -17,7 +17,7 @@ import { computeDef } from '../../lib/armor'
 import { CURRENCY_OPTIONS } from '../../lib/currency'
 import { POTION_RECIPES } from '../../lib/potions'
 import { BLOCK_CARRY_LIMIT, countBlocks } from '../../lib/building'
-import { MyBuilds } from '../building/MyBuilds'
+import { BuildHub } from '../building/BuildHub'
 import type { CharacterItem, Area } from '../../types'
 
 interface Props {
@@ -807,11 +807,11 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
 
           <div className="border-t border-stone-700" />
 
-          {/* Builds — own character draws their builds' map icons */}
+          {/* Mining and builds — planned here, signed off by the GM */}
           {isOwnChar && (
             <div>
               <div className="text-xs font-medium text-stone-400 font-heading tracking-wide mb-2">Builds</div>
-              <MyBuilds characterId={activeChar.id} />
+              <BuildHub character={activeChar} />
             </div>
           )}
 

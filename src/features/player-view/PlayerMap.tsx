@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow, type Node, type Edge, ConnectionMode,
   Handle, Position, type NodeProps,
@@ -12,7 +12,10 @@ import { useCampaignStore } from '../campaigns/store'
 import { loadMapBg } from '../../lib/imageCache'
 import { useBuildStore } from '../building/store'
 import { StructureNode } from '../building/StructureNode'
+import { BuildSheet } from '../building/BuildSheet'
+import { PlaceExplorer } from '../building/PlaceExplorer'
 import { TokenAvatar } from '../../ui/TokenAvatar'
+import { AREA_TYPE_ICONS, placesOnLevel, structuresOnLevel, structureVisibleToPlayers, WORLD_LEVEL, type MapLevel } from '../../lib/places'
 import type { Area, Character } from '../../types'
 
 // ── Realm colors (same as GM map) ────────────────────────────────────────
@@ -22,10 +25,7 @@ const REALM_COLORS: Record<string, string> = {
   end:       'border-end',
 }
 
-const TYPE_ICONS: Record<string, string> = {
-  settlement: '🏘️', dungeon: '⚔️', wilderness: '🌲',
-  portal: '🌀', stronghold: '🏰', ruins: '🏚️', other: '📍',
-}
+const TYPE_ICONS = AREA_TYPE_ICONS
 
 // ── Player-visible area node ──────────────────────────────────────────────
 interface PlayerAreaNodeData {
@@ -140,13 +140,26 @@ const nodeTypes = {
 }
 
 // ── Inner canvas (needs ReactFlowProvider context for useReactFlow) ──────────
-function PlayerMapCanvas() {
+function PlayerMapCanvas({ focusedCharacterId }: { focusedCharacterId?: string }) {
   const { areas, edges, playerVisibleAreaIds, travelingMarkers, mapBackground } = useWorldStore()
   const characters = useCharacterStore(s => s.characters)
   const structures = useBuildStore(s => s.structures)
   const activeId = useCampaignStore(s => s.activeId)
   const bgUrl = activeId ? loadMapBg(activeId) : null
   const { fitView } = useReactFlow()
+  const character = characters.find(c => c.id === focusedCharacterId)
+  const [openBuildId, setOpenBuildId] = useState<string | null>(null)
+  const [explore, setExplore] = useState<MapLevel | null>(null)
+
+  /** Tapping a build opens it; tapping an area looks inside, if there's anything to see. */
+  const onNodeClick = (_: React.MouseEvent, node: Node) => {
+    if (node.id.startsWith('st:')) { setOpenBuildId(node.id.slice(3)); return }
+    const area = areas.find(a => a.id === node.id)
+    if (!area) return
+    const level: MapLevel = { areaId: area.id, path: [] }
+    const hasInside = placesOnLevel(level, areas, { hideSecretsExcept: [] }).length > 0 || structuresOnLevel(structures, level, areas).length > 0
+    if (hasInside) setExplore(level)
+  }
 
   const { rfNodes, rfEdges } = useMemo(() => {
     const visibleSet = new Set(playerVisibleAreaIds)
@@ -300,8 +313,9 @@ function PlayerMapCanvas() {
     }] : []
 
     // Player builds — shown when free-standing or in an area the players can see.
-    const structureNodes: Node[] = structures
-      .filter(st => !st.areaId || visibleSet.has(st.areaId) || !areas.some(a => a.id === st.areaId))
+    // Builds placed inside an area show when you look inside it.
+    const structureNodes: Node[] = structuresOnLevel(structures, WORLD_LEVEL, areas)
+      .filter(st => structureVisibleToPlayers(st, areas, playerVisibleAreaIds))
       .map(st => ({
         id: 'st:' + st.id,
         type: 'structure',
@@ -416,16 +430,19 @@ function PlayerMapCanvas() {
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.02}
         proOptions={{ hideAttribution: true }}
+        onNodeClick={onNodeClick}
       />
+      {explore && <PlaceExplorer start={explore} character={character} onClose={() => setExplore(null)} />}
+      {openBuildId && <BuildSheet structureId={openBuildId} character={character} onClose={() => setOpenBuildId(null)} />}
     </div>
   )
 }
 
 // ── Public export — wrapped in provider so useReactFlow works inside ─────────
-export function PlayerMap() {
+export function PlayerMap({ focusedCharacterId }: { focusedCharacterId?: string }) {
   return (
     <ReactFlowProvider>
-      <PlayerMapCanvas />
+      <PlayerMapCanvas focusedCharacterId={focusedCharacterId} />
     </ReactFlowProvider>
   )
 }

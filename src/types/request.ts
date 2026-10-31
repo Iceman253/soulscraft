@@ -16,6 +16,10 @@ export type RequestType =
   | 'sell-item'      // sell an on-hand item to a market
   | 'reveal-area'    // reveal area on player map
   | 'skill-approval' // level up + new custom skill awaiting GM approval
+  | 'mine'           // mining trip already rolled by the player; GM awards the blocks
+  | 'build-start'    // player-designed build: icon, purpose and placement
+  | 'build-days'     // days the builders worked on a build
+  | 'build-speedup'  // fewer days needed, with the player's reason
   | 'custom'         // free-text request
 
 export interface PlayerRequest {

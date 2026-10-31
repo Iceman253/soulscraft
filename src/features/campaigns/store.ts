@@ -5,7 +5,7 @@ import { newId } from '../../lib/id'
 import { emptyEconomy } from '../../lib/economyEngine'
 import {
   listCampaigns, createCampaignOnServer, enterCampaign as apiEnter,
-  putCampaign, deleteCampaignOnServer, ApiError,
+  patchCampaign, deleteCampaignOnServer, ApiError,
 } from '../../lib/api'
 import { setImageSyncContext, hydrateImages } from '../../lib/imageCache'
 
@@ -76,7 +76,9 @@ interface CampaignStore {
   exitToSwitcher: () => void
 
   updateCampaignData: (patch: Partial<CampaignData>) => void
-  applyRemote: (data: CampaignData) => void   // called by the WS sync handler
+  applyRemote: (data: CampaignData) => CampaignData   // called by the WS sync handler; returns the merged campaign
+  /** Catch up after being asleep or offline. Null if it couldn't reach the server. */
+  refetchActive: () => Promise<CampaignData | null>
   flushCurrent: () => void
 
   exportCampaign: (id: string) => void
@@ -96,6 +98,9 @@ export function runWithoutSave(fn: () => void) {
 
 // ── Debounced server save ──────────────────────────────────────────────────────
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+// Fields changed here but not yet saved. Saving only these means a device with an
+// out-of-date copy can't overwrite what other devices did to unrelated fields.
+const dirtyKeys = new Set<keyof CampaignData>()
 function scheduleSave(get: () => CampaignStore) {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => { saveTimer = null; flush(get) }, 400)
@@ -103,9 +108,15 @@ function scheduleSave(get: () => CampaignStore) {
 function flush(get: () => CampaignStore) {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
   const { activeId, activeCode, activeCampaign } = get()
-  if (activeId && activeCode != null && activeCampaign) {
-    void putCampaign(activeId, activeCode, activeCampaign).catch(() => { /* offline — retried on next change */ })
-  }
+  if (!activeId || activeCode == null || !activeCampaign || dirtyKeys.size === 0) return
+  const keys = [...dirtyKeys]
+  dirtyKeys.clear()
+  // JSON drops undefined, so a cleared field is sent as null to reach the server.
+  const patch = Object.fromEntries(keys.map(k => [k, activeCampaign[k] ?? null])) as Partial<CampaignData>
+  void patchCampaign(activeId, activeCode, patch).catch(() => {
+    // Offline — keep the fields dirty so the next change retries them.
+    keys.forEach(k => dirtyKeys.add(k))
+  })
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
@@ -162,6 +173,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   async commitStaged() {
     const s = get().staged
     if (!s) return
+    dirtyKeys.clear()   // nothing unsaved can carry over from another campaign
     setImageSyncContext({ campaignId: s.id, code: s.code })
     await hydrateImages(s.id)   // seed the image cache before the app renders
     sessionStorage.setItem(ACTIVE_KEY, JSON.stringify({ id: s.id, code: s.code }))
@@ -186,12 +198,29 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     const current = get().activeCampaign
     if (!current) return
     set({ activeCampaign: { ...current, ...patch } })
-    if (!suppressSave) scheduleSave(get)
+    if (!suppressSave) {
+      (Object.keys(patch) as (keyof CampaignData)[]).forEach(k => dirtyKeys.add(k))
+      scheduleSave(get)
+    }
   },
 
   applyRemote(data) {
-    // A change arrived from another device — adopt it without re-broadcasting.
-    set({ activeCampaign: data })
+    // A change arrived from another device — adopt it without re-broadcasting,
+    // keeping any local change that hasn't been saved yet.
+    const current = get().activeCampaign
+    const unsaved = current ? Object.fromEntries([...dirtyKeys].map(k => [k, current[k]])) : {}
+    const merged = { ...data, ...unsaved } as CampaignData
+    set({ activeCampaign: merged })
+    return merged
+  },
+
+  async refetchActive() {
+    const { activeId, activeCode } = get()
+    if (!activeId || activeCode == null) return null
+    try {
+      const res = await apiEnter(activeId, activeCode)
+      return get().activeId === activeId ? get().applyRemote(res.data) : null
+    } catch { return null }
   },
 
   flushCurrent() { flush(get) },

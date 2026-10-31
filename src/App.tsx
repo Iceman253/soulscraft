@@ -53,7 +53,7 @@ function hydrateAll(d: CampaignData) {
 }
 
 export default function App() {
-  const { activeId, activeCampaign, loading, init, flushCurrent, commitStaged, applyRemote, exitToSwitcher } = useCampaignStore()
+  const { activeId, activeCampaign, loading, init, flushCurrent, commitStaged, applyRemote, refetchActive, exitToSwitcher } = useCampaignStore()
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(loadPlayerRole)
   const isPhone = useIsPhone()
 
@@ -77,17 +77,32 @@ export default function App() {
     connectSync(activeId, async (msg) => {
       if (msg.type === 'update') {
         if (!msg.data) { exitToSwitcher(); return }   // campaign was deleted elsewhere
-        applyRemote(msg.data)
-        hydrateAll(msg.data)
+        hydrateAll(applyRemote(msg.data))
       } else if (msg.type === 'image') {
         await hydrateImages(activeId)
         const d = useCampaignStore.getState().activeCampaign
         if (d) hydrateAll(d)   // nudge a re-render so the new image shows
+      } else if (msg.type === 'reconnected') {
+        const d = await refetchActive()
+        if (d) hydrateAll(d)
       }
     })
     return () => disconnectSync()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId])
+
+  // A phone coming back from sleep may have missed updates (and its socket can
+  // look open when it isn't), so catch up before the player acts on stale data.
+  useEffect(() => {
+    if (!activeId) return
+    const onVisible = async () => {
+      if (document.visibilityState !== 'visible') return
+      const d = await refetchActive()
+      if (d) hydrateAll(d)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [activeId, refetchActive])
 
   // Flush any pending save on tab close.
   useEffect(() => {

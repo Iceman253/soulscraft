@@ -5,6 +5,11 @@ import { useCharacterStore } from '../characters/store'
 import { useQuestStore } from '../quests/store'
 import { useWorldStore } from '../map/store'
 import { useEconomyStore } from '../economy/store'
+import { useBuildStore } from '../building/store'
+import { PixelIcon } from '../building/PixelIcon'
+import { PlaceMap } from '../building/PlaceMap'
+import { parseBuildProposal } from '../../lib/building'
+import { levelOfPlacement, placementLabel } from '../../lib/places'
 import { log } from '../log/store'
 import { CURRENCY_OPTIONS, formatCopper } from '../../lib/currency'
 import { CLASS_ABILITIES } from '../../lib/classAbilities'
@@ -129,6 +134,36 @@ function useExecute() {
         }
         break
       }
+      case 'build-start': {
+        useBuildStore.getState().addStructure(parseBuildProposal(p, charId))
+        break
+      }
+      case 'mine': {
+        useBuildStore.getState().mine({
+          characterId: charId,
+          areaName: typeof p.areaName === 'string' ? p.areaName : undefined,
+          materials: Array.isArray(p.materials) ? p.materials.map(String) : [],
+          requested: Number(p.requested) || 0,
+          total: Number(p.total) || 0,
+          gained: Number(p.gained) || 0,
+          destination: p.destination === 'onHand' ? 'onHand' : 'storage',
+        })
+        break
+      }
+      case 'build-days': {
+        const build = useBuildStore.getState().structures.find(s => s.id === p.structureId)
+        if (!build) return false
+        useBuildStore.getState().addProgress(build.id, { days: Number(p.days) || 0 })
+        log('building', `🔨 ${req.characterName} logged ${p.days} day(s) on ${build.name}.`)
+        break
+      }
+      case 'build-speedup': {
+        const build = useBuildStore.getState().structures.find(s => s.id === p.structureId)
+        if (!build) return false
+        useBuildStore.getState().updateStructure(build.id, { daysRequired: Math.max(0, Number(p.days) || 0) })
+        log('building', `⏱️ ${build.name} now takes ${p.days} day(s), thanks to ${req.characterName}.`)
+        break
+      }
       case 'custom': {
         log('manual', `💬 GM approved request from ${req.characterName}: "${p.text}"`)
         break
@@ -176,6 +211,26 @@ function useExecute() {
   }
 }
 
+// ── Build sign-off: the icon, what it's for and where it goes ─────────────────
+function BuildRequestCard({ req }: { req: PlayerRequest }) {
+  const areas = useWorldStore(s => s.areas)
+  const proposal = parseBuildProposal(req.payload, req.characterId)
+  return (
+    <div className="bg-stone-900/60 border border-stone-700 rounded p-2 space-y-2">
+      <div className="flex gap-2">
+        <div className="shrink-0 rounded border border-stone-600 bg-stone-950 p-1"><PixelIcon icon={proposal.icon} tier={proposal.tier} size={64} /></div>
+        <div className="min-w-0 text-stone-200 leading-snug whitespace-pre-wrap">{proposal.description}</div>
+      </div>
+      <div className="text-stone-400">📍 {placementLabel(proposal, areas)}</div>
+      {req.status === 'pending' && (
+        <div className="h-36 overflow-hidden rounded border border-stone-700">
+          <PlaceMap level={levelOfPlacement(proposal, areas)} pin={{ position: proposal.position, icon: proposal.icon, tier: proposal.tier }} still />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Single request row ────────────────────────────────────────────────────────
 function RequestRow({ req }: { req: PlayerRequest }) {
   const { approveRequest, denyRequest, clearRequest, updateRequestPayload } = useRequestStore()
@@ -188,6 +243,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
     'quest-complete': '✅', 'quest-fail': '❌', 'quest-activate': '🔄',
     currency: '💰', 'buy-item': '🛒', 'sell-item': '🪙',
     'reveal-area': '🗺️', 'skill-approval': '🎓', custom: '💬',
+    mine: '⛏️', 'build-start': '🏗️', 'build-days': '🔨', 'build-speedup': '⏱️',
   }
 
   const isPending = req.status === 'pending'
@@ -196,7 +252,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
   const approve = () => {
     setFailure(null)
     if (execute(req)) approveRequest(req.id)
-    else setFailure('Could not complete — see the session log. Adjust the price or deny.')
+    else setFailure(req.type.startsWith('build-') ? 'That build no longer exists. Deny this request.' : 'Could not complete — see the session log. Adjust the price or deny.')
   }
 
   return (
@@ -267,6 +323,39 @@ function RequestRow({ req }: { req: PlayerRequest }) {
               )}
             </>
           ) : null}
+        </div>
+      )}
+
+      {req.type === 'build-start' && <BuildRequestCard req={req} />}
+
+      {/* Mining — the player has already rolled; the GM only awards the blocks */}
+      {req.type === 'mine' && isPending && (
+        <div className="bg-stone-900/60 border border-stone-700 rounded p-2 space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-stone-500">Blocks gained</span>
+            <input
+              type="number" min={0}
+              value={Number(req.payload.gained) || 0}
+              onChange={e => updateRequestPayload(req.id, { gained: Math.max(0, parseInt(e.target.value) || 0) })}
+              className="w-20 bg-stone-800 border border-stone-600 rounded px-1.5 py-0.5 text-stone-100 text-xs text-right outline-none focus:border-gold/50 font-mono tabular-nums"
+            />
+          </div>
+          {Array.isArray(req.payload.offList) && req.payload.offList.length > 0 && (
+            <div className="text-amber-400 text-[11px] leading-snug">⚠️ Not listed for this area: {(req.payload.offList as string[]).join(', ')}</div>
+          )}
+        </div>
+      )}
+
+      {/* Speed-up — the player's proposal stands unless the GM changes it */}
+      {req.type === 'build-speedup' && isPending && (
+        <div className="bg-stone-900/60 border border-stone-700 rounded p-2 flex items-center justify-between gap-2">
+          <span className="text-stone-500">Days needed</span>
+          <input
+            type="number" min={0}
+            value={Number(req.payload.days) || 0}
+            onChange={e => updateRequestPayload(req.id, { days: Math.max(0, parseFloat(e.target.value) || 0) })}
+            className="w-20 bg-stone-800 border border-stone-600 rounded px-1.5 py-0.5 text-stone-100 text-xs text-right outline-none focus:border-gold/50 font-mono tabular-nums"
+          />
         </div>
       )}
 
@@ -354,7 +443,7 @@ export function GMRequestsPanel({ onClose }: Props) {
       </div>
 
       {/* Body */}
-      <div className="max-h-96 overflow-y-auto p-2.5 space-y-2">
+      <div className="max-h-[70vh] overflow-y-auto p-2.5 space-y-2">
         {requests.length === 0 ? (
           <div className="py-8 text-center text-stone-500 text-xs">
             <div className="text-2xl mb-2">📭</div>

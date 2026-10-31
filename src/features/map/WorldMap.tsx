@@ -22,6 +22,7 @@ import { useBuildStore } from '../building/store'
 import { StructurePanel } from '../building/StructurePanel'
 import { MiningModal } from '../building/MiningModal'
 import { StructureNode } from '../building/StructureNode'
+import { structuresOnLevel, WORLD_LEVEL } from '../../lib/places'
 import type { AreaEdge as AreaEdgeType, Character } from '../../types'
 
 /** A free-floating character token on the world map (dropped on empty canvas). */
@@ -127,15 +128,16 @@ export function WorldMap() {
       draggable: true,
     })), [characters])
 
-  // Player builds (pixel icons), drawn above areas so they can sit on top.
-  const structureNodes: Node[] = useMemo(() => structures.map(st => ({
+  // Player builds (pixel icons), drawn above areas so they can sit on top. Builds
+  // placed inside an area show on its sub-map instead.
+  const structureNodes: Node[] = useMemo(() => structuresOnLevel(structures, WORLD_LEVEL, areas).map(st => ({
     id: 'st:' + st.id,
     type: 'structure',
     position: st.position,
     data: { structure: st, selected: st.id === selectedStructureId },
     draggable: true,
     zIndex: 5,
-  })), [structures, selectedStructureId])
+  })), [structures, areas, selectedStructureId])
 
   // Background as a flow-space node (pans/zooms with the nodes). Draggable only
   // while scaling; otherwise pointer-events off so panning works over it.

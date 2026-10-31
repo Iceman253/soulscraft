@@ -7,7 +7,7 @@ import { useBuildStore } from './store'
 import { rollDiceSpec } from '../../lib/dice'
 import {
   MINING_AMOUNTS, miningDays, TOOL_BONUS, TOOL_TIERS, detectMiningTool, actionOutcome,
-  BLOCK_CARRY_LIMIT, countBlocks, minedStackName, type ToolTier,
+  BLOCK_CARRY_LIMIT, countBlocks, minedStackName, miningTraits, suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
 
 const OUTCOME_TEXT = {
@@ -52,13 +52,13 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const [destination, setDestination] = useState<'storage' | 'onHand'>('storage')
 
   // Default: pre-check Traits that sound like mining (e.g. Deep Dwymir "Miner").
-  const autoTraits = useMemo(() => (character?.traits ?? []).filter(t => /\bmin(e|er|ing)\b|excavat|dig/i.test(t.name)).map(t => t.id), [character])
+  const autoTraits = useMemo(() => miningTraits(character?.traits ?? []).map(t => t.id), [character])
   const checkedTraits = traitIds ?? autoTraits
   const skill = character?.skills.find(s => s.id === skillId)
   const bonus = TOOL_BONUS[effectiveTool] + checkedTraits.length + (skill?.bonus ?? 0) + otherBonus
   const total = roll === '' ? null : roll + bonus
   const outcome = total === null ? null : actionOutcome(total)
-  const awarded = gained ?? (outcome && outcome !== 'failure' ? requested : 0)
+  const awarded = gained ?? (total === null ? 0 : suggestedMiningBlocks(total, requested))
   const offList = materials.filter(m => !areaMaterials.some(a => a.toLowerCase() === m.toLowerCase()))
   const onHandAfter = (character ? countBlocks(character.onHand.items) : 0) + (destination === 'onHand' ? awarded : 0)
 

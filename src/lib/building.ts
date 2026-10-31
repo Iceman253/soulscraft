@@ -1,4 +1,6 @@
-import type { Character, CharacterItem, InventorySection, ProjectTier, Structure } from '../types'
+import type { Character, CharacterItem, InventorySection, ProjectTier, Structure, Trait } from '../types'
+import { rollDiceSpec } from './dice'
+import { normalizeIcon } from './pixelArt'
 
 // Mining, Building and block-carrying rules — Guidebook pp. 7, 81–83 (3.1e).
 
@@ -78,6 +80,23 @@ export function actionOutcome(total: number): ActionOutcome {
   return 'failure'
 }
 
+/** Traits that sound like mining, such as a Deep Dwymir's "Miner" (+1 each). */
+export function miningTraits(traits: Trait[]): Trait[] {
+  return traits.filter(t => /\bmin(e|er|ing)\b|excavat|dig/i.test(t.name))
+}
+
+/** Blocks the GM is offered by default: what was asked for, or nothing on a failure. */
+export function suggestedMiningBlocks(total: number, requested: number): number {
+  return actionOutcome(total) === 'failure' ? 0 : requested
+}
+
+/** A mining action roll: 2d6 + bonuses, minus the missed-rest penalty (1d4 each, p.90). */
+export function rollMiningCheck(bonus: number, missedRests: number, roll: (spec: string) => number = rollDiceSpec) {
+  const dice = roll('2d6')
+  const penalty = missedRests > 0 ? roll(`${missedRests}d4`) : 0
+  return { dice, penalty, total: dice + bonus - penalty }
+}
+
 // ── Building ────────────────────────────────────────────────────────────
 
 export interface ProjectTierInfo {
@@ -142,15 +161,31 @@ export function structureProgress(s: Pick<Structure, 'blocksRequired' | 'blocksC
 
 /** Take up to `amount` blocks from a character, storage first, then on hand.
  *  Stacks that run out are removed. Returns the new sections and how many were taken. */
-export function takeBlocks(
+export function takeBlocks(c: Pick<Character, 'storage' | 'onHand'>, amount: number) {
+  return takeItems(c, amount, i => !!i.isBlock)
+}
+
+const isRedstoneDust = (i: CharacterItem) => !i.isBlock && /redstone/i.test(i.name)
+
+/** Redstone dust a character holds across storage and on hand. */
+export function countRedstone(c: Pick<Character, 'storage' | 'onHand'>): number {
+  return [...c.storage.items, ...c.onHand.items].filter(isRedstoneDust).reduce((sum, i) => sum + (i.quantity ?? 1), 0)
+}
+
+export function takeRedstone(c: Pick<Character, 'storage' | 'onHand'>, amount: number) {
+  return takeItems(c, amount, isRedstoneDust)
+}
+
+function takeItems(
   c: Pick<Character, 'storage' | 'onHand'>,
   amount: number,
+  matches: (item: CharacterItem) => boolean,
 ): { storage: InventorySection; onHand: InventorySection; taken: number } {
   let left = Math.max(0, Math.floor(amount))
   const drain = (section: InventorySection): InventorySection => {
     const items: CharacterItem[] = []
     for (const item of section.items) {
-      if (left > 0 && item.isBlock) {
+      if (left > 0 && matches(item)) {
         const qty = item.quantity ?? 1
         const take = Math.min(qty, left)
         left -= take
@@ -182,6 +217,36 @@ export function addBlocks(section: InventorySection, name: string, quantity: num
 export function minedStackName(materials: string[]): string {
   const m = materials.map(s => s.trim()).filter(Boolean)
   return m.length ? `${m.join(' & ')} blocks` : 'Blocks'
+}
+
+/** Everything a player sends to propose a build. */
+export interface BuildProposal {
+  name: string
+  description: string
+  tier: ProjectTier
+  icon: string
+  areaId: string | null
+  subNodeId?: string | null
+  position: { x: number; y: number }
+  builderIds: string[]
+}
+
+/** Read a build-start request back safely: it has crossed the network, so a bad
+ *  value falls back to something usable and the proposer is always a builder. */
+export function parseBuildProposal(p: Record<string, unknown>, proposerId: string): BuildProposal {
+  const pos = (p.position ?? {}) as { x?: unknown; y?: unknown }
+  const builders = Array.isArray(p.builderIds) ? p.builderIds.filter((id): id is string => typeof id === 'string') : []
+  const tier = String(p.tier)
+  return {
+    name: typeof p.name === 'string' ? p.name : '',
+    description: typeof p.description === 'string' ? p.description : '',
+    tier: PROJECT_TIER_ORDER.includes(tier as ProjectTier) ? tier as ProjectTier : 'small',
+    icon: normalizeIcon(typeof p.icon === 'string' ? p.icon : undefined),
+    areaId: typeof p.areaId === 'string' ? p.areaId : null,
+    ...(typeof p.subNodeId === 'string' || p.subNodeId === null ? { subNodeId: p.subNodeId as string | null } : {}),
+    position: { x: Number(pos.x) || 0, y: Number(pos.y) || 0 },
+    builderIds: [...new Set([proposerId, ...builders])],
+  }
 }
 
 /** Common materials a GM can tag an area with (anything else can be typed in). */

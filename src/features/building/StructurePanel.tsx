@@ -9,6 +9,7 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { PixelIcon } from './PixelIcon'
 import { PixelEditor } from './PixelEditor'
 import { PROJECT_TIERS, PROJECT_TIER_ORDER, projectRequirements, isArchitect, structureProgress, countBlocks } from '../../lib/building'
+import { allPlaceOptions, defaultPositionFor, placeOptionValue } from '../../lib/places'
 import type { ProjectTier } from '../../types'
 
 const inputCls = 'w-full bg-stone-900 border border-stone-600 rounded px-2 py-1.5 text-stone-100 text-sm outline-none focus:border-gold/50'
@@ -37,6 +38,7 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
   const characters = useCharacterStore(st => st.characters)
   const areas = useWorldStore(st => st.areas)
   const living = useMemo(() => characters.filter(c => !c.isDead), [characters])
+  const placeOptions = useMemo(() => allPlaceOptions(areas), [areas])
 
   const [editingIcon, setEditingIcon] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -59,6 +61,13 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
 
   const toggleBuilder = (id: string) =>
     updateStructure(s.id, { builderIds: s.builderIds.includes(id) ? s.builderIds.filter(x => x !== id) : [...s.builderIds, id] })
+
+  const movePlace = (value: string) => {
+    const option = placeOptions.find(o => o.value === value)
+    if (!option) return
+    const { areaId, subNodeId } = option.placement
+    updateStructure(s.id, { areaId, subNodeId, position: defaultPositionFor(option.placement, useBuildStore.getState().structures.filter(x => x.id !== s.id), areas) })
+  }
 
   const give = () => {
     if (!giver) return
@@ -92,9 +101,8 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
           </button>
           <div className="flex-1 min-w-0 space-y-2">
             <input value={s.name} onChange={e => updateStructure(s.id, { name: e.target.value })} className={inputCls} />
-            <select value={s.areaId ?? ''} onChange={e => updateStructure(s.id, { areaId: e.target.value || null })} className={`${inputCls} text-xs`}>
-              <option value="">Free-standing (no area)</option>
-              {areas.map(a => <option key={a.id} value={a.id}>📍 {a.name}</option>)}
+            <select value={placeOptionValue(s)} onChange={e => movePlace(e.target.value)} className={`${inputCls} text-xs`}>
+              {placeOptions.map(o => <option key={o.value} value={o.value}>{'\u00A0\u00A0'.repeat(o.depth)}{o.label}</option>)}
             </select>
           </div>
         </div>

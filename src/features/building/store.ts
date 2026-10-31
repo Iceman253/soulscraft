@@ -6,7 +6,7 @@ import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import {
   PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
-  takeBlocks, addBlocks, minedStackName, miningDays, actionOutcome,
+  takeBlocks, takeRedstone, addBlocks, minedStackName, miningDays, actionOutcome,
 } from '../../lib/building'
 
 export interface MineParams {
@@ -26,7 +26,11 @@ interface BuildStore {
   structures: Structure[]
   hydrate: (structures: Structure[]) => void
 
-  addStructure: (init: { name?: string; tier?: ProjectTier; areaId: string | null; position: { x: number; y: number }; builderIds?: string[] }) => string
+  addStructure: (init: {
+    name?: string; tier?: ProjectTier; description?: string; icon?: string
+    areaId: string | null; subNodeId?: string | null
+    position: { x: number; y: number }; builderIds?: string[]
+  }) => string
   updateStructure: (id: string, patch: Partial<Omit<Structure, 'id'>>) => void
   /** Change tier and reset requirements to the rulebook values for it. */
   setTier: (id: string, tier: ProjectTier) => void
@@ -37,6 +41,10 @@ interface BuildStore {
 
   /** Move up to `amount` blocks from a character's inventory into the build. Returns blocks taken. */
   commitBlocks: (id: string, characterId: string, amount: number) => number
+  /** Same for redstone dust. Returns dust taken. */
+  commitRedstone: (id: string, characterId: string, amount: number) => number
+  /** Add a character to a build's builders. */
+  joinBuild: (id: string, characterId: string) => void
   /** Add progress that doesn't come from a character's inventory (bought, gifted, days worked). */
   addProgress: (id: string, delta: { blocks?: number; redstone?: number; days?: number }) => void
   setCompleted: (id: string, completed: boolean) => void
@@ -74,14 +82,16 @@ export const useBuildStore = create<BuildStore>((set, get) => {
 
     hydrate(structures) { set({ structures }) },
 
-    addStructure({ name, tier = 'small', areaId, position, builderIds = [] }) {
+    addStructure({ name, tier = 'small', description = '', icon, areaId, subNodeId, position, builderIds = [] }) {
       const req = projectRequirements(tier, hasArchitect(builderIds))
       const s: Structure = {
         id: newId(),
         name: name?.trim() || `New ${PROJECT_TIERS[tier].label}`,
         tier,
-        description: '',
+        description,
+        ...(icon ? { icon } : {}),
         areaId,
+        ...(subNodeId !== undefined ? { subNodeId } : {}),
         position,
         builderIds,
         blocksRequired: req.blocks,
@@ -134,6 +144,23 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       mapOne(id, x => withCompletion({ ...x, blocksCommitted: x.blocksCommitted + taken }))
       log('building', `🧱 ${c.name} put ${taken} block${taken === 1 ? '' : 's'} into ${s.name}.`)
       return taken
+    },
+
+    commitRedstone(id, characterId, amount) {
+      const s = get().structures.find(x => x.id === id)
+      const charStore = useCharacterStore.getState()
+      const c = charStore.characters.find(x => x.id === characterId)
+      if (!s || !c || amount <= 0) return 0
+      const { storage, onHand, taken } = takeRedstone(c, amount)
+      if (taken === 0) return 0
+      charStore.updateCharacter(characterId, { storage, onHand })
+      mapOne(id, x => withCompletion({ ...x, redstoneCommitted: x.redstoneCommitted + taken }))
+      log('building', `🔴 ${c.name} put ${taken} redstone dust into ${s.name}.`)
+      return taken
+    },
+
+    joinBuild(id, characterId) {
+      mapOne(id, s => s.builderIds.includes(characterId) ? s : { ...s, builderIds: [...s.builderIds, characterId] })
     },
 
     addProgress(id, { blocks = 0, redstone = 0, days = 0 }) {
