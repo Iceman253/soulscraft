@@ -4,7 +4,9 @@ import {
   allPlaceOptions, characterLevel, defaultPositionFor, findSubPath, levelCrumbs, levelLabel, levelOfPlacement,
   MAX_SUBMAP_DEPTH, nearestArea, placeOptionValue, placementAt, placementLabel, placesOnLevel, sameLevel,
   structuresOnLevel, structureVisibleToPlayers, subNodesOnLevel, WORLD_LEVEL,
+  findMine, mineAt, miningSites,
 } from './places'
+import { AREA_TYPES, SUB_NODE_TYPES } from './world'
 
 const sub = (id: string, subNodes: SubNode[] = [], type: SubNode['type'] = 'other'): SubNode =>
   ({ id, name: id.toUpperCase(), type, position: { x: 1, y: 2 }, subNodes, subEdges: [] })
@@ -160,5 +162,54 @@ describe('GM move-to dropdown', () => {
     expect(defaultPositionFor({ areaId: 'town', subNodeId: null }, [], areas)).toEqual({ x: 200, y: 300 })
     expect(defaultPositionFor({ areaId: 'forest' }, [], areas)).toEqual({ x: 1000, y: 120 })
     expect(defaultPositionFor({ areaId: null }, [], areas)).toEqual({ x: 300, y: 300 })
+  })
+})
+
+describe('mines', () => {
+  it('can be created on the main map and in sub-locations', () => {
+    expect(AREA_TYPES).toContain('mine')
+    expect(SUB_NODE_TYPES).toContain('mine')
+  })
+
+  const shaft = { ...sub('shaft', [], 'mine'), materials: ['Iron'] }
+  const deep = sub('deep', [sub('lode', [], 'mine')])
+  const hidden = sub('hidden', [sub('stash', [], 'mine')], 'secret')
+  const quarry = { ...area('quarry', [], 500), type: 'mine' as const, materials: ['Stone'] }
+  const world = [area('town', [shaft, deep, hidden]), quarry]
+
+  it('lists every area plus mines in sub-locations at any depth', () => {
+    expect(miningSites(world).map(s => s.id)).toEqual(['town', 'shaft', 'lode', 'stash', 'quarry'])
+  })
+
+  it('marks real mines and carries their materials', () => {
+    const sites = miningSites(world)
+    expect(sites.find(s => s.id === 'quarry')).toMatchObject({ isMine: true, materials: ['Stone'], label: 'QUARRY' })
+    expect(sites.find(s => s.id === 'shaft')).toMatchObject({ isMine: true, materials: ['Iron'], label: 'TOWN › SHAFT' })
+    expect(sites.find(s => s.id === 'town')).toMatchObject({ isMine: false })
+    expect(sites.find(s => s.id === 'lode')?.label).toBe('TOWN › DEEP › LODE')
+  })
+
+  it('hides unrevealed areas and anything inside an undiscovered secret', () => {
+    expect(miningSites(world, { visibleAreaIds: ['town'], hideSecretsExcept: [] }).map(s => s.id)).toEqual(['town', 'shaft', 'lode'])
+    expect(miningSites(world, { hideSecretsExcept: ['hidden'] }).map(s => s.id)).toContain('stash')
+  })
+
+  it('only finds places that are mines right now', () => {
+    expect(findMine('shaft', world)?.name).toBe('SHAFT')
+    expect(findMine('quarry', world)?.name).toBe('QUARRY')
+    expect(findMine('town', world)).toBeNull()
+    expect(findMine('gone', world)).toBeNull()
+  })
+
+  it('knows when a character is standing at a mine', () => {
+    expect(mineAt({ locationId: 'town', subLocationId: 'shaft' }, world)?.id).toBe('shaft')
+    expect(mineAt({ locationId: 'quarry', subLocationId: null }, world)?.id).toBe('quarry')
+    expect(mineAt({ locationId: 'town', subLocationId: null }, world)).toBeNull()
+    expect(mineAt({ locationId: null, subLocationId: null }, world)).toBeNull()
+  })
+
+  it('counts anywhere inside a mine as being at it', () => {
+    const nested = [area('town', [{ ...sub('mine', [sub('tunnel')], 'mine') }])]
+    expect(mineAt({ locationId: 'town', subLocationId: 'tunnel' }, nested)?.id).toBe('mine')
   })
 })

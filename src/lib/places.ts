@@ -9,12 +9,12 @@ export const MAX_SUBMAP_DEPTH = 3
 
 export const AREA_TYPE_ICONS: Record<string, string> = {
   settlement: '🏘️', dungeon: '⚔️', wilderness: '🌲',
-  portal: '🌀', stronghold: '🏰', ruins: '🏚️', other: '📍',
+  portal: '🌀', stronghold: '🏰', ruins: '🏚️', mine: '⛏️', other: '📍',
 }
 
 export const SUB_TYPE_ICONS: Record<string, string> = {
   'rest-spot': '🛏️', dungeon: '⚔️', merchant: '🛒',
-  shrine: '✨', hazard: '💀', secret: '🔮', other: '📍',
+  shrine: '✨', hazard: '💀', secret: '🔮', mine: '⛏️', other: '📍',
 }
 
 /** One map: `areaId` null is the world map; `path` walks down the sub-locations. */
@@ -223,4 +223,54 @@ export function defaultPositionFor(
   if (level.areaId) return { x: 200 + structuresOnLevel(structures, level, areas).length * 56, y: 300 }
   const area = target.areaId ? areas.find(a => a.id === target.areaId) : null
   return area ? { x: area.position.x + others * 56, y: area.position.y + 120 } : { x: 300, y: 300 }
+}
+
+/** Somewhere a character can go mining: any area, or a mine in a sub-location. */
+export interface MiningSite {
+  id: string
+  name: string
+  /** With its area, e.g. "Hilltown › Old Shaft". */
+  label: string
+  isMine: boolean
+  materials: string[]
+}
+
+/** Every place to mine, with mine sub-locations at any depth. Filters like the map:
+ *  no unrevealed areas, and nothing inside a secret sub-location the viewer hasn't found. */
+export function miningSites(areas: Area[], filter: PlaceFilter = {}): MiningSite[] {
+  const visible = filter.visibleAreaIds && new Set(filter.visibleAreaIds)
+  const keep = filter.hideSecretsExcept
+  const sites: MiningSite[] = []
+  const walk = (area: Area, nodes: SubNode[], path: string[]) => {
+    for (const n of nodes) {
+      if (n.type === 'secret' && keep && !keep.includes(n.id)) continue
+      const at = [...path, n.id]
+      if (n.type === 'mine') {
+        sites.push({ id: n.id, name: n.name, label: levelLabel({ areaId: area.id, path: at }, areas), isMine: true, materials: n.materials ?? [] })
+      }
+      walk(area, n.subNodes ?? [], at)
+    }
+  }
+  for (const a of areas) {
+    if (visible && !visible.has(a.id)) continue
+    sites.push({ id: a.id, name: a.name, label: a.name, isMine: a.type === 'mine', materials: a.materials ?? [] })
+    walk(a, a.subNodes, [])
+  }
+  return sites
+}
+
+/** The mine with this id, or null if it was deleted or stopped being a mine. */
+export function findMine(placeId: string, areas: Area[]): MiningSite | null {
+  return miningSites(areas).find(s => s.id === placeId && s.isMine) ?? null
+}
+
+/** The mine a character is at: the closest one around where they're standing. */
+export function mineAt(c: Pick<Character, 'locationId' | 'subLocationId'>, areas: Area[]): MiningSite | null {
+  const level = characterLevel(c, areas)
+  if (!level.areaId) return null
+  for (const id of [...level.path].reverse().concat(level.areaId)) {
+    const mine = findMine(id, areas)
+    if (mine) return mine
+  }
+  return null
 }

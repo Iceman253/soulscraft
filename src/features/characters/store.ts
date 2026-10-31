@@ -13,7 +13,7 @@ import { WARRIOR_MANEUVERS, DELVER_EVASIONS, VINDICATOR_VOICES, CLASS_DAMAGE_DIC
 import type { DefaultSkill } from '../../lib/classes'
 import { CLASS_ABILITIES } from '../../lib/classAbilities'
 import { rollDiceSpec } from '../../lib/dice'
-import { BLOCK_CARRY_LIMIT, enforceCarryLimit } from '../../lib/building'
+import { BLOCK_CARRY_LIMIT, carryLimitOf, carryRoom, countBlocks, enforceCarryLimit, moveBlocks, nextCarryLimit } from '../../lib/building'
 
 // ── One-time hydration migration ───────────────────────────────────────
 // Re-syncs combatRoles and appliedEffects on stored abilities + the Discipline
@@ -191,6 +191,12 @@ interface CharacterStore {
   updateStorageItem: (id: string, itemId: string, patch: Partial<CharacterItem>) => void
   removeStorageItem: (id: string, itemId: string) => void
   moveItemToStorage: (id: string, itemId: string) => void
+  /** Set a temporary carry limit, or end it with null. Extra blocks go to storage. */
+  setCarryLimit: (id: string, limit: number | null) => void
+  /** Leave up to `amount` on-hand blocks at a mine. Returns blocks left. */
+  leaveBlocksAtMine: (id: string, placeId: string, amount: number) => number
+  /** Pick up blocks left at a mine, up to the carry limit. Returns blocks taken. */
+  takeBlocksFromMine: (id: string, placeId: string, amount: number) => number
   moveItemToHand: (id: string, itemId: string) => void
   giveItemToCharacter: (fromId: string, itemId: string, fromSection: 'onHand' | 'storage', toId: string) => void
   setCurrency: (id: string, patch: Partial<Character['currency']>) => void
@@ -234,14 +240,19 @@ function resolveDeathAtZero(chars: Character[], id: string): { characters: Chara
   }
 }
 
-/** Apply the 10-block carry limit after anything that can add to on-hand items. */
-function withCarryLimit(chars: Character[], id: string): Character[] {
-  const c = chars.find(x => x.id === id)
-  if (!c) return chars
-  const { onHand, storage, moved } = enforceCarryLimit(c, newId)
-  if (moved === 0) return chars
-  log('character-move', `📦 ${c.name} can only carry ${BLOCK_CARRY_LIMIT} blocks, so ${moved} went to storage.`)
-  return mapChar(chars, id, x => ({ ...x, onHand, storage }))
+/** After anything that changes on-hand items: end a temporary limit if the blocks
+ *  carried just fell below 10, then hold the character to their limit. */
+function settleCarry(before: Character[], after: Character[], id: string): Character[] {
+  const was = before.find(x => x.id === id)
+  const c = after.find(x => x.id === id)
+  if (!was || !c) return after
+  const carryLimit = nextCarryLimit(c.carryLimit, countBlocks(was.onHand.items), countBlocks(c.onHand.items))
+  const ended = carryLimit !== c.carryLimit
+  if (ended) log('character-move', `📦 ${c.name}'s carry limit is back to ${BLOCK_CARRY_LIMIT} blocks.`)
+  const settled = ended ? { ...c, carryLimit } : c
+  const { onHand, storage, moved } = enforceCarryLimit(settled, newId)
+  if (moved > 0) log('character-move', `📦 ${c.name} can only carry ${carryLimitOf(settled)} blocks, so ${moved} went to storage.`)
+  return ended || moved > 0 ? mapChar(after, id, () => ({ ...settled, onHand, storage })) : after
 }
 
 function defaultClassFeatureState(characterClass: string): ClassFeatureState {
@@ -402,7 +413,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   updateCharacter(id, patch) {
-    const characters = mapChar(get().characters, id, c => ({ ...c, ...patch }))
+    const updated = mapChar(get().characters, id, c => ({ ...c, ...patch }))
+    const characters = patch.onHand ? settleCarry(get().characters, updated, id) : updated
     set({ characters })
     save(characters, get().xpLog)
   },
@@ -1122,7 +1134,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   addOnHandItem(id, item) {
     const itemId = newId()
-    const characters = withCarryLimit(mapChar(get().characters, id, c => ({
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, c => ({
       ...c, onHand: { items: [...c.onHand.items, { ...item, id: itemId }] },
     })), id)
     set({ characters }); save(characters, get().xpLog)
@@ -1130,16 +1142,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   updateOnHandItem(id, itemId, patch) {
-    const characters = withCarryLimit(mapChar(get().characters, id, c => ({
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, c => ({
       ...c, onHand: { items: c.onHand.items.map(i => i.id === itemId ? { ...i, ...patch } : i) },
     })), id)
     set({ characters }); save(characters, get().xpLog)
   },
 
   removeOnHandItem(id, itemId) {
-    const characters = mapChar(get().characters, id, c => ({
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, c => ({
       ...c, onHand: { items: c.onHand.items.filter(i => i.id !== itemId) },
-    }))
+    })), id)
     set({ characters }); save(characters, get().xpLog)
   },
 
@@ -1164,8 +1176,48 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     set({ characters }); save(characters, get().xpLog)
   },
 
+  setCarryLimit(id, limit) {
+    const character = get().characters.find(c => c.id === id)
+    if (!character) return
+    const set_ = mapChar(get().characters, id, c => ({ ...c, carryLimit: limit ?? undefined }))
+    const c = set_.find(x => x.id === id)!
+    const { onHand, storage, moved } = enforceCarryLimit(c, newId)
+    const characters = moved > 0 ? mapChar(set_, id, x => ({ ...x, onHand, storage })) : set_
+    set({ characters }); save(characters, get().xpLog)
+    log('character-move', limit
+      ? `📦 ${character.name} can carry up to ${limit} blocks for now. This ends once they're carrying fewer than ${BLOCK_CARRY_LIMIT}.`
+      : `📦 ${character.name}'s carry limit is back to ${BLOCK_CARRY_LIMIT} blocks.`)
+    if (moved > 0) log('character-move', `📦 ${moved} of ${character.name}'s blocks went to storage.`)
+  },
+
+  leaveBlocksAtMine(id, placeId, amount) {
+    const c = get().characters.find(x => x.id === id)
+    if (!c) return 0
+    const stash = c.mineStashes?.[placeId] ?? { items: [] }
+    const { from, to, moved } = moveBlocks(c.onHand, stash, amount, newId)
+    if (moved === 0) return 0
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, x => ({
+      ...x, onHand: from, mineStashes: { ...x.mineStashes, [placeId]: to },
+    })), id)
+    set({ characters }); save(characters, get().xpLog)
+    return moved
+  },
+
+  takeBlocksFromMine(id, placeId, amount) {
+    const c = get().characters.find(x => x.id === id)
+    const stash = c?.mineStashes?.[placeId]
+    if (!c || !stash) return 0
+    const { from, to, moved } = moveBlocks(stash, c.onHand, Math.min(amount, carryRoom(c)), newId)
+    if (moved === 0) return 0
+    const mineStashes = { ...c.mineStashes, [placeId]: from }
+    if (from.items.length === 0) delete mineStashes[placeId]
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, x => ({ ...x, onHand: to, mineStashes })), id)
+    set({ characters }); save(characters, get().xpLog)
+    return moved
+  },
+
   moveItemToStorage(id, itemId) {
-    const characters = mapChar(get().characters, id, c => {
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, c => {
       const item = c.onHand.items.find(i => i.id === itemId)
       if (!item) return c
       return {
@@ -1173,12 +1225,12 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         onHand: { items: c.onHand.items.filter(i => i.id !== itemId) },
         storage: { items: [...c.storage.items, item] },
       }
-    })
+    }), id)
     set({ characters }); save(characters, get().xpLog)
   },
 
   moveItemToHand(id, itemId) {
-    const characters = withCarryLimit(mapChar(get().characters, id, c => {
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, c => {
       const item = c.storage.items.find(i => i.id === itemId)
       if (!item) return c
       return {
@@ -1202,13 +1254,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const newItemId = newId()
     let characters = state.characters
     // Remove from source
-    characters = mapChar(characters, fromId, c =>
+    characters = settleCarry(characters, mapChar(characters, fromId, c =>
       fromSection === 'onHand'
         ? { ...c, onHand: { items: c.onHand.items.filter(i => i.id !== itemId) } }
         : { ...c, storage: { items: c.storage.items.filter(i => i.id !== itemId) } }
-    )
+    ), fromId)
     // Add to target's onHand
-    characters = withCarryLimit(mapChar(characters, toId, c => ({
+    characters = settleCarry(characters, mapChar(characters, toId, c => ({
       ...c, onHand: { items: [...c.onHand.items, { ...item, id: newItemId }] },
     })), toId)
     set({ characters }); save(characters, get().xpLog)

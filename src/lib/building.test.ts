@@ -6,6 +6,7 @@ import {
   actionOutcome, PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
   takeBlocks, addBlocks, minedStackName, miningTraits, suggestedMiningBlocks, rollMiningCheck,
   canBoostWithSd, miningEffectNotes, miningBreakdown, carryRoom, enforceCarryLimit, blocksPerUnit, looksLikeBlocks,
+  carryLimitOf, nextCarryLimit, parseCarryLimit, moveBlocks,
   countRedstone, takeRedstone, parseBuildProposal,
 } from './building'
 
@@ -295,9 +296,10 @@ describe('mining on a phone', () => {
   })
 
   it('knows how many more blocks can be carried', () => {
-    expect(carryRoom([item('Stone', 8, true), item('Torch', 5)])).toBe(2)
-    expect(carryRoom([item('Stone', 10, true)])).toBe(0)
-    expect(carryRoom([item('Stone', 40, true)])).toBe(0)
+    expect(carryRoom({ onHand: { items: [item('Stone', 8, true), item('Torch', 5)] } })).toBe(2)
+    expect(carryRoom({ onHand: { items: [item('Stone', 10, true)] } })).toBe(0)
+    expect(carryRoom({ onHand: { items: [item('Stone', 40, true)] } })).toBe(0)
+    expect(carryRoom({ onHand: { items: [item('Stone', 12, true)] }, carryLimit: 30 })).toBe(18)
   })
 })
 
@@ -333,6 +335,74 @@ describe('enforcing the carry limit', () => {
   it('never touches items that are not blocks', () => {
     const { onHand } = enforceCarryLimit({ onHand: { items: [item('Stone', 11, true), item('Torch', 99)] }, storage: empty }, ids)
     expect(onHand.items).toEqual([item('Stone', 10, true), item('Torch', 99)])
+  })
+})
+
+describe('temporary carry limit', () => {
+  it('defaults to 10', () => {
+    expect(carryLimitOf({})).toBe(10)
+    expect(carryLimitOf({ carryLimit: 25 })).toBe(25)
+  })
+
+  it('lets a raised limit hold more before anything moves to storage', () => {
+    const c = { onHand: { items: [item('Stone', 25, true)] }, storage: { items: [] }, carryLimit: 25 }
+    expect(enforceCarryLimit(c, () => 'id').moved).toBe(0)
+    expect(enforceCarryLimit({ ...c, carryLimit: 20 }, () => 'id').moved).toBe(5)
+  })
+
+  it('ends the moment the blocks carried drop below 10', () => {
+    expect(nextCarryLimit(30, 15, 9)).toBeUndefined()
+    expect(nextCarryLimit(30, 10, 9)).toBeUndefined()
+    expect(nextCarryLimit(30, 30, 0)).toBeUndefined()
+  })
+
+  it('holds at exactly 10 and above', () => {
+    expect(nextCarryLimit(30, 15, 10)).toBe(30)
+    expect(nextCarryLimit(30, 20, 15)).toBe(30)
+    expect(nextCarryLimit(30, 12, 28)).toBe(30)
+  })
+
+  it('does not end for someone who was under 10 when it was granted', () => {
+    expect(nextCarryLimit(30, 3, 3)).toBe(30)
+    expect(nextCarryLimit(30, 3, 8)).toBe(30)
+    expect(nextCarryLimit(30, 8, 3)).toBe(30)
+  })
+
+  it('stays clear with no limit set', () => {
+    expect(nextCarryLimit(undefined, 12, 5)).toBeUndefined()
+  })
+
+  it('only accepts a limit that raises the usual 10', () => {
+    expect(parseCarryLimit(25)).toBe(25)
+    expect(parseCarryLimit('25')).toBe(25)
+    expect(parseCarryLimit(11)).toBe(11)
+    expect(parseCarryLimit(10)).toBeNull()
+    expect(parseCarryLimit(5)).toBeNull()
+    expect(parseCarryLimit('')).toBeNull()
+    expect(parseCarryLimit(undefined)).toBeNull()
+  })
+})
+
+describe('moving blocks between sections', () => {
+  const ids = () => 'new'
+
+  it('moves what it can, stacking by name', () => {
+    const { from, to, moved } = moveBlocks({ items: [item('Stone', 8, true)] }, { items: [item('Stone', 2, true)] }, 5, ids)
+    expect(moved).toBe(5)
+    expect(from.items).toEqual([item('Stone', 3, true)])
+    expect(to.items).toEqual([item('Stone', 7, true)])
+  })
+
+  it('stops at what is there and leaves other items', () => {
+    const { from, to, moved } = moveBlocks({ items: [item('Torch', 4), item('Stone', 3, true)] }, { items: [] }, 50, ids)
+    expect(moved).toBe(3)
+    expect(from.items).toEqual([item('Torch', 4)])
+    expect(to.items).toEqual([{ id: 'new', name: 'Stone', quantity: 3, isBlock: true }])
+  })
+
+  it('moves nothing for a zero or negative amount', () => {
+    expect(moveBlocks({ items: [item('Stone', 3, true)] }, { items: [] }, 0, ids).moved).toBe(0)
+    expect(moveBlocks({ items: [item('Stone', 3, true)] }, { items: [] }, -2, ids).moved).toBe(0)
   })
 })
 

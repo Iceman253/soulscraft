@@ -1,3 +1,4 @@
+import { carryLimitOf } from '../../lib/building'
 import { useState } from 'react'
 import { Send } from 'lucide-react'
 import { useRequestStore, type RequestType } from '../requests/store'
@@ -25,6 +26,7 @@ const REQUEST_TYPES: { type: RequestType; icon: string; label: string; desc: str
   { type: 'level-up',       icon: '🆙', label: 'Level Up',             desc: 'Request a level up'                    },
   { type: 'currency',       icon: '💰', label: 'Request Currency',     desc: 'Ask for coin or gems'                  },
   { type: 'reveal-area',    icon: '🗺️', label: 'Reveal Location',      desc: 'Ask the GM to reveal a map area'       },
+  { type: 'carry-limit',    icon: '📦', label: 'Carry More Blocks',    desc: 'Ask to carry past your limit for a while' },
   { type: 'custom',         icon: '💬', label: 'Custom Request',       desc: 'Send a free-text request to the GM'    },
 ]
 
@@ -78,6 +80,8 @@ export function PlayerRequestModal({ character: c, onClose }: Props) {
       }
       case 'level-up':
         return { payload: {}, label: 'Level up' }
+      case 'carry-limit':
+        return { payload: {}, label: `Asks to carry more than ${carryLimitOf(c)} blocks for a while` }
       case 'effect-add': {
         if (!effectName.trim()) return null
         const needsCount = effectDuration === 'scenes' || effectDuration === 'days'

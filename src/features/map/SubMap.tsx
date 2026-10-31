@@ -14,6 +14,7 @@ import { CHAR_DND } from './AreaNode'
 import { PlaceCharactersModal } from '../../ui/PlaceCharactersModal'
 import type { Area, SubNode, SubEdge, Character } from '../../types'
 import { useBuildStore } from '../building/store'
+import { MaterialsEditor } from './MaterialsEditor'
 import { StructureNode } from '../building/StructureNode'
 import { StructurePanel } from '../building/StructurePanel'
 import { MAX_SUBMAP_DEPTH, SUB_TYPE_ICONS, structuresOnLevel } from '../../lib/places'
@@ -651,6 +652,15 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
                   {SUB_NODE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
+              {selectedNode.type === 'mine' && (
+                <div>
+                  <div className="text-xs text-stone-500 mb-1">Mineable here</div>
+                  <MaterialsEditor
+                    materials={selectedNode.materials ?? []}
+                    onChange={materials => updateSubNode(area.id, selectedNode.id, { materials }, currentPath)}
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-stone-500 mb-1">Notes</label>
                 <textarea

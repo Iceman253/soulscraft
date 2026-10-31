@@ -16,7 +16,7 @@ const REALM_COLORS = {
 }
 
 const TYPE_ICONS: Record<string, string> = {
-  settlement: '🏘️', dungeon: '⚔️', wilderness: '🌲',
+  settlement: '🏘️', dungeon: '⚔️', wilderness: '🌲', mine: '⛏️',
   portal: '🌀', stronghold: '🏰', ruins: '🏚️', other: '📍',
 }
 

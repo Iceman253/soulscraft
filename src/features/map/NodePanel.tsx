@@ -8,8 +8,9 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { AREA_TYPES, REALMS } from '../../lib/constants'
 import { defaultMarketForArea } from '../../lib/economyEngine'
-import { COMMON_MATERIALS, PROJECT_TIERS, structureProgress } from '../../lib/building'
+import { PROJECT_TIERS, structureProgress } from '../../lib/building'
 import { useBuildStore } from '../building/store'
+import { MaterialsEditor } from './MaterialsEditor'
 import { placementLabel } from '../../lib/places'
 import { PixelIcon } from '../building/PixelIcon'
 import type { Area } from '../../types'
@@ -45,13 +46,6 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
   const allStructures = useBuildStore(s => s.structures)
   const structures = useMemo(() => allStructures.filter(s => s.areaId === area.id), [allStructures, area.id])
   const materials = area.materials ?? []
-  const [newMaterial, setNewMaterial] = useState('')
-  const [showMaterialPicker, setShowMaterialPicker] = useState(false)
-  const addMaterial = (m: string) => {
-    const name = m.trim()
-    if (name && !materials.some(x => x.toLowerCase() === name.toLowerCase())) updateArea(area.id, { materials: [...materials, name] })
-  }
-  const removeMaterial = (m: string) => updateArea(area.id, { materials: materials.filter(x => x !== m) })
 
   return (
     <div className="h-full bg-stone-800 border-l border-stone-700 flex flex-col">
@@ -116,36 +110,7 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-1">
-            {materials.map(m => (
-              <span key={m} className="flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-stone-900 border border-stone-600 text-xs text-stone-300">
-                {m}
-                <button onClick={() => removeMaterial(m)} className="text-stone-600 hover:text-red-400" title={`Remove ${m}`}><X size={10} /></button>
-              </span>
-            ))}
-            <button onClick={() => setShowMaterialPicker(v => !v)} className="px-2 py-0.5 rounded-full border border-dashed border-stone-600 text-xs text-stone-500 hover:text-stone-200">
-              {showMaterialPicker ? 'Done' : '+ Material'}
-            </button>
-          </div>
-          {materials.length === 0 && !showMaterialPicker && (
-            <div className="text-[10px] text-stone-600 mt-1">Players can only mine what the place has — a forest for wood, a mineshaft for ore.</div>
-          )}
-          {showMaterialPicker && (
-            <div className="mt-2 space-y-1.5">
-              <div className="flex flex-wrap gap-1">
-                {COMMON_MATERIALS.filter(m => !materials.some(x => x.toLowerCase() === m.toLowerCase())).map(m => (
-                  <button key={m} onClick={() => addMaterial(m)} className="px-1.5 py-0.5 rounded-sm border border-stone-700 text-[11px] text-stone-400 hover:text-gold hover:border-gold/40">{m}</button>
-                ))}
-              </div>
-              <input
-                value={newMaterial}
-                onChange={e => setNewMaterial(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { addMaterial(newMaterial); setNewMaterial('') } }}
-                placeholder="Other material, then Enter"
-                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-100 text-xs outline-hidden focus:border-gold/50"
-              />
-            </div>
-          )}
+          <MaterialsEditor materials={materials} onChange={next => updateArea(area.id, { materials: next })} />
         </div>
 
         {/* Builds */}

@@ -20,6 +20,7 @@ export type RequestType =
   | 'build-start'    // player-designed build: icon, purpose and placement
   | 'build-days'     // days the builders worked on a build
   | 'build-speedup'  // fewer days needed, with the player's reason
+  | 'carry-limit'    // carry more blocks for a while; the GM sets how many
   | 'custom'         // free-text request
 
 export interface PlayerRequest {

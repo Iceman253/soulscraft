@@ -2,13 +2,13 @@
 
 export const AREA_TYPES = [
   'settlement', 'dungeon', 'wilderness', 'portal',
-  'stronghold', 'ruins', 'other',
+  'stronghold', 'ruins', 'mine', 'other',
 ] as const
 
 export const REALMS = ['overworld', 'nether', 'end'] as const
 
 export const SUB_NODE_TYPES = [
-  'rest-spot', 'dungeon', 'merchant', 'shrine', 'hazard', 'secret', 'other',
+  'rest-spot', 'dungeon', 'merchant', 'shrine', 'hazard', 'secret', 'mine', 'other',
 ] as const
 
 export const CREATURE_TYPES = [

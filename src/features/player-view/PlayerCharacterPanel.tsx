@@ -16,7 +16,7 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { computeDef } from '../../lib/armor'
 import { CURRENCY_OPTIONS } from '../../lib/currency'
 import { POTION_RECIPES } from '../../lib/potions'
-import { BLOCK_CARRY_LIMIT, countBlocks } from '../../lib/building'
+import { carryLimitOf, countBlocks } from '../../lib/building'
 import { BuildHub } from '../building/BuildHub'
 import type { CharacterItem, Area } from '../../types'
 
@@ -657,9 +657,9 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
             <div className="flex items-center justify-between mb-2">
               <div className="text-xs font-medium text-stone-400 font-heading tracking-wide">On Hand</div>
               {activeChar.onHand.items.some(i => i.isBlock) && (
-                <div className={`text-xs ${countBlocks(activeChar.onHand.items) > BLOCK_CARRY_LIMIT ? 'text-red-400' : 'text-stone-500'}`}>
-                  {countBlocks(activeChar.onHand.items)}/{BLOCK_CARRY_LIMIT} blocks
-                  {countBlocks(activeChar.onHand.items) > BLOCK_CARRY_LIMIT ? ' — over limit' : ''}
+                <div className={`text-xs ${countBlocks(activeChar.onHand.items) > carryLimitOf(activeChar) ? 'text-red-400' : 'text-stone-500'}`}>
+                  {countBlocks(activeChar.onHand.items)}/{carryLimitOf(activeChar)} blocks
+                  {countBlocks(activeChar.onHand.items) > carryLimitOf(activeChar) ? ' — over limit' : ''}
                 </div>
               )}
             </div>

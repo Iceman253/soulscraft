@@ -5,10 +5,12 @@ import { useCharacterStore } from '../characters/store'
 import { useRequestStore } from '../requests/store'
 import { FullScreen, fieldCls, fieldLabelCls, primaryBtn } from './FullScreen'
 import {
-  BLOCK_CARRY_LIMIT, MINING_AMOUNTS, TOOL_BONUS, actionOutcome, canBoostWithSd, carriedMiningTools, carryRoom,
+  MINING_AMOUNTS, TOOL_BONUS, actionOutcome, canBoostWithSd, carriedMiningTools, carryLimitOf, carryRoom,
   miningBreakdown, miningDays, miningEffectNotes, miningToolOptions, miningTraits,
   resolveMiningTool, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
+import { characterLevel, mineAt, miningSites } from '../../lib/places'
+import type { MiningDestination } from './store'
 import type { Character } from '../../types'
 
 type Step = 'where' | 'amount' | 'roll' | 'sent'
@@ -29,12 +31,18 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const visibleIds = useWorldStore(s => s.playerVisibleAreaIds)
   const addRequest = useRequestStore(s => s.addRequest)
   const adjustSd = useCharacterStore(s => s.adjustSd)
-  const areas = useMemo(() => allAreas.filter(a => visibleIds.includes(a.id)), [allAreas, visibleIds])
+  const sites = useMemo(
+    () => miningSites(allAreas, { visibleAreaIds: visibleIds, hideSecretsExcept: characterLevel(character, allAreas).path }),
+    [allAreas, visibleIds, character],
+  )
 
   const [step, setStep] = useState<Step>('where')
-  const [areaId, setAreaId] = useState(() => areas.some(a => a.id === character.locationId) ? character.locationId! : '')
-  const area = areas.find(a => a.id === areaId)
-  const tagged = area?.materials ?? []
+  const [siteId, setSiteId] = useState(() => {
+    const start = mineAt(character, allAreas)?.id ?? character.locationId
+    return sites.some(s => s.id === start) ? start! : ''
+  })
+  const site = sites.find(s => s.id === siteId)
+  const tagged = site?.materials ?? []
   const [materials, setMaterials] = useState<string[]>([])
   const [custom, setCustom] = useState('')
   const [requested, setRequested] = useState(50)
@@ -44,7 +52,11 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const tool = resolveMiningTool(pickedTool, tools)
   const [skillId, setSkillId] = useState('')
   const [traitIds, setTraitIds] = useState(() => miningTraits(character.traits).map(t => t.id))
-  const [destination, setDestination] = useState<'storage' | 'onHand'>('storage')
+  const [pickedDestination, setDestination] = useState<MiningDestination | null>(null)
+  // At a mine, blocks stay there by default. Anywhere else there's no stash to use.
+  const destination: MiningDestination = pickedDestination && (pickedDestination !== 'mine' || site?.isMine)
+    ? pickedDestination
+    : site?.isMine ? 'mine' : 'storage'
   const [otherBonus, setOtherBonus] = useState(0)
   const [spendSd, setSpendSd] = useState(false)
   const [result, setResult] = useState<{ total: number; breakdown: string; doubleSix: boolean } | null>(null)
@@ -52,7 +64,8 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const skill = character.skills.find(s => s.id === skillId)
   const bonus = TOOL_BONUS[tool] + traitIds.length + (skill?.bonus ?? 0) + otherBonus
   const canBoost = canBoostWithSd(character)
-  const room = carryRoom(character.onHand.items)
+  const room = carryRoom(character)
+  const limit = carryLimitOf(character)
   const overLimit = destination === 'onHand' && requested > room
   const toggleMaterial = (m: string) => setMaterials(cur => cur.includes(m) ? cur.filter(x => x !== m) : [...cur, m])
   const addCustom = () => {
@@ -76,13 +89,14 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
       characterName: character.name,
       type: 'mine',
       payload: {
-        areaName: area?.name, materials, requested, total: check.total,
+        areaName: site?.label, materials, requested, total: check.total,
         gained: suggestedMiningBlocks(check.total, requested), destination,
+        placeId: destination === 'mine' ? site?.id : undefined,
         breakdown, doubleSix: check.doubleSix, overLimit, effects: miningEffectNotes(character),
         // Anything not on the area's list is the GM's call, so flag it on their card.
-        offList: area ? materials.filter(m => !tagged.some(t => t.toLowerCase() === m.toLowerCase())) : [],
+        offList: site ? materials.filter(m => !tagged.some(t => t.toLowerCase() === m.toLowerCase())) : [],
       },
-      label: `Mined ${requested} ${what}${area ? ` at ${area.name}` : ''}: rolled ${check.total} (${OUTCOME[outcome].label})`,
+      label: `Mined ${requested} ${what}${site ? ` at ${site.label}` : ''}: rolled ${check.total} (${OUTCOME[outcome].label})`,
     })
     setResult({ total: check.total, breakdown, doubleSix: check.doubleSix })
     setStep('sent')
@@ -161,10 +175,11 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
           <div>
             <div className={fieldLabelCls}>Put the blocks</div>
             <div className="grid grid-cols-2 gap-2">
+              {site?.isMine && <button onClick={() => setDestination('mine')} className={`col-span-2 ${chip(destination === 'mine')}`}>Leave them at the mine</button>}
               <button onClick={() => setDestination('storage')} className={chip(destination === 'storage')}>In storage</button>
               <button onClick={() => setDestination('onHand')} className={chip(destination === 'onHand')}>On hand</button>
             </div>
-            {overLimit && <div className="mt-2 text-sm text-amber-300">You can carry {BLOCK_CARRY_LIMIT} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest goes`} to storage.</div>}
+            {overLimit && <div className="mt-2 text-sm text-amber-300">You can carry {limit} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest goes`} to storage.</div>}
           </div>
           {character.missedRests > 0 && (
             <div className="rounded-xl border border-orange-700/40 bg-orange-900/20 px-3.5 py-2.5 text-base text-orange-300">
@@ -199,9 +214,9 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
       <div className="space-y-5 p-4">
         <div>
           <label className={fieldLabelCls}>Where</label>
-          <select value={areaId} onChange={e => { setAreaId(e.target.value); setMaterials([]) }} className={fieldCls}>
+          <select value={siteId} onChange={e => { setSiteId(e.target.value); setMaterials([]) }} className={fieldCls}>
             <option value="">Somewhere else</option>
-            {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {sites.map(s => <option key={s.id} value={s.id}>{s.isMine ? `⛏️ ${s.label}` : s.label}</option>)}
           </select>
         </div>
         <div>

@@ -8,7 +8,7 @@ import { useEconomyStore } from '../economy/store'
 import { useBuildStore } from '../building/store'
 import { PixelIcon } from '../building/PixelIcon'
 import { PlaceMap } from '../building/PlaceMap'
-import { actionOutcome, looksLikeBlocks, parseBuildProposal } from '../../lib/building'
+import { BLOCK_CARRY_LIMIT, actionOutcome, countBlocks, looksLikeBlocks, parseBuildProposal, parseCarryLimit } from '../../lib/building'
 import { levelOfPlacement, placementLabel } from '../../lib/places'
 import { log } from '../log/store'
 import { CURRENCY_OPTIONS, formatCopper } from '../../lib/currency'
@@ -146,9 +146,16 @@ function useExecute() {
           requested: Number(p.requested) || 0,
           total: Number(p.total) || 0,
           gained: Number(p.gained) || 0,
-          destination: p.destination === 'onHand' ? 'onHand' : 'storage',
+          destination: p.destination === 'onHand' || p.destination === 'mine' ? p.destination : 'storage',
+          placeId: typeof p.placeId === 'string' ? p.placeId : undefined,
           doubleSix: p.doubleSix === true,
         })
+        break
+      }
+      case 'carry-limit': {
+        const limit = parseCarryLimit(p.limit)
+        if (limit === null) return false
+        useCharacterStore.getState().setCarryLimit(charId, limit)
         break
       }
       case 'build-days': {
@@ -219,6 +226,28 @@ const MINING_OUTCOME_HINT = {
   failure: 'Failure: they fall short, and you add a complication.',
 }
 
+// ── Temporary carry limit: asks the GM how many blocks to allow ────────────────
+function CarryLimitPrompt({ req, onChange }: { req: PlayerRequest; onChange: (limit: number | '') => void }) {
+  const character = useCharacterStore(s => s.characters.find(c => c.id === req.characterId))
+  const value = req.payload.limit
+  return (
+    <div className="bg-stone-900/60 border border-stone-700 rounded-sm p-2 space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-stone-300">Temporary limit</span>
+        <input
+          type="number" min={BLOCK_CARRY_LIMIT + 1} autoFocus placeholder="blocks"
+          value={typeof value === 'number' ? value : ''}
+          onChange={e => onChange(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
+          className="w-20 bg-stone-800 border border-gold/40 rounded-sm px-1.5 py-0.5 text-stone-100 text-xs text-right outline-hidden focus:border-gold font-mono tabular-nums"
+        />
+      </div>
+      <div className="text-stone-500 leading-snug">
+        Carrying {character ? countBlocks(character.onHand.items) : 0} now. Goes back to {BLOCK_CARRY_LIMIT} once they drop below {BLOCK_CARRY_LIMIT}.
+      </div>
+    </div>
+  )
+}
+
 // ── Build sign-off: the icon, what it's for and where it goes ─────────────────
 function BuildRequestCard({ req }: { req: PlayerRequest }) {
   const areas = useWorldStore(s => s.areas)
@@ -251,7 +280,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
     'quest-complete': '✅', 'quest-fail': '❌', 'quest-activate': '🔄',
     currency: '💰', 'buy-item': '🛒', 'sell-item': '🪙',
     'reveal-area': '🗺️', 'skill-approval': '🎓', custom: '💬',
-    mine: '⛏️', 'build-start': '🏗️', 'build-days': '🔨', 'build-speedup': '⏱️',
+    mine: '⛏️', 'build-start': '🏗️', 'build-days': '🔨', 'build-speedup': '⏱️', 'carry-limit': '📦',
   }
 
   const isPending = req.status === 'pending'
@@ -260,6 +289,7 @@ function RequestRow({ req }: { req: PlayerRequest }) {
   const approve = () => {
     setFailure(null)
     if (execute(req)) approveRequest(req.id)
+    else if (req.type === 'carry-limit') setFailure(`Enter a limit above ${BLOCK_CARRY_LIMIT} first, or deny this request.`)
     else setFailure(req.type.startsWith('build-') ? 'That build no longer exists. Deny this request.' : 'Could not complete — see the session log. Adjust the price or deny.')
   }
 
@@ -360,6 +390,9 @@ function RequestRow({ req }: { req: PlayerRequest }) {
           {req.payload.doubleSix === true && <div className="text-gold text-[11px] font-semibold">⭐ Double 6s: approving gives +1 XP</div>}
         </div>
       )}
+
+      {/* Carry limit — the GM decides the number; it isn't prefilled */}
+      {req.type === 'carry-limit' && isPending && <CarryLimitPrompt req={req} onChange={limit => updateRequestPayload(req.id, { limit })} />}
 
       {/* Speed-up — the player's proposal stands unless the GM changes it */}
       {req.type === 'build-speedup' && isPending && (

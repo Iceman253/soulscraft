@@ -6,12 +6,13 @@ import { useRequestStore } from '../requests/store'
 import { PixelIcon } from './PixelIcon'
 import { BuildSheet } from './BuildSheet'
 import { MineFlow } from './MineFlow'
+import { MineStash } from './MineStash'
 import { StartBuildFlow } from './StartBuildFlow'
-import { BLOCK_CARRY_LIMIT, PROJECT_TIERS, countBlocks, structureProgress } from '../../lib/building'
+import { BLOCK_CARRY_LIMIT, PROJECT_TIERS, carryLimitOf, countBlocks, structureProgress } from '../../lib/building'
 import { placementLabel } from '../../lib/places'
 import type { Character, PlayerRequest, RequestType } from '../../types'
 
-const BUILD_REQUESTS: RequestType[] = ['mine', 'build-start', 'build-days', 'build-speedup']
+const BUILD_REQUESTS: RequestType[] = ['mine', 'build-start', 'build-days', 'build-speedup', 'carry-limit']
 
 /** A player's whole building life: blocks, mining, new builds and the state of what
  *  they've sent the GM. Shown as a phone tab and in the desktop player panel. */
@@ -20,6 +21,7 @@ export function BuildHub({ character }: { character: Character }) {
   const areas = useWorldStore(s => s.areas)
   const allRequests = useRequestStore(s => s.requests)
   const clearRequest = useRequestStore(s => s.clearRequest)
+  const addRequest = useRequestStore(s => s.addRequest)
   const structures = useMemo(() => allStructures.filter(s => s.builderIds.includes(character.id)), [allStructures, character.id])
   const requests = useMemo(
     () => allRequests.filter(r => r.characterId === character.id && BUILD_REQUESTS.includes(r.type) && r.status !== 'approved'),
@@ -32,7 +34,16 @@ export function BuildHub({ character }: { character: Character }) {
 
   const onHand = countBlocks(character.onHand.items)
   const stored = countBlocks(character.storage.items)
-  const overLimit = onHand > BLOCK_CARRY_LIMIT
+  const limit = carryLimitOf(character)
+  const overLimit = onHand > limit
+  const askedForMore = requests.some(r => r.type === 'carry-limit' && r.status === 'pending')
+  const askForMore = () => addRequest({
+    characterId: character.id,
+    characterName: character.name,
+    type: 'carry-limit',
+    payload: {},
+    label: `Asks to carry more than ${limit} blocks for a while`,
+  })
 
   return (
     <>
@@ -40,14 +51,18 @@ export function BuildHub({ character }: { character: Character }) {
         <div className="grid grid-cols-2 gap-2.5">
           <div className={`rounded-xl border px-3.5 py-2.5 ${overLimit ? 'border-amber-700/60 bg-amber-900/20' : 'border-stone-700 bg-stone-900'}`}>
             <div className="text-sm text-stone-500">On hand</div>
-            <div className={`font-mono text-xl font-bold ${overLimit ? 'text-amber-300' : 'text-stone-100'}`}>{onHand}<span className="text-base text-stone-500"> / {BLOCK_CARRY_LIMIT}</span></div>
+            <div className={`font-mono text-xl font-bold ${overLimit ? 'text-amber-300' : 'text-stone-100'}`}>{onHand}<span className="text-base text-stone-500"> / {limit}</span></div>
+            {character.carryLimit !== undefined && <div className="text-xs text-teal-300">Temporary, until you're under {BLOCK_CARRY_LIMIT}</div>}
           </div>
           <div className="rounded-xl border border-stone-700 bg-stone-900 px-3.5 py-2.5">
             <div className="text-sm text-stone-500">In storage</div>
             <div className="font-mono text-xl font-bold text-stone-100">{stored}</div>
           </div>
         </div>
-        {overLimit && <div className="text-sm text-amber-300">⚠️ You're carrying more than the {BLOCK_CARRY_LIMIT}-block limit.</div>}
+        {overLimit && <div className="text-sm text-amber-300">⚠️ You're carrying more than your {limit}-block limit.</div>}
+        {onHand >= limit && !askedForMore && (
+          <button onClick={askForMore} className="w-full py-1 text-base text-teal-300">Ask the GM to carry more for a while</button>
+        )}
 
         <div className="grid grid-cols-2 gap-2.5">
           <button onClick={() => setMining(true)} className="flex items-center justify-center gap-2 rounded-xl border border-stone-600 bg-stone-800 py-3.5 text-base font-semibold text-stone-100 active:border-gold/60 hover:border-gold/60">
@@ -57,6 +72,8 @@ export function BuildHub({ character }: { character: Character }) {
             <Hammer size={19} /> Start a Build
           </button>
         </div>
+
+        <MineStash character={character} />
 
         {requests.length > 0 && (
           <div className="space-y-2">

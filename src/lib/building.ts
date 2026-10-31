@@ -171,18 +171,36 @@ export function miningBreakdown(parts: {
   return bits.join(' ')
 }
 
-/** Blocks a character can still pick up before reaching the carry limit (p.7). */
-export function carryRoom(items: CharacterItem[]): number {
-  return Math.max(0, BLOCK_CARRY_LIMIT - countBlocks(items))
+/** A character's carry limit right now: 10, unless the GM granted a temporary raise. */
+export function carryLimitOf(c: Pick<Character, 'carryLimit'>): number {
+  return c.carryLimit ?? BLOCK_CARRY_LIMIT
 }
 
-/** Hold a character to the 10-block carry limit (p.7): anything past it goes to
- *  storage, which has no limit, so blocks are never lost. The newest stacks go first. */
+/** Blocks a character can still pick up before reaching their carry limit (p.7). */
+export function carryRoom(c: Pick<Character, 'onHand' | 'carryLimit'>): number {
+  return Math.max(0, carryLimitOf(c) - countBlocks(c.onHand.items))
+}
+
+/** A temporary limit ends the moment the blocks carried fall below the usual 10.
+ *  Only a drop from 10 or more counts, so a raise granted to someone holding 3 blocks
+ *  doesn't end before they've used it. */
+export function nextCarryLimit(limit: number | undefined, before: number, after: number): number | undefined {
+  return before >= BLOCK_CARRY_LIMIT && after < BLOCK_CARRY_LIMIT ? undefined : limit
+}
+
+/** A limit the GM entered, or null if it wouldn't raise the usual 10. */
+export function parseCarryLimit(value: unknown): number | null {
+  const n = Math.floor(Number(value))
+  return Number.isFinite(n) && n > BLOCK_CARRY_LIMIT ? n : null
+}
+
+/** Hold a character to their carry limit (p.7): anything past it goes to storage,
+ *  which has no limit, so blocks are never lost. The newest stacks go first. */
 export function enforceCarryLimit(
-  c: Pick<Character, 'onHand' | 'storage'>,
+  c: Pick<Character, 'onHand' | 'storage' | 'carryLimit'>,
   newId: () => string,
 ): { onHand: InventorySection; storage: InventorySection; moved: number } {
-  const moved = Math.max(0, countBlocks(c.onHand.items) - BLOCK_CARRY_LIMIT)
+  const moved = Math.max(0, countBlocks(c.onHand.items) - carryLimitOf(c))
   if (moved === 0) return { onHand: c.onHand, storage: c.storage, moved }
   const items = [...c.onHand.items]
   let storage = c.storage
@@ -328,6 +346,26 @@ export function addBlocks(section: InventorySection, name: string, quantity: num
     return { items: section.items.map(i => i === existing ? { ...i, quantity: (i.quantity ?? 1) + quantity } : i) }
   }
   return { items: [...section.items, { id: newId(), name: name.trim(), quantity, isBlock: true }] }
+}
+
+/** Move up to `amount` blocks between two sections, newest stacks first, stacking by
+ *  name. Other items stay put. Returns how many actually moved. */
+export function moveBlocks(from: InventorySection, to: InventorySection, amount: number, newId: () => string) {
+  const items = [...from.items]
+  let dest = to
+  let left = Math.max(0, Math.floor(amount))
+  const wanted = left
+  for (let i = items.length - 1; i >= 0 && left > 0; i--) {
+    const item = items[i]
+    if (!item.isBlock) continue
+    const qty = item.quantity ?? 1
+    const take = Math.min(qty, left)
+    left -= take
+    dest = addBlocks(dest, item.name, take, newId)
+    if (take === qty) items.splice(i, 1)
+    else items[i] = { ...item, quantity: qty - take }
+  }
+  return { from: { items }, to: dest, moved: wanted - left }
 }
 
 /** Display name for a stack of mined materials, e.g. ["Stone", "Iron"] → "Stone & Iron blocks". */

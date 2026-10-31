@@ -212,6 +212,11 @@ export interface Character {
   mapPos?: { x: number; y: number }
   currency: Currency
   onHand: InventorySection
+  /** A temporary carry limit the GM granted, above the usual 10 blocks. Clears itself
+   *  once the blocks on hand drop below 10 (see nextCarryLimit). */
+  carryLimit?: number
+  /** Blocks left at mines to come back for, by the mine's area or sub-location id. */
+  mineStashes?: Record<string, InventorySection>
   storage: InventorySection
   rations: number
   notes: string

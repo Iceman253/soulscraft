@@ -3,10 +3,11 @@ import { Dices } from 'lucide-react'
 import { Modal } from '../../ui/Modal'
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
-import { useBuildStore } from './store'
+import { useBuildStore, type MiningDestination } from './store'
+import { mineAt, miningSites } from '../../lib/places'
 import {
   MINING_AMOUNTS, miningDays, TOOL_BONUS, carriedMiningTools, miningToolOptions, resolveMiningTool, actionOutcome,
-  BLOCK_CARRY_LIMIT, carryRoom, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
+  carryLimitOf, carryRoom, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
 } from '../../lib/building'
 
 const OUTCOME_TEXT = {
@@ -33,8 +34,9 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
     ?? living.find(c => initialAreaId && c.locationId === initialAreaId)?.id
     ?? living[0]?.id ?? '')
   const character = living.find(c => c.id === characterId)
-  const [areaId, setAreaId] = useState(() => initialAreaId ?? character?.locationId ?? '')
-  const area = areas.find(a => a.id === areaId)
+  const sites = useMemo(() => miningSites(areas), [areas])
+  const [areaId, setAreaId] = useState(() => initialAreaId ?? (character && mineAt(character, areas)?.id) ?? character?.locationId ?? '')
+  const area = sites.find(s => s.id === areaId)
   const areaMaterials = area?.materials ?? []
 
   const [materials, setMaterials] = useState<string[]>([])
@@ -49,7 +51,10 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const [roll, setRoll] = useState<number | ''>('')
   const [penalty, setPenalty] = useState(0)   // missed-rest penalty, rolled with the dice
   const [gained, setGained] = useState<number | null>(null)
-  const [destination, setDestination] = useState<'storage' | 'onHand'>('storage')
+  const [pickedDestination, setDestination] = useState<MiningDestination | null>(null)
+  const destination: MiningDestination = pickedDestination && (pickedDestination !== 'mine' || area?.isMine)
+    ? pickedDestination
+    : area?.isMine ? 'mine' : 'storage'
 
   // Default: pre-check Traits that sound like mining (e.g. Deep Dwymir "Miner").
   const autoTraits = useMemo(() => miningTraits(character?.traits ?? []).map(t => t.id), [character])
@@ -60,7 +65,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const outcome = total === null ? null : actionOutcome(total)
   const awarded = gained ?? (total === null ? 0 : suggestedMiningBlocks(total, requested))
   const offList = materials.filter(m => !areaMaterials.some(a => a.toLowerCase() === m.toLowerCase()))
-  const room = character ? carryRoom(character.onHand.items) : 0
+  const room = character ? carryRoom(character) : 0
 
   const toggleMaterial = (m: string) => setMaterials(cur => cur.includes(m) ? cur.filter(x => x !== m) : [...cur, m])
   const addCustom = () => {
@@ -73,12 +78,12 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
     setCharacterId(id)
     setTool(null); setSkillId(''); setTraitIds(null); setPenalty(0)
     const c = living.find(x => x.id === id)
-    if (c?.locationId && !initialAreaId) setAreaId(c.locationId)
+    if (c?.locationId && !initialAreaId) setAreaId(mineAt(c, areas)?.id ?? c.locationId)
   }
 
   const apply = () => {
     if (!character || total === null) return
-    mine({ characterId: character.id, areaName: area?.name, materials, requested, total, gained: awarded, destination, doubleSix: roll === 12 })
+    mine({ characterId: character.id, areaName: area?.label, materials, requested, total, gained: awarded, destination, placeId: destination === 'mine' ? area?.id : undefined, doubleSix: roll === 12 })
     onClose()
   }
 
@@ -100,7 +105,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
             <label className={labelCls}>Where</label>
             <select value={areaId} onChange={e => { setAreaId(e.target.value); setMaterials([]) }} className={inputCls}>
               <option value="">— somewhere unmapped —</option>
-              {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {sites.map(s => <option key={s.id} value={s.id}>{s.isMine ? `⛏️ ${s.label}` : s.label}</option>)}
             </select>
           </div>
         </div>
@@ -229,14 +234,15 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
             </div>
             <div>
               <label className={labelCls}>Put them</label>
-              <select value={destination} onChange={e => setDestination(e.target.value as 'storage' | 'onHand')} className={inputCls}>
+              <select value={destination} onChange={e => setDestination(e.target.value as MiningDestination)} className={inputCls}>
+                {area?.isMine && <option value="mine">Left at the mine</option>}
                 <option value="storage">In storage (chests)</option>
                 <option value="onHand">On hand</option>
               </select>
             </div>
             {destination === 'onHand' && awarded > room && (
               <div className="col-span-2 text-[11px] text-amber-400">
-                {character?.name} can carry {BLOCK_CARRY_LIMIT} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest goes`} to storage.
+                {character?.name} can carry {character ? carryLimitOf(character) : 0} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest goes`} to storage.
               </div>
             )}
             {awarded > 0 && (

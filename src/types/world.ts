@@ -1,7 +1,7 @@
 // ── World ──────────────────────────────────────────────────────────────
-export type AreaType = 'settlement' | 'dungeon' | 'wilderness' | 'portal' | 'stronghold' | 'ruins' | 'other'
+export type AreaType = 'settlement' | 'dungeon' | 'wilderness' | 'portal' | 'stronghold' | 'ruins' | 'mine' | 'other'
 export type Realm = 'overworld' | 'nether' | 'end'
-export type SubNodeType = 'rest-spot' | 'dungeon' | 'merchant' | 'shrine' | 'hazard' | 'secret' | 'other'
+export type SubNodeType = 'rest-spot' | 'dungeon' | 'merchant' | 'shrine' | 'hazard' | 'secret' | 'mine' | 'other'
 
 export interface SubNode {
   id: string
@@ -11,6 +11,8 @@ export interface SubNode {
   position: { x: number; y: number }
   subNodes?: SubNode[]
   subEdges?: SubEdge[]
+  /** What can be mined here, for a 'mine' sub-location (see Area.materials). */
+  materials?: string[]
 }
 
 export interface SubEdge {

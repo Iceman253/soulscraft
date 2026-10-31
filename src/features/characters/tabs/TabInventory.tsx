@@ -3,7 +3,7 @@ import { useCharacterStore } from '../store'
 import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, Sword, Shield, Gift, Package } from 'lucide-react'
 import { fileToDataUrl, saveItemImage, loadItemImage } from '../../../lib/imageCache'
 import { CURRENCY_OPTIONS } from '../../../lib/currency'
-import { BLOCK_CARRY_LIMIT, countBlocks } from '../../../lib/building'
+import { BLOCK_CARRY_LIMIT, carryLimitOf, countBlocks } from '../../../lib/building'
 import type { Character, CharacterItem } from '../../../types'
 
 // Rulebook equipment packs (pp. 91) — quick-fill starting gear
@@ -47,7 +47,7 @@ export function TabInventory({ character: c }: TabInventoryProps) {
   const {
     addOnHandItem, updateOnHandItem, removeOnHandItem,
     addStorageItem, updateStorageItem, removeStorageItem,
-    moveItemToStorage, moveItemToHand, setCurrency, setRations,
+    moveItemToStorage, moveItemToHand, setCurrency, setRations, setCarryLimit,
     giveItemToCharacter,
   } = useCharacterStore()
   const [showPacks, setShowPacks] = useState(false)
@@ -60,7 +60,8 @@ export function TabInventory({ character: c }: TabInventoryProps) {
   }
 
   const blockCount = countBlocks(c.onHand.items)
-  const blocksFull = blockCount >= BLOCK_CARRY_LIMIT
+  const blockLimit = carryLimitOf(c)
+  const blocksFull = blockCount >= blockLimit
 
   return (
     <div className="p-4 space-y-5">
@@ -128,8 +129,15 @@ export function TabInventory({ character: c }: TabInventoryProps) {
         moveIcon={<ArrowDownToLine size={12} />}
         moveTitle="Move to Storage"
         blockCount={blockCount}
+        blockLimit={blockLimit}
         blocksFull={blocksFull}
       />
+      {c.carryLimit !== undefined && (
+        <div className="-mt-3 flex items-center justify-between text-xs text-teal-300">
+          <span>Temporary limit, until they drop below {BLOCK_CARRY_LIMIT} blocks.</span>
+          <button onClick={() => setCarryLimit(c.id, null)} className="text-stone-400 hover:text-stone-200">End now</button>
+        </div>
+      )}
 
       {/* Storage */}
       <ItemList
@@ -148,7 +156,7 @@ export function TabInventory({ character: c }: TabInventoryProps) {
   )
 }
 
-function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onGive, moveIcon, moveTitle, blockCount, blocksFull }: {
+function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onGive, moveIcon, moveTitle, blockCount, blockLimit, blocksFull }: {
   title: string
   items: CharacterItem[]
   charId: string
@@ -160,6 +168,7 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
   moveIcon: React.ReactNode
   moveTitle: string
   blockCount?: number
+  blockLimit?: number
   blocksFull?: boolean
 }) {
   return (
@@ -173,7 +182,7 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
                 ? 'bg-red-900/40 border-red-700 text-red-400 font-bold'
                 : 'bg-stone-800 border-stone-700 text-stone-500'
             }`}>
-              📦 {blockCount}/{BLOCK_CARRY_LIMIT} blocks{blockCount > BLOCK_CARRY_LIMIT ? ' — OVER LIMIT' : blocksFull ? ' — FULL' : ''}
+              📦 {blockCount}/{blockLimit} blocks{blockCount > (blockLimit ?? BLOCK_CARRY_LIMIT) ? ' — OVER LIMIT' : blocksFull ? ' — FULL' : ''}
             </span>
           )}
         </div>

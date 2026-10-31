@@ -9,6 +9,8 @@ import {
   takeBlocks, takeRedstone, addBlocks, enforceCarryLimit, minedStackName, miningDays, actionOutcome,
 } from '../../lib/building'
 
+export type MiningDestination = 'storage' | 'onHand' | 'mine'
+
 export interface MineParams {
   characterId: string
   areaName?: string
@@ -19,7 +21,9 @@ export interface MineParams {
   total: number
   /** Blocks the GM awards after narrating the outcome. */
   gained: number
-  destination: 'storage' | 'onHand'
+  destination: MiningDestination
+  /** The mine to leave them at, when destination is 'mine'. */
+  placeId?: string
   /** Rolled double 6s: worth 1 XP on any action roll (p.8). */
   doubleSix?: boolean
 }
@@ -65,6 +69,13 @@ function hasArchitect(builderIds: string[]): boolean {
     const c = chars.find(x => x.id === id)
     return !!c && isArchitect(c)
   })
+}
+
+/** Where a mining trip's blocks ended up, for the session log. */
+function minedWhere(destination: MiningDestination, qty: number, overflow: number, place?: string): string {
+  if (destination === 'mine') return ` (left at ${place ?? 'the mine'})`
+  if (destination === 'storage' || overflow >= qty) return ' (to storage)'
+  return overflow > 0 ? ` (${qty - overflow} on hand, ${overflow} to storage)` : ' (on hand)'
 }
 
 /** Mark a structure complete (and log it) once every requirement is met. */
@@ -189,7 +200,7 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       })
     },
 
-    mine({ characterId, areaName, materials, requested, total, gained, destination, doubleSix }) {
+    mine({ characterId, areaName, materials, requested, total, gained, destination, placeId, doubleSix }) {
       const charStore = useCharacterStore.getState()
       const c = charStore.characters.find(x => x.id === characterId)
       if (!c) return
@@ -201,6 +212,9 @@ export const useBuildStore = create<BuildStore>((set, get) => {
           const { onHand, storage, moved } = enforceCarryLimit({ ...c, onHand: addBlocks(c.onHand, name, qty, newId) }, newId)
           overflow = moved
           charStore.updateCharacter(characterId, { onHand, storage })
+        } else if (destination === 'mine' && placeId) {
+          const stash = addBlocks(c.mineStashes?.[placeId] ?? { items: [] }, name, qty, newId)
+          charStore.updateCharacter(characterId, { mineStashes: { ...c.mineStashes, [placeId]: stash } })
         } else {
           charStore.updateCharacter(characterId, { storage: addBlocks(c.storage, name, qty, newId) })
         }
@@ -212,7 +226,7 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       log('building',
         `⛏️ ${c.name} mined for ${requested} blocks of ${what}${where} — rolled ${total} (${outcome}), ` +
         `${days} day${days === 1 ? '' : 's'}: gained ${qty} block${qty === 1 ? '' : 's'}` +
-        `${qty > 0 ? (destination === 'storage' || overflow >= qty ? ' (to storage)' : overflow > 0 ? ` (${qty - overflow} on hand, ${overflow} to storage)` : ' (on hand)') : ''}.`)
+        `${qty > 0 ? minedWhere(destination === 'mine' && placeId ? 'mine' : destination, qty, overflow, areaName) : ''}.`)
       if (doubleSix) {
         charStore.awardXp(characterId, 1, 'double-six', 'Double 6 while mining')
         log('building', `⭐ ${c.name} rolled double 6s mining: +1 XP.`)
