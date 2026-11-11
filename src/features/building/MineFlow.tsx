@@ -52,11 +52,8 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const tool = resolveMiningTool(pickedTool, tools, materials)
   const [skillId, setSkillId] = useState('')
   const [traitIds, setTraitIds] = useState(() => miningTraits(character.traits).map(t => t.id))
-  const [pickedDestination, setDestination] = useState<MiningDestination | null>(null)
-  // At a mine, blocks stay there by default. Anywhere else there's no stash to use.
-  const destination: MiningDestination = pickedDestination && (pickedDestination !== 'mine' || site?.isMine)
-    ? pickedDestination
-    : site?.isMine ? 'mine' : 'storage'
+  // Blocks are left where they were mined unless they're carried off (p.7).
+  const [destination, setDestination] = useState<MiningDestination>('storage')
   const [otherBonus, setOtherBonus] = useState(0)
   const [spendSd, setSpendSd] = useState(false)
   const [result, setResult] = useState<{ total: number; breakdown: string; doubleSix: boolean } | null>(null)
@@ -91,7 +88,7 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
       payload: {
         areaName: site?.label, materials, requested, total: check.total,
         gained: suggestedMiningBlocks(check.total, requested), destination,
-        placeId: destination === 'mine' ? site?.id : undefined,
+        placeId: site?.id,
         breakdown, doubleSix: check.doubleSix, overLimit, effects: miningEffectNotes(character),
         // Anything not on the area's list is the GM's call, so flag it on their card.
         offList: site ? materials.filter(m => !tagged.some(t => t.toLowerCase() === m.toLowerCase())) : [],
@@ -175,11 +172,10 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
           <div>
             <div className={fieldLabelCls}>Put the blocks</div>
             <div className="grid grid-cols-2 gap-2">
-              {site?.isMine && <button onClick={() => setDestination('mine')} className={`col-span-2 ${chip(destination === 'mine')}`}>Leave them at the mine</button>}
-              <button onClick={() => setDestination('storage')} className={chip(destination === 'storage')}>In storage</button>
+              <button onClick={() => setDestination('storage')} className={chip(destination === 'storage')}>Leave them here</button>
               <button onClick={() => setDestination('onHand')} className={chip(destination === 'onHand')}>On hand</button>
             </div>
-            {overLimit && <div className="mt-2 text-sm text-amber-300">You can carry {limit} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest goes`} to storage.</div>}
+            {overLimit && <div className="mt-2 text-sm text-amber-300">You can carry {limit} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest stays`} here.</div>}
           </div>
           {character.missedRests > 0 && (
             <div className="rounded-xl border border-orange-700/40 bg-orange-900/20 px-3.5 py-2.5 text-base text-orange-300">

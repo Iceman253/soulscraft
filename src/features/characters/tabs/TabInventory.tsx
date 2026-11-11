@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useCharacterStore } from '../store'
+import { useWorldStore } from '../../map/store'
+import { useStorageReach } from '../useStorageReach'
 import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, Sword, Shield, Gift, Package } from 'lucide-react'
 import { fileToDataUrl, saveItemImage, loadItemImage } from '../../../lib/imageCache'
 import { CURRENCY_OPTIONS } from '../../../lib/currency'
 import { BLOCK_CARRY_LIMIT, carryLimitOf, countBlocks } from '../../../lib/building'
+import { allPlaceOptions } from '../../../lib/places'
+import { ENDER, carriesEnderChest, partyOf, stashOf, storeLabel, type StoreKey } from '../../../lib/stashes'
 import type { Character, CharacterItem } from '../../../types'
 
 // Rulebook equipment packs (pp. 91) — quick-fill starting gear
@@ -46,10 +50,19 @@ interface TabInventoryProps { character: Character }
 export function TabInventory({ character: c }: TabInventoryProps) {
   const {
     addOnHandItem, updateOnHandItem, removeOnHandItem,
-    addStorageItem, updateStorageItem, removeStorageItem,
-    moveItemToStorage, moveItemToHand, setCurrency, setRations, setCarryLimit,
+    addStoredItem, updateStoredItem, removeStoredItem,
+    moveItem, moveStore, setCurrency, setRations, setCarryLimit,
     giveItemToCharacter,
   } = useCharacterStore()
+  const characters = useCharacterStore(s => s.characters)
+  const areas = useWorldStore(s => s.areas)
+  const reach = useStorageReach(c)
+  const places = useMemo(() => allPlaceOptions(areas).flatMap(o =>
+    o.placement.subNodeId === undefined ? [] : [{ id: o.placement.subNodeId ?? o.placement.areaId!, label: o.label.replace(/^Inside /, ''), depth: o.depth - 1 }]), [areas])
+  // Storage where they are always shows, so there's somewhere to add things; then
+  // any other storage they have, then the Ender Chest.
+  const storeKeys = [reach.drop, ...Object.keys(c.stashes ?? {}).filter(k => k !== ENDER && k !== reach.drop)]
+  const enderCarrier = partyOf(c, characters).find(carriesEnderChest)
   const [showPacks, setShowPacks] = useState(false)
 
   function applyPack(pack: typeof EQUIPMENT_PACKS[number]) {
@@ -124,10 +137,11 @@ export function TabInventory({ character: c }: TabInventoryProps) {
         onAdd={() => addOnHandItem(c.id, { name: '', quantity: 1 })}
         onUpdate={(itemId, patch) => updateOnHandItem(c.id, itemId, patch)}
         onRemove={(itemId) => removeOnHandItem(c.id, itemId)}
-        onMove={(itemId) => moveItemToStorage(c.id, itemId)}
+        moves={[
+          { icon: <ArrowDownToLine size={12} />, title: `Put in storage: ${storeLabel(reach.drop, areas)}`, onMove: id => moveItem(c.id, id, 'onHand', reach.drop) },
+          { icon: <span className="text-[10px]">🟪</span>, title: 'Put in their Ender Chest', onMove: id => moveItem(c.id, id, 'onHand', ENDER) },
+        ]}
         onGive={(itemId, toId) => giveItemToCharacter(c.id, itemId, 'onHand', toId)}
-        moveIcon={<ArrowDownToLine size={12} />}
-        moveTitle="Move to Storage"
         blockCount={blockCount}
         blockLimit={blockLimit}
         blocksFull={blocksFull}
@@ -139,34 +153,83 @@ export function TabInventory({ character: c }: TabInventoryProps) {
         </div>
       )}
 
-      {/* Storage */}
-      <ItemList
-        title="Storage"
-        items={c.storage.items}
-        charId={c.id}
-        onAdd={() => addStorageItem(c.id, { name: '', quantity: 1 })}
-        onUpdate={(itemId, patch) => updateStorageItem(c.id, itemId, patch)}
-        onRemove={(itemId) => removeStorageItem(c.id, itemId)}
-        onMove={(itemId) => moveItemToHand(c.id, itemId)}
-        onGive={(itemId, toId) => giveItemToCharacter(c.id, itemId, 'storage', toId)}
-        moveIcon={<ArrowUpFromLine size={12} />}
-        moveTitle="Move to On Hand"
+      {/* Storage, which stays where it was left (p.7) */}
+      {storeKeys.map(key => (
+        <StoreList key={key} c={c} storeKey={key}
+          title={storeLabel(key, areas)}
+          status={reach.local.includes(key) ? 'Here' : reach.orphaned.includes(key) ? 'No place' : 'Elsewhere'}
+          places={key === reach.drop && reach.local.includes(key) ? undefined : places}
+          onRelocate={to => moveStore(c.id, key, to)}
+          onAdd={() => addStoredItem(c.id, key, { name: '', quantity: 1 })}
+          onUpdate={(itemId, patch) => updateStoredItem(c.id, key, itemId, patch)}
+          onRemove={(itemId) => removeStoredItem(c.id, key, itemId)}
+          onMove={(itemId) => moveItem(c.id, itemId, key, 'onHand')}
+          onGive={(itemId, toId) => giveItemToCharacter(c.id, itemId, key, toId)}
+        />
+      ))}
+      <StoreList c={c} storeKey={ENDER} title="🟪 Ender Chest"
+        status={enderCarrier ? `Open: ${enderCarrier.name} has one` : 'Locked: nobody with them has one'}
+        onAdd={() => addStoredItem(c.id, ENDER, { name: '', quantity: 1 })}
+        onUpdate={(itemId, patch) => updateStoredItem(c.id, ENDER, itemId, patch)}
+        onRemove={(itemId) => removeStoredItem(c.id, ENDER, itemId)}
+        onMove={(itemId) => moveItem(c.id, itemId, ENDER, 'onHand')}
+        onGive={(itemId, toId) => giveItemToCharacter(c.id, itemId, ENDER, toId)}
       />
     </div>
   )
 }
 
-function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onGive, moveIcon, moveTitle, blockCount, blockLimit, blocksFull }: {
+interface ItemMove { icon: React.ReactNode; title: string; onMove: (id: string) => void }
+
+/** One store: its items, where it is, and (for the GM) moving all of it to a place. */
+function StoreList({ c, storeKey, title, status, places, onRelocate, onAdd, onUpdate, onRemove, onMove, onGive }: {
+  c: Character
+  storeKey: StoreKey
   title: string
-  items: CharacterItem[]
-  charId: string
+  status: string
+  places?: { id: string; label: string; depth: number }[]
+  onRelocate?: (to: StoreKey) => void
   onAdd: () => void
   onUpdate: (id: string, patch: Partial<CharacterItem>) => void
   onRemove: (id: string) => void
   onMove: (id: string) => void
   onGive: (itemId: string, toId: string) => void
-  moveIcon: React.ReactNode
-  moveTitle: string
+}) {
+  const items = stashOf(c, storeKey).items
+  return (
+    <div className="space-y-1">
+      <ItemList
+        title={title}
+        badge={status}
+        items={items}
+        charId={c.id}
+        onAdd={onAdd}
+        onUpdate={onUpdate}
+        onRemove={onRemove}
+        moves={[{ icon: <ArrowUpFromLine size={12} />, title: 'Move to On Hand', onMove }]}
+        onGive={onGive}
+      />
+      {places && onRelocate && items.length > 0 && (
+        <select value="" onChange={e => { if (e.target.value) onRelocate(e.target.value) }}
+          className="w-full bg-stone-900 border border-stone-700 rounded-sm px-2 py-1 text-stone-400 text-xs outline-hidden">
+          <option value="">Really somewhere else? Move all of it to…</option>
+          {places.filter(p => p.id !== storeKey).map(p => <option key={p.id} value={p.id}>{'\u00A0\u00A0'.repeat(p.depth)}{p.label}</option>)}
+        </select>
+      )}
+    </div>
+  )
+}
+
+function ItemList({ title, badge, items, charId, onAdd, onUpdate, onRemove, moves, onGive, blockCount, blockLimit, blocksFull }: {
+  title: string
+  badge?: string
+  items: CharacterItem[]
+  charId: string
+  onAdd: () => void
+  onUpdate: (id: string, patch: Partial<CharacterItem>) => void
+  onRemove: (id: string) => void
+  moves: ItemMove[]
+  onGive: (itemId: string, toId: string) => void
   blockCount?: number
   blockLimit?: number
   blocksFull?: boolean
@@ -176,6 +239,7 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">{title}</div>
+          {badge && <span className="text-[10px] px-1.5 py-0.5 rounded-sm border border-stone-700 bg-stone-800 text-stone-400">{badge}</span>}
           {blockCount !== undefined && (
             <span className={`text-xs font-mono px-1.5 py-0.5 rounded-sm border ${
               blocksFull
@@ -195,22 +259,20 @@ function ItemList({ title, items, charId, onAdd, onUpdate, onRemove, onMove, onG
           <div className="text-xs text-stone-500 italic py-1">Empty</div>
         )}
         {items.map(item => (
-          <ItemRow key={item.id} item={item} charId={charId} onUpdate={onUpdate} onRemove={onRemove} onMove={onMove} onGive={onGive} moveIcon={moveIcon} moveTitle={moveTitle} />
+          <ItemRow key={item.id} item={item} charId={charId} onUpdate={onUpdate} onRemove={onRemove} moves={moves} onGive={onGive} />
         ))}
       </div>
     </div>
   )
 }
 
-function ItemRow({ item, charId, onUpdate, onRemove, onMove, onGive, moveIcon, moveTitle }: {
+function ItemRow({ item, charId, onUpdate, onRemove, moves, onGive }: {
   item: CharacterItem
   charId: string
   onUpdate: (id: string, patch: Partial<CharacterItem>) => void
   onRemove: (id: string) => void
-  onMove: (id: string) => void
+  moves: ItemMove[]
   onGive: (itemId: string, toId: string) => void
-  moveIcon: React.ReactNode
-  moveTitle: string
 }) {
   const characters = useCharacterStore(s => s.characters)
   const otherChars = characters.filter(c => c.id !== charId)
@@ -266,11 +328,13 @@ function ItemRow({ item, charId, onUpdate, onRemove, onMove, onGive, moveIcon, m
         className="w-12 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-200 text-xs text-center outline-hidden font-mono tabular-nums"
       />
 
-      <button onClick={() => onMove(item.id)} title={moveTitle}
-        disabled={!!gearInfo}
-        className="flex items-center gap-1 text-xs text-stone-500 hover:text-stone-300 disabled:opacity-30 disabled:cursor-not-allowed">
-        {moveIcon}
-      </button>
+      {moves.map(m => (
+        <button key={m.title} onClick={() => m.onMove(item.id)} title={m.title} aria-label={m.title}
+          disabled={!!gearInfo}
+          className="flex items-center gap-1 text-xs text-stone-500 hover:text-stone-300 disabled:opacity-30 disabled:cursor-not-allowed">
+          {m.icon}
+        </button>
+      ))}
 
       {!gearInfo && otherChars.length > 0 && (
         <div className="relative shrink-0">

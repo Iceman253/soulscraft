@@ -4,11 +4,17 @@ import { newId } from '../../lib/id'
 import { log } from '../log/store'
 import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
+import { useWorldStore } from '../map/store'
+import { UNPLACED, addBlocksTo, dropKey, reachableStores, type Section } from '../../lib/stashes'
+import type { Character } from '../../types'
 import {
   PROJECT_TIERS, projectRequirements, isArchitect, structureProgress, repairLeft,
   takeBlocks, takeRedstone, addBlocks, enforceCarryLimit, minedStackName, miningDays, actionOutcome,
 } from '../../lib/building'
 
+/** Where mined blocks go: into storage at the place mined (or where the character
+ *  is, if it wasn't a mapped place), or on hand. 'mine' is the same as 'storage';
+ *  older requests used it for mines. */
 export type MiningDestination = 'storage' | 'onHand' | 'mine'
 
 export interface MineParams {
@@ -22,7 +28,7 @@ export interface MineParams {
   /** Blocks the GM awards after narrating the outcome. */
   gained: number
   destination: MiningDestination
-  /** The mine to leave them at, when destination is 'mine'. */
+  /** The place mined, where stored blocks are left. */
   placeId?: string
   /** Rolled double 6s: worth 1 XP on any action roll (p.8). */
   doubleSix?: boolean
@@ -74,6 +80,14 @@ function save(structures: Structure[]) {
   useCampaignStore.getState().updateCampaignData({ structures })
 }
 
+/** What a character can take blocks and dust from right now: storage where they
+ *  are, their Ender Chest if one is with them, then what they carry. */
+export function reachableSections(c: Character): Section[] {
+  const characters = useCharacterStore.getState().characters
+  const areas = useWorldStore.getState().areas ?? []
+  return [...reachableStores(c, characters, areas), 'onHand']
+}
+
 function hasArchitect(builderIds: string[]): boolean {
   const chars = useCharacterStore.getState().characters
   return builderIds.some(id => {
@@ -83,10 +97,10 @@ function hasArchitect(builderIds: string[]): boolean {
 }
 
 /** Where a mining trip's blocks ended up, for the session log. */
-function minedWhere(destination: MiningDestination, qty: number, overflow: number, place?: string): string {
-  if (destination === 'mine') return ` (left at ${place ?? 'the mine'})`
-  if (destination === 'storage' || overflow >= qty) return ' (to storage)'
-  return overflow > 0 ? ` (${qty - overflow} on hand, ${overflow} to storage)` : ' (on hand)'
+function minedWhere(destination: 'storage' | 'onHand', qty: number, overflow: number, place: string | undefined, nowhere: boolean): string {
+  const stored = nowhere ? 'left behind' : place ? `stored at ${place}` : 'stored here'
+  if (destination === 'storage' || overflow >= qty) return ` (${stored})`
+  return overflow > 0 ? ` (${qty - overflow} on hand, ${overflow} ${stored})` : ' (on hand)'
 }
 
 function withoutDamage(s: Structure): Structure {
@@ -169,9 +183,9 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       const charStore = useCharacterStore.getState()
       const c = charStore.characters.find(x => x.id === characterId)
       if (!s || !c || amount <= 0) return 0
-      const { storage, onHand, taken } = takeBlocks(c, amount)
+      const { patch, taken } = takeBlocks(c, reachableSections(c), amount)
       if (taken === 0) return 0
-      charStore.updateCharacter(characterId, { storage, onHand })
+      charStore.updateCharacter(characterId, patch)
       mapOne(id, x => withCompletion({ ...x, blocksCommitted: x.blocksCommitted + taken }))
       log('building', `🧱 ${c.name} put ${taken} block${taken === 1 ? '' : 's'} into ${s.name}.`)
       return taken
@@ -182,9 +196,9 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       const charStore = useCharacterStore.getState()
       const c = charStore.characters.find(x => x.id === characterId)
       if (!s || !c || amount <= 0) return 0
-      const { storage, onHand, taken } = takeRedstone(c, amount)
+      const { patch, taken } = takeRedstone(c, reachableSections(c), amount)
       if (taken === 0) return 0
-      charStore.updateCharacter(characterId, { storage, onHand })
+      charStore.updateCharacter(characterId, patch)
       mapOne(id, x => withCompletion({ ...x, redstoneCommitted: x.redstoneCommitted + taken }))
       log('building', `🔴 ${c.name} put ${taken} redstone dust into ${s.name}.`)
       return taken
@@ -232,9 +246,9 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       const charStore = useCharacterStore.getState()
       const c = charStore.characters.find(x => x.id === characterId)
       if (!s?.damage || !c || amount <= 0) return 0
-      const { storage, onHand, taken } = takeBlocks(c, Math.min(amount, repairLeft(s)))
+      const { patch, taken } = takeBlocks(c, reachableSections(c), Math.min(amount, repairLeft(s)))
       if (taken === 0) return 0
-      charStore.updateCharacter(characterId, { storage, onHand })
+      charStore.updateCharacter(characterId, patch)
       const repaired = s.damage.repaired + taken
       if (repaired >= s.damage.needed) {
         mapOne(id, x => withoutDamage(x))
@@ -282,28 +296,28 @@ export const useBuildStore = create<BuildStore>((set, get) => {
       const c = charStore.characters.find(x => x.id === characterId)
       if (!c) return
       const qty = Math.max(0, Math.floor(gained))
+      const where = destination === 'onHand' ? 'onHand' : 'storage'
+      const key = placeId ?? dropKey(c)
       let overflow = 0
       if (qty > 0) {
         const name = minedStackName(materials)
-        if (destination === 'onHand') {
-          const { onHand, storage, moved } = enforceCarryLimit({ ...c, onHand: addBlocks(c.onHand, name, qty, newId) }, newId)
+        if (where === 'onHand') {
+          // Mining goes on hand where they mined: anything they can't carry stays there.
+          const { onHand, stashes, moved } = enforceCarryLimit({ ...c, onHand: addBlocks(c.onHand, name, qty, newId) }, newId, key)
           overflow = moved
-          charStore.updateCharacter(characterId, { onHand, storage })
-        } else if (destination === 'mine' && placeId) {
-          const stash = addBlocks(c.mineStashes?.[placeId] ?? { items: [] }, name, qty, newId)
-          charStore.updateCharacter(characterId, { mineStashes: { ...c.mineStashes, [placeId]: stash } })
+          charStore.updateCharacter(characterId, { onHand, stashes })
         } else {
-          charStore.updateCharacter(characterId, { storage: addBlocks(c.storage, name, qty, newId) })
+          charStore.updateCharacter(characterId, { stashes: addBlocksTo(c, key, name, qty, newId) })
         }
       }
       const days = miningDays(requested)
       const outcome = actionOutcome(total)
-      const where = areaName ? ` at ${areaName}` : ''
+      const at = areaName ? ` at ${areaName}` : ''
       const what = materials.length ? materials.join(' & ') : 'blocks'
       log('building',
-        `⛏️ ${c.name} mined for ${requested} blocks of ${what}${where} — rolled ${total} (${outcome}), ` +
+        `⛏️ ${c.name} mined for ${requested} blocks of ${what}${at} — rolled ${total} (${outcome}), ` +
         `${days} day${days === 1 ? '' : 's'}: gained ${qty} block${qty === 1 ? '' : 's'}` +
-        `${qty > 0 ? minedWhere(destination === 'mine' && placeId ? 'mine' : destination, qty, overflow, areaName) : ''}.`)
+        `${qty > 0 ? minedWhere(where, qty, overflow, areaName, key === UNPLACED) : ''}.`)
       if (doubleSix) {
         charStore.awardXp(characterId, 1, 'double-six', 'Double 6 while mining')
         log('building', `⭐ ${c.name} rolled double 6s mining: +1 XP.`)

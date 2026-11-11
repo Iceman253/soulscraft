@@ -6,9 +6,10 @@ import { useRequestStore } from '../requests/store'
 import { PixelIcon } from './PixelIcon'
 import { BuildSheet } from './BuildSheet'
 import { MineFlow } from './MineFlow'
-import { MineStash } from './MineStash'
+import { BlockStores } from './BlockStores'
+import { useStorageReach } from '../characters/useStorageReach'
 import { StartBuildFlow } from './StartBuildFlow'
-import { BLOCK_CARRY_LIMIT, PROJECT_TIERS, buildCondition, carryLimitOf, countBlocks, repairLeft, structureProgress } from '../../lib/building'
+import { BLOCK_CARRY_LIMIT, PROJECT_TIERS, buildCondition, carryLimitOf, countBlocks, countBlocksIn, repairLeft, structureProgress } from '../../lib/building'
 import { placementLabel } from '../../lib/places'
 import type { Character, PlayerRequest, RequestType } from '../../types'
 
@@ -33,7 +34,8 @@ export function BuildHub({ character }: { character: Character }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
   const onHand = countBlocks(character.onHand.items)
-  const stored = countBlocks(character.storage.items)
+  const reach = useStorageReach(character)
+  const stored = countBlocksIn(character, reach.sections.filter(s => s !== 'onHand'))
   const limit = carryLimitOf(character)
   const overLimit = onHand > limit
   const askedForMore = requests.some(r => r.type === 'carry-limit' && r.status === 'pending')
@@ -55,7 +57,7 @@ export function BuildHub({ character }: { character: Character }) {
             {character.carryLimit !== undefined && <div className="text-xs text-teal-300">Temporary, until you're under {BLOCK_CARRY_LIMIT}</div>}
           </div>
           <div className="rounded-xl border border-stone-700 bg-stone-900 px-3.5 py-2.5">
-            <div className="text-sm text-stone-500">In storage</div>
+            <div className="text-sm text-stone-500">Stored here</div>
             <div className="font-mono text-xl font-bold text-stone-100">{stored}</div>
           </div>
         </div>
@@ -73,7 +75,7 @@ export function BuildHub({ character }: { character: Character }) {
           </button>
         </div>
 
-        <MineStash character={character} />
+        <BlockStores character={character} />
 
         {requests.length > 0 && (
           <div className="space-y-2">

@@ -3,6 +3,8 @@ import { Pencil, Check, X, ChevronDown, ChevronRight, Trash2, Skull, Send, Spark
 import { PlayerRequestModal } from './PlayerRequestModal'
 import { PlayerMarketModal } from './PlayerMarketModal'
 import { LevelUpModal, type LevelUpInitialState } from '../characters/LevelUpModal'
+import { useStorageReach } from '../characters/useStorageReach'
+import { ENDER, UNPLACED, stashOf, storeLabel } from '../../lib/stashes'
 import { useCharacterStore } from '../characters/store'
 import { useRequestStore } from '../requests/store'
 import { useEconomyStore } from '../economy/store'
@@ -91,7 +93,7 @@ function ItemNameEditor({ item, onSave }: { item: CharacterItem; onSave: (custom
 // ── Main panel ────────────────────────────────────────────────────────────────
 export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
   const { characters, adjustHp, adjustSd, addEffect, removeEffect, updateOnHandItem, removeOnHandItem,
-    moveItemToStorage, moveItemToHand, updateCharacter, updateStorageItem, removeStorageItem } = useCharacterStore()
+    moveItem, updateCharacter, updateStoredItem, removeStoredItem } = useCharacterStore()
   const areas = useWorldStore(s => s.areas)
   const travelingMarkers = useWorldStore(s => s.travelingMarkers)
   const combatSession = useCombatStore(s => s.session)
@@ -115,6 +117,11 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
   const [pendingPotion, setPendingPotion] = useState<{ charId: string; item: CharacterItem; sceneDuration: number } | null>(null)
 
   const activeChar = characters.find(c => c.id === activeTab) ?? characters[0]
+  // Storage stays where it was left (p.7): only what's here, plus the Ender Chest
+  // while someone they're with carries one.
+  const reach = useStorageReach(activeChar ?? undefined)
+  const canStoreHere = reach.drop !== UNPLACED
+  const openStores = [...reach.local, ...(reach.ender ? [ENDER] : [])]
   const isOwnChar = !focusedCharacterId || focusedCharacterId === activeTab
 
   // Watch for pending / denied skill-approval requests for the active character.
@@ -694,14 +701,23 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                         </button>
                       )}
 
-                      {/* Move to storage (at rest spots) */}
-                      {isOwnChar && atRestSpot && (
+                      {/* Put it in storage here, or in the Ender Chest if one's open */}
+                      {isOwnChar && canStoreHere && (
                         <button
-                          onClick={() => moveItemToStorage(activeChar.id, item.id)}
+                          onClick={() => moveItem(activeChar.id, item.id, 'onHand', reach.drop)}
                           className="px-1.5 py-0.5 rounded-sm bg-stone-700 border border-stone-600 text-stone-400 hover:text-stone-200 hover:bg-stone-600 text-xs transition-colors shrink-0"
-                          title="Store"
+                          title={`Store at ${storeLabel(reach.drop, areas)}`}
                         >
                           Store
+                        </button>
+                      )}
+                      {isOwnChar && reach.ender && (
+                        <button
+                          onClick={() => moveItem(activeChar.id, item.id, 'onHand', ENDER)}
+                          className="px-1.5 py-0.5 rounded-sm bg-purple-950/60 border border-purple-800/60 text-purple-300 hover:bg-purple-900/60 text-xs transition-colors shrink-0"
+                          title="Put in your Ender Chest"
+                        >
+                          Ender
                         </button>
                       )}
 
@@ -722,7 +738,7 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
             )}
           </div>
 
-          {/* Storage — only shown at rest spots or if collapsed toggle exists */}
+          {/* Storage: what's here (and the Ender Chest if open) can be used; the rest is listed */}
           {isOwnChar && (
             <div>
               <button
@@ -730,46 +746,53 @@ export function PlayerCharacterPanel({ focusedCharacterId }: Props) {
                 className="flex items-center gap-1.5 text-xs font-medium text-stone-400 hover:text-stone-200 transition-colors w-full"
               >
                 {showStorage ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                Storage ({activeChar.storage.items.length})
-                {atRestSpot && <span className="ml-1 text-teal-500">· accessible</span>}
+                Storage ({openStores.reduce((n, k) => n + stashOf(activeChar, k).items.length, 0)} here)
+                {reach.ender && <span className="ml-1 text-purple-300">· Ender Chest open</span>}
               </button>
               {showStorage && (
-                <div className="mt-2 space-y-1">
-                  {activeChar.storage.items.length === 0 ? (
-                    <div className="text-xs text-stone-500 italic pl-4">Storage is empty.</div>
-                  ) : (
-                    activeChar.storage.items.map(item => (
-                      <div key={item.id} className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-stone-800/60 text-xs group">
-                        <div className="flex-1 min-w-0">
-                          {isOwnChar ? (
+                <div className="mt-2 space-y-2">
+                  {openStores.length === 0 && <div className="text-xs text-stone-500 italic pl-4">You're not at a place with storage.</div>}
+                  {openStores.map(key => (
+                    <div key={key} className="space-y-1">
+                      <div className="pl-1 text-[11px] text-stone-500">{key === ENDER ? '🟪 Ender Chest' : `📦 ${storeLabel(key, areas)}`}</div>
+                      {stashOf(activeChar, key).items.length === 0 ? (
+                        <div className="text-xs text-stone-500 italic pl-4">Empty.</div>
+                      ) : stashOf(activeChar, key).items.map(item => (
+                        <div key={item.id} className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-stone-800/60 text-xs group">
+                          <div className="flex-1 min-w-0">
                             <ItemNameEditor
                               item={item}
-                              onSave={customName => updateStorageItem(activeChar.id, item.id, { customName })}
+                              onSave={customName => updateStoredItem(activeChar.id, key, item.id, { customName })}
                             />
-                          ) : (
-                            <span className="text-stone-300 truncate">{item.customName ?? item.name}</span>
-                          )}
-                        </div>
-                        <span className="text-stone-500 font-mono shrink-0">×{item.quantity}</span>
-                        {atRestSpot && (
+                          </div>
+                          <span className="text-stone-500 font-mono shrink-0">×{item.quantity}</span>
                           <button
-                            onClick={() => moveItemToHand(activeChar.id, item.id)}
+                            onClick={() => moveItem(activeChar.id, item.id, key, 'onHand')}
                             className="px-1.5 py-0.5 rounded-sm bg-stone-700 border border-stone-600 text-stone-400 hover:text-stone-200 hover:bg-stone-600 text-xs transition-colors shrink-0"
                             title="Take"
                           >
                             Take
                           </button>
-                        )}
-                        <button
-                          onClick={() => removeStorageItem(activeChar.id, item.id)}
-                          className="p-0.5 text-stone-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                          title="Remove from storage"
-                        >
-                          <Trash2 size={11} />
-                        </button>
-                      </div>
-                    ))
+                          <button
+                            onClick={() => removeStoredItem(activeChar.id, key, item.id)}
+                            className="p-0.5 text-stone-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                            title="Throw away"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  {!reach.ender && stashOf(activeChar, ENDER).items.length > 0 && (
+                    <div className="text-xs text-stone-500 pl-1">🟪 Ender Chest: {stashOf(activeChar, ENDER).items.length} items. Someone with you needs to carry an Ender Chest to open it.</div>
                   )}
+                  {[...reach.elsewhere, ...reach.orphaned].map(key => (
+                    <div key={key} className="text-xs text-stone-500 pl-1">
+                      📦 {storeLabel(key, areas)}: {stashOf(activeChar, key).items.length} item{stashOf(activeChar, key).items.length === 1 ? '' : 's'}
+                      {reach.orphaned.includes(key) && ' (ask your GM where these are)'}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

@@ -20,6 +20,8 @@ const char = (id = 'c1') => useCharacterStore.getState().characters.find(c => c.
 const structure = (id: string) => useBuildStore.getState().structures.find(s => s.id === id)!
 const build = () => useBuildStore.getState()
 const at = { x: 10, y: 20 }
+const stash = (key: string, id = 'c1') => char(id).stashes?.[key]?.items ?? []
+const atCamp = { locationId: 'camp' }
 
 beforeEach(() => {
   updateCampaignData.mockClear()
@@ -98,20 +100,38 @@ describe('tiers and requirements', () => {
 
 describe('commitBlocks', () => {
   it("moves blocks out of the character's inventory into the build", () => {
-    useCharacterStore.setState({ characters: [makeChar({ storage: { items: [blocks('Stone', 30)] }, onHand: { items: [blocks('Dirt', 5)] } })] })
+    useCharacterStore.setState({ characters: [makeChar({ ...atCamp, stashes: { camp: { items: [blocks('Stone', 30)] } }, onHand: { items: [blocks('Dirt', 5)] } })] })
     const id = build().addStructure({ tier: 'small', areaId: null, position: at })
     expect(build().commitBlocks(id, 'c1', 32)).toBe(32)
     expect(structure(id).blocksCommitted).toBe(32)
-    expect(char().storage.items).toEqual([])
+    expect(char().stashes).toEqual({})
     expect(char().onHand.items).toEqual([blocks('Dirt', 3)])
     expect(log).toHaveBeenCalledWith('building', '🧱 Steve put 32 blocks into New Small Project.')
   })
 
   it('only commits what the character actually has', () => {
-    useCharacterStore.setState({ characters: [makeChar({ storage: { items: [blocks('Stone', 7)] } })] })
+    useCharacterStore.setState({ characters: [makeChar({ ...atCamp, stashes: { camp: { items: [blocks('Stone', 7)] } } })] })
     const id = build().addStructure({ tier: 'small', areaId: null, position: at })
     expect(build().commitBlocks(id, 'c1', 50)).toBe(7)
     expect(structure(id).blocksCommitted).toBe(7)
+  })
+
+  it('cannot use storage somewhere else', () => {
+    useCharacterStore.setState({ characters: [makeChar({ ...atCamp, stashes: { faraway: { items: [blocks('Stone', 40)] } }, onHand: { items: [blocks('Dirt', 2)] } })] })
+    const id = build().addStructure({ tier: 'small', areaId: null, position: at })
+    expect(build().commitBlocks(id, 'c1', 50)).toBe(2)
+    expect(stash('faraway')).toEqual([blocks('Stone', 40)])
+  })
+
+  it('uses the Ender Chest only while someone there carries one', () => {
+    const enderChest: CharacterItem = { id: 'ec', name: 'Ender Chest', quantity: 1 }
+    const steve = makeChar({ ...atCamp, stashes: { ender: { items: [blocks('Obsidian', 20)] } } })
+    useCharacterStore.setState({ characters: [steve, makeChar({ id: 'c2', name: 'Alex', locationId: 'elsewhere', onHand: { items: [enderChest] } })] })
+    const id = build().addStructure({ tier: 'small', areaId: null, position: at })
+    expect(build().commitBlocks(id, 'c1', 10)).toBe(0)
+    useCharacterStore.setState({ characters: [steve, makeChar({ id: 'c2', name: 'Alex', ...atCamp, onHand: { items: [enderChest] } })] })
+    expect(build().commitBlocks(id, 'c1', 10)).toBe(10)
+    expect(stash('ender')).toEqual([blocks('Obsidian', 10)])
   })
 
   it('does nothing without blocks, a valid character, or a positive amount', () => {
@@ -146,12 +166,12 @@ describe('commitRedstone', () => {
   const dust = (quantity: number): CharacterItem => ({ id: 'd', name: 'Redstone Dust', quantity })
 
   it('moves dust from the inventory and can finish a redstone project', () => {
-    useCharacterStore.setState({ characters: [makeChar({ storage: { items: [dust(12)] } })] })
+    useCharacterStore.setState({ characters: [makeChar({ ...atCamp, stashes: { camp: { items: [dust(12)] } } })] })
     const id = build().addStructure({ tier: 'redstone', areaId: null, position: at })
     build().addProgress(id, { blocks: 25, days: 1 })
     expect(build().commitRedstone(id, 'c1', 10)).toBe(10)
     expect(structure(id).completedAt).toBeDefined()
-    expect(char().storage.items).toEqual([dust(2)])
+    expect(stash('camp')).toEqual([dust(2)])
   })
 
   it('does nothing without dust', () => {
@@ -233,76 +253,76 @@ describe('move and delete', () => {
 })
 
 describe('mine', () => {
-  it('adds the awarded blocks to storage and logs the trip', () => {
-    useCharacterStore.setState({ characters: [makeChar()] })
-    build().mine({ characterId: 'c1', areaName: 'Ravine', materials: ['Stone', 'Iron'], requested: 100, total: 13, gained: 110, destination: 'storage' })
-    expect(char().storage.items).toEqual([expect.objectContaining({ name: 'Stone & Iron blocks', quantity: 110, isBlock: true })])
+  it('leaves the awarded blocks where they were mined and logs the trip', () => {
+    useCharacterStore.setState({ characters: [makeChar(atCamp)] })
+    build().mine({ characterId: 'c1', areaName: 'Ravine', materials: ['Stone', 'Iron'], requested: 100, total: 13, gained: 110, destination: 'storage', placeId: 'ravine' })
+    expect(stash('ravine')).toEqual([expect.objectContaining({ name: 'Stone & Iron blocks', quantity: 110, isBlock: true })])
     expect(char().onHand.items).toEqual([])
     expect(log).toHaveBeenCalledWith('building',
-      '⛏️ Steve mined for 100 blocks of Stone & Iron at Ravine — rolled 13 (success), 2 days: gained 110 blocks (to storage).')
+      '⛏️ Steve mined for 100 blocks of Stone & Iron at Ravine — rolled 13 (success), 2 days: gained 110 blocks (stored at Ravine).')
   })
 
-  it('stacks onto existing blocks of the same material', () => {
-    useCharacterStore.setState({ characters: [makeChar({ storage: { items: [blocks('Stone blocks', 10)] } })] })
-    build().mine({ characterId: 'c1', materials: ['Stone'], requested: 25, total: 8, gained: 25, destination: 'storage' })
-    expect(char().storage.items).toEqual([blocks('Stone blocks', 35)])
+  it('stacks onto existing blocks of the same material there', () => {
+    useCharacterStore.setState({ characters: [makeChar({ stashes: { shaft: { items: [blocks('Stone blocks', 10)] } } })] })
+    build().mine({ characterId: 'c1', materials: ['Stone'], requested: 25, total: 8, gained: 25, destination: 'storage', placeId: 'shaft' })
+    expect(stash('shaft')).toEqual([blocks('Stone blocks', 35)])
   })
 
-  it('sends whatever will not fit on hand to storage', () => {
-    useCharacterStore.setState({ characters: [makeChar({ onHand: { items: [blocks('Stone blocks', 6)] } })] })
-    build().mine({ characterId: 'c1', materials: ['Stone'], requested: 100, total: 10, gained: 100, destination: 'onHand' })
-    expect(char().onHand.items).toEqual([blocks('Stone blocks', 10)])
-    expect(char().storage.items).toEqual([expect.objectContaining({ name: 'Stone blocks', quantity: 96, isBlock: true })])
-    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 100 blocks (4 on hand, 96 to storage).'))
+  it('stores where the character is if no place was given', () => {
+    useCharacterStore.setState({ characters: [makeChar(atCamp)] })
+    build().mine({ characterId: 'c1', materials: ['Iron'], requested: 25, total: 10, gained: 25, destination: 'storage' })
+    expect(stash('camp')).toEqual([expect.objectContaining({ quantity: 25 })])
+    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 25 blocks (stored here).'))
   })
 
-  it('sends it all to storage when the character is already full', () => {
-    useCharacterStore.setState({ characters: [makeChar({ onHand: { items: [blocks('Dirt', 10)] } })] })
-    build().mine({ characterId: 'c1', materials: ['Stone'], requested: 25, total: 10, gained: 25, destination: 'onHand' })
-    expect(char().onHand.items).toEqual([blocks('Dirt', 10)])
-    expect(char().storage.items).toEqual([expect.objectContaining({ quantity: 25 })])
-    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 25 blocks (to storage).'))
-  })
-
-  it('leaves blocks at the mine to come back for', () => {
+  it('leaves them behind with no place at all', () => {
     useCharacterStore.setState({ characters: [makeChar()] })
-    build().mine({ characterId: 'c1', areaName: 'Old Shaft', materials: ['Iron'], requested: 100, total: 10, gained: 100, destination: 'mine', placeId: 'shaft' })
-    expect(char().mineStashes?.shaft.items).toEqual([expect.objectContaining({ name: 'Iron blocks', quantity: 100, isBlock: true })])
-    expect(char().onHand.items).toEqual([])
-    expect(char().storage.items).toEqual([])
-    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 100 blocks (left at Old Shaft).'))
+    build().mine({ characterId: 'c1', materials: ['Iron'], requested: 25, total: 10, gained: 25, destination: 'storage' })
+    expect(stash('unplaced')).toEqual([expect.objectContaining({ quantity: 25 })])
+    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 25 blocks (left behind).'))
   })
 
-  it('stacks onto what was already left there', () => {
-    useCharacterStore.setState({ characters: [makeChar({ mineStashes: { shaft: { items: [blocks('Iron blocks', 25)] } } })] })
+  it("treats an older request's 'mine' the same as storage", () => {
+    useCharacterStore.setState({ characters: [makeChar()] })
     build().mine({ characterId: 'c1', materials: ['Iron'], requested: 25, total: 10, gained: 25, destination: 'mine', placeId: 'shaft' })
-    expect(char().mineStashes?.shaft.items).toEqual([blocks('Iron blocks', 50)])
+    expect(stash('shaft')).toEqual([expect.objectContaining({ quantity: 25 })])
   })
 
-  it('falls back to storage if no mine was given', () => {
-    useCharacterStore.setState({ characters: [makeChar()] })
-    build().mine({ characterId: 'c1', materials: ['Iron'], requested: 25, total: 10, gained: 25, destination: 'mine' })
-    expect(char().storage.items).toEqual([expect.objectContaining({ quantity: 25 })])
+  it('leaves whatever will not fit on hand where it was mined', () => {
+    useCharacterStore.setState({ characters: [makeChar({ ...atCamp, onHand: { items: [blocks('Stone blocks', 6)] } })] })
+    build().mine({ characterId: 'c1', areaName: 'Shaft', materials: ['Stone'], requested: 100, total: 10, gained: 100, destination: 'onHand', placeId: 'shaft' })
+    expect(char().onHand.items).toEqual([blocks('Stone blocks', 10)])
+    expect(stash('shaft')).toEqual([expect.objectContaining({ name: 'Stone blocks', quantity: 96, isBlock: true })])
+    expect(stash('camp')).toEqual([])
+    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 100 blocks (4 on hand, 96 stored at Shaft).'))
+  })
+
+  it('leaves it all there when the character is already full', () => {
+    useCharacterStore.setState({ characters: [makeChar({ onHand: { items: [blocks('Dirt', 10)] } })] })
+    build().mine({ characterId: 'c1', areaName: 'Shaft', materials: ['Stone'], requested: 25, total: 10, gained: 25, destination: 'onHand', placeId: 'shaft' })
+    expect(char().onHand.items).toEqual([blocks('Dirt', 10)])
+    expect(stash('shaft')).toEqual([expect.objectContaining({ quantity: 25 })])
+    expect(log).toHaveBeenCalledWith('building', expect.stringContaining('gained 25 blocks (stored at Shaft).'))
   })
 
   it('carries more under a temporary limit', () => {
-    useCharacterStore.setState({ characters: [makeChar({ carryLimit: 30 })] })
+    useCharacterStore.setState({ characters: [makeChar({ ...atCamp, carryLimit: 30 })] })
     build().mine({ characterId: 'c1', materials: ['Stone'], requested: 50, total: 10, gained: 50, destination: 'onHand' })
     expect(char().onHand.items).toEqual([expect.objectContaining({ quantity: 30 })])
-    expect(char().storage.items).toEqual([expect.objectContaining({ quantity: 20 })])
+    expect(stash('camp')).toEqual([expect.objectContaining({ quantity: 20 })])
   })
 
   it('can put blocks on hand instead', () => {
     useCharacterStore.setState({ characters: [makeChar()] })
     build().mine({ characterId: 'c1', materials: ['Wood'], requested: 25, total: 10, gained: 10, destination: 'onHand' })
     expect(char().onHand.items).toEqual([expect.objectContaining({ name: 'Wood blocks', quantity: 10 })])
-    expect(char().storage.items).toEqual([])
+    expect(char().stashes).toBeUndefined()
   })
 
   it('logs a failed trip without adding anything', () => {
     useCharacterStore.setState({ characters: [makeChar()] })
     build().mine({ characterId: 'c1', materials: ['Diamond'], requested: 50, total: 5, gained: 0, destination: 'storage' })
-    expect(char().storage.items).toEqual([])
+    expect(char().stashes).toBeUndefined()
     expect(log).toHaveBeenCalledWith('building', expect.stringContaining('rolled 5 (failure), 1 day: gained 0 blocks.'))
   })
 

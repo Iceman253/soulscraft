@@ -29,10 +29,11 @@ describe('buying blocks', () => {
     expect(stock()).toBe(4)
   })
 
-  it('sends blocks past the carry limit to storage', () => {
+  it('stores blocks past the carry limit where the buyer is', () => {
+    useCharacterStore.setState({ characters: [{ ...char(), locationId: 'town' }] })
     economy().buy('m', 'stone-blocks', 2, 'c1', 50)
     expect(char().onHand.items).toEqual([expect.objectContaining({ quantity: 10, isBlock: true })])
-    expect(char().storage.items).toEqual([expect.objectContaining({ name: 'Stone Blocks', quantity: 10, isBlock: true })])
+    expect(char().stashes?.town.items).toEqual([expect.objectContaining({ name: 'Stone Blocks', quantity: 10, isBlock: true })])
   })
 
   it('leaves goods that are not blocks alone', () => {

@@ -8,7 +8,7 @@ import {
   takeBlocks, addBlocks, minedStackName, miningTraits, suggestedMiningBlocks, rollMiningCheck,
   canBoostWithSd, miningEffectNotes, miningBreakdown, carryRoom, enforceCarryLimit, blocksPerUnit, looksLikeBlocks,
   carryLimitOf, nextCarryLimit, parseCarryLimit, moveBlocks,
-  countRedstone, takeRedstone, parseBuildProposal,
+  countRedstone, takeRedstone, parseBuildProposal, countBlocksIn,
 } from './building'
 
 const item = (name: string, quantity = 1, isBlock = false, id = name): CharacterItem => ({ id, name, quantity, isBlock })
@@ -105,7 +105,7 @@ describe('mining tools', () => {
   })
 
   it('does not count tools left in storage', () => {
-    const c = { ...carrying(), storage: { items: [item('Diamond Pickaxe')] } }
+    const c = { ...carrying(), stashes: { camp: { items: [item('Diamond Pickaxe')] }, ender: { items: [item('Netherite Pickaxe')] } } }
     expect(carriedMiningTools(c)).toEqual([])
   })
 
@@ -251,30 +251,43 @@ describe('structureProgress', () => {
 
 describe('takeBlocks', () => {
   const c = {
-    storage: { items: [item('Stone', 30, true, 's1'), item('Chest', 1, false, 's2')] },
+    stashes: {
+      camp: { items: [item('Stone', 30, true, 's1'), item('Chest', 1, false, 's2')] },
+      far: { items: [item('Sand', 64, true, 'f1')] },
+    },
     onHand: { items: [item('Dirt', 8, true, 'h1'), item('Iron Pickaxe', 1, false, 'h2')] },
   }
-  it('takes from storage first and keeps the remainder of a stack', () => {
-    const r = takeBlocks(c, 20)
+  const reach = ['camp', 'onHand']
+  it('takes from the first section given and keeps the remainder of a stack', () => {
+    const r = takeBlocks(c, reach, 20)
     expect(r.taken).toBe(20)
-    expect(r.storage.items).toEqual([item('Stone', 10, true, 's1'), item('Chest', 1, false, 's2')])
-    expect(r.onHand).toEqual(c.onHand)
+    expect(r.patch.stashes?.camp.items).toEqual([item('Stone', 10, true, 's1'), item('Chest', 1, false, 's2')])
+    expect(r.patch.onHand).toBeUndefined()
   })
   it('moves on to on-hand blocks and removes emptied stacks', () => {
-    const r = takeBlocks(c, 35)
+    const r = takeBlocks(c, reach, 35)
     expect(r.taken).toBe(35)
-    expect(r.storage.items.map(i => i.name)).toEqual(['Chest'])
-    expect(r.onHand.items).toEqual([item('Dirt', 3, true, 'h1'), item('Iron Pickaxe', 1, false, 'h2')])
+    expect(r.patch.stashes?.camp.items.map(i => i.name)).toEqual(['Chest'])
+    expect(r.patch.onHand?.items).toEqual([item('Dirt', 3, true, 'h1'), item('Iron Pickaxe', 1, false, 'h2')])
   })
-  it('takes only what the character has', () => {
-    const r = takeBlocks(c, 100)
+  it('takes only what the character can reach', () => {
+    const r = takeBlocks(c, reach, 100)
     expect(r.taken).toBe(38)
-    expect(countBlocks(r.storage.items) + countBlocks(r.onHand.items)).toBe(0)
+    expect(r.patch.stashes?.far).toEqual(c.stashes.far)
+  })
+  it('drops a store once it is empty', () => {
+    const r = takeBlocks({ ...c, stashes: { camp: { items: [item('Stone', 5, true)] } } }, ['camp'], 5)
+    expect(r.patch.stashes).toEqual({})
   })
   it('never touches non-block items and ignores non-positive amounts', () => {
-    expect(takeBlocks(c, 0).taken).toBe(0)
-    expect(takeBlocks(c, -5).taken).toBe(0)
-    expect(takeBlocks(c, 100).onHand.items.map(i => i.name)).toEqual(['Iron Pickaxe'])
+    expect(takeBlocks(c, reach, 0).taken).toBe(0)
+    expect(takeBlocks(c, reach, -5).taken).toBe(0)
+    expect(takeBlocks(c, reach, 100).patch.onHand?.items.map(i => i.name)).toEqual(['Iron Pickaxe'])
+  })
+  it('counts only the sections given', () => {
+    expect(countBlocksIn(c, reach)).toBe(38)
+    expect(countBlocksIn(c, ['far'])).toBe(64)
+    expect(countBlocksIn(c, ['nowhere'])).toBe(0)
   })
 })
 
@@ -375,35 +388,47 @@ describe('mining on a phone', () => {
 
 describe('enforcing the carry limit', () => {
   const ids = () => 'new-id'
-  const empty = { items: [] }
+  const at = { locationId: 'town', subLocationId: 'inn' }
 
   it('leaves 10 or fewer blocks alone', () => {
     const onHand = { items: [item('Stone', 10, true), item('Torch', 50)] }
-    const result = enforceCarryLimit({ onHand, storage: empty }, ids)
-    expect(result).toEqual({ onHand, storage: empty, moved: 0 })
+    const result = enforceCarryLimit({ ...at, onHand }, ids)
+    expect(result).toEqual({ onHand, stashes: undefined, moved: 0 })
     expect(result.onHand).toBe(onHand)
   })
 
-  it('moves everything past 10 to storage, so nothing is lost', () => {
-    const { onHand, storage, moved } = enforceCarryLimit({ onHand: { items: [item('Stone', 25, true)] }, storage: empty }, ids)
+  it('leaves everything past 10 where the character is, so nothing is lost', () => {
+    const { onHand, stashes, moved } = enforceCarryLimit({ ...at, onHand: { items: [item('Stone', 25, true)] } }, ids)
     expect(moved).toBe(15)
     expect(onHand.items).toEqual([item('Stone', 10, true)])
-    expect(storage.items).toEqual([{ id: 'new-id', name: 'Stone', quantity: 15, isBlock: true }])
+    expect(stashes).toEqual({ inn: { items: [{ id: 'new-id', name: 'Stone', quantity: 15, isBlock: true }] } })
+  })
+
+  it('leaves them at a place it is given instead', () => {
+    const { stashes } = enforceCarryLimit({ ...at, onHand: { items: [item('Stone', 12, true)] } }, ids, 'mine')
+    expect(Object.keys(stashes ?? {})).toEqual(['mine'])
+  })
+
+  it('has nowhere in particular to put them out on the road', () => {
+    const { stashes } = enforceCarryLimit({ locationId: null, subLocationId: null, onHand: { items: [item('Stone', 12, true)] } }, ids)
+    expect(stashes?.unplaced.items[0].quantity).toBe(2)
   })
 
   it('takes the newest stacks first and removes emptied ones', () => {
-    const { onHand, storage } = enforceCarryLimit({ onHand: { items: [item('Stone', 8, true), item('Dirt', 4, true), item('Sand', 3, true)] }, storage: empty }, ids)
+    const { onHand, stashes } = enforceCarryLimit({ ...at, onHand: { items: [item('Stone', 8, true), item('Dirt', 4, true), item('Sand', 3, true)] } }, ids)
     expect(onHand.items).toEqual([item('Stone', 8, true), item('Dirt', 2, true)])
-    expect(storage.items.map(i => [i.name, i.quantity])).toEqual([['Sand', 3], ['Dirt', 2]])
+    expect(stashes?.inn.items.map(i => [i.name, i.quantity])).toEqual([['Sand', 3], ['Dirt', 2]])
   })
 
-  it('stacks onto matching blocks in storage', () => {
-    const { storage } = enforceCarryLimit({ onHand: { items: [item('Stone', 12, true)] }, storage: { items: [item('Stone', 5, true)] } }, ids)
-    expect(storage.items).toEqual([item('Stone', 7, true)])
+  it('stacks onto matching blocks already stored there, and leaves other stores alone', () => {
+    const ender = { items: [item('Stone', 1, true)] }
+    const { stashes } = enforceCarryLimit({ ...at, onHand: { items: [item('Stone', 12, true)] }, stashes: { inn: { items: [item('Stone', 5, true)] }, ender } }, ids)
+    expect(stashes?.inn.items).toEqual([item('Stone', 7, true)])
+    expect(stashes?.ender).toBe(ender)
   })
 
   it('never touches items that are not blocks', () => {
-    const { onHand } = enforceCarryLimit({ onHand: { items: [item('Stone', 11, true), item('Torch', 99)] }, storage: empty }, ids)
+    const { onHand } = enforceCarryLimit({ ...at, onHand: { items: [item('Stone', 11, true), item('Torch', 99)] } }, ids)
     expect(onHand.items).toEqual([item('Stone', 10, true), item('Torch', 99)])
   })
 })
@@ -415,7 +440,7 @@ describe('temporary carry limit', () => {
   })
 
   it('lets a raised limit hold more before anything moves to storage', () => {
-    const c = { onHand: { items: [item('Stone', 25, true)] }, storage: { items: [] }, carryLimit: 25 }
+    const c = { onHand: { items: [item('Stone', 25, true)] }, locationId: 'camp', subLocationId: null, carryLimit: 25 }
     expect(enforceCarryLimit(c, () => 'id').moved).toBe(0)
     expect(enforceCarryLimit({ ...c, carryLimit: 20 }, () => 'id').moved).toBe(5)
   })
@@ -494,20 +519,23 @@ describe('recognizing blocks', () => {
 
 describe('redstone dust', () => {
   const c = {
-    storage: { items: [item('Redstone Dust', 6), item('Redstone Block', 4, true)] },
+    stashes: { camp: { items: [item('Redstone Dust', 6), item('Redstone Block', 4, true)] } },
     onHand: { items: [item('Redstone', 3), item('Torch', 2)] },
   }
+  const reach = ['camp', 'onHand']
 
   it('counts dust, not redstone blocks', () => {
-    expect(countRedstone(c)).toBe(9)
+    expect(countRedstone(c, reach)).toBe(9)
+    expect(countRedstone(c, ['onHand'])).toBe(3)
   })
 
-  it('takes from storage first and only as much as there is', () => {
-    const { storage, onHand, taken } = takeRedstone(c, 7)
+  it('takes from the first section first and only as much as there is', () => {
+    const { patch, taken } = takeRedstone(c, reach, 7)
     expect(taken).toBe(7)
-    expect(storage.items).toEqual([item('Redstone Block', 4, true)])
-    expect(onHand.items).toEqual([item('Redstone', 2), item('Torch', 2)])
-    expect(takeRedstone(c, 99).taken).toBe(9)
+    expect(patch.stashes?.camp.items).toEqual([item('Redstone Block', 4, true)])
+    expect(patch.onHand?.items).toEqual([item('Redstone', 2), item('Torch', 2)])
+    expect(takeRedstone(c, reach, 99).taken).toBe(9)
+    expect(takeRedstone(c, ['onHand'], 99).taken).toBe(3)
   })
 })
 

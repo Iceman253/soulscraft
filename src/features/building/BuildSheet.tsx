@@ -8,7 +8,8 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { FullScreen, fieldCls } from './FullScreen'
 import { PixelEditor } from './PixelEditor'
 import { PixelIcon } from './PixelIcon'
-import { PROJECT_TIERS, buildCondition, countBlocks, countRedstone, repairLeft, structureProgress, tectonBuilders } from '../../lib/building'
+import { useStorageReach } from '../characters/useStorageReach'
+import { PROJECT_TIERS, buildCondition, countBlocksIn, countRedstone, repairLeft, structureProgress, tectonBuilders } from '../../lib/building'
 import { placementLabel } from '../../lib/places'
 import type { Character, Structure } from '../../types'
 
@@ -57,6 +58,7 @@ export function BuildSheet({ structureId, character, onClose }: { structureId: s
   const [days, setDays] = useState(1)
   const [reason, setReason] = useState('')
   const [toast, setToast] = useState<string | null>(null)
+  const reach = useStorageReach(character)
   if (!s) return null
 
   const p = structureProgress(s)
@@ -64,8 +66,8 @@ export function BuildSheet({ structureId, character, onClose }: { structureId: s
   const tectons = tectonBuilders(s, characters)
   const builders = characters.filter(c => s.builderIds.includes(c.id))
   const isBuilder = !!character && s.builderIds.includes(character.id)
-  const blocksHeld = character ? countBlocks(character.storage.items) + countBlocks(character.onHand.items) : 0
-  const dustHeld = character ? countRedstone(character) : 0
+  const blocksHeld = character ? countBlocksIn(character, reach.sections) : 0
+  const dustHeld = character ? countRedstone(character, reach.sections) : 0
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500) }
 
   const ask = (type: 'build-days' | 'build-speedup', payload: Record<string, unknown>, label: string) => {

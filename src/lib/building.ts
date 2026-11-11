@@ -1,6 +1,7 @@
 import type { Character, CharacterItem, InventorySection, ProjectTier, Structure, Trait, WeaponMaterial, WeaponType } from '../types'
 import { rollDiceSpec } from './dice'
 import { normalizeIcon } from './pixelArt'
+import { countIn, dropKey, stashOf, takeFrom, withStash, type Section } from './stashes'
 
 // Mining, Building and block-carrying rules — Guidebook pp. 7, 81–83 (3.1e).
 
@@ -254,16 +255,18 @@ export function parseCarryLimit(value: unknown): number | null {
   return Number.isFinite(n) && n > BLOCK_CARRY_LIMIT ? n : null
 }
 
-/** Hold a character to their carry limit (p.7): anything past it goes to storage,
- *  which has no limit, so blocks are never lost. The newest stacks go first. */
+/** Hold a character to their carry limit (p.7): anything past it goes into storage
+ *  where they are (see lib/stashes dropKey), which has no limit, so blocks are never
+ *  lost. The newest stacks go first. */
 export function enforceCarryLimit(
-  c: Pick<Character, 'onHand' | 'storage' | 'carryLimit'>,
+  c: Pick<Character, 'onHand' | 'stashes' | 'carryLimit' | 'locationId' | 'subLocationId'>,
   newId: () => string,
-): { onHand: InventorySection; storage: InventorySection; moved: number } {
+  key: string = dropKey(c),
+): { onHand: InventorySection; stashes: Record<string, InventorySection> | undefined; moved: number } {
   const moved = Math.max(0, countBlocks(c.onHand.items) - carryLimitOf(c))
-  if (moved === 0) return { onHand: c.onHand, storage: c.storage, moved }
+  if (moved === 0) return { onHand: c.onHand, stashes: c.stashes, moved }
   const items = [...c.onHand.items]
-  let storage = c.storage
+  let storage = stashOf(c, key)
   let left = moved
   for (let i = items.length - 1; i >= 0 && left > 0; i--) {
     const item = items[i]
@@ -275,7 +278,7 @@ export function enforceCarryLimit(
     if (take === qty) items.splice(i, 1)
     else items[i] = { ...item, quantity: qty - take }
   }
-  return { onHand: { items }, storage, moved }
+  return { onHand: { items }, stashes: withStash(c, key, storage), moved }
 }
 
 /** Blocks in one unit of a market good: 10 for "stack of 10 blocks", 1 for "block",
@@ -410,46 +413,27 @@ export function tectonBuildBonus(
 
 // ── Inventory helpers ───────────────────────────────────────────────────
 
-/** Take up to `amount` blocks from a character, storage first, then on hand.
- *  Stacks that run out are removed. Returns the new sections and how many were taken. */
-export function takeBlocks(c: Pick<Character, 'storage' | 'onHand'>, amount: number) {
-  return takeItems(c, amount, i => !!i.isBlock)
-}
-
+const isBlock = (i: CharacterItem) => !!i.isBlock
 const isRedstoneDust = (i: CharacterItem) => !i.isBlock && /redstone/i.test(i.name)
 
-/** Redstone dust a character holds across storage and on hand. */
-export function countRedstone(c: Pick<Character, 'storage' | 'onHand'>): number {
-  return [...c.storage.items, ...c.onHand.items].filter(isRedstoneDust).reduce((sum, i) => sum + (i.quantity ?? 1), 0)
+/** Take up to `amount` blocks from the sections a character can reach (see
+ *  lib/stashes reachableStores), in the order given. Returns the patch and how many. */
+export function takeBlocks(c: Pick<Character, 'stashes' | 'onHand'>, sections: Section[], amount: number) {
+  return takeFrom(c, sections, amount, isBlock)
 }
 
-export function takeRedstone(c: Pick<Character, 'storage' | 'onHand'>, amount: number) {
-  return takeItems(c, amount, isRedstoneDust)
+/** Blocks in the given sections. */
+export function countBlocksIn(c: Pick<Character, 'stashes' | 'onHand'>, sections: Section[]): number {
+  return countIn(c, sections, isBlock)
 }
 
-function takeItems(
-  c: Pick<Character, 'storage' | 'onHand'>,
-  amount: number,
-  matches: (item: CharacterItem) => boolean,
-): { storage: InventorySection; onHand: InventorySection; taken: number } {
-  let left = Math.max(0, Math.floor(amount))
-  const drain = (section: InventorySection): InventorySection => {
-    const items: CharacterItem[] = []
-    for (const item of section.items) {
-      if (left > 0 && matches(item)) {
-        const qty = item.quantity ?? 1
-        const take = Math.min(qty, left)
-        left -= take
-        if (qty - take > 0) items.push({ ...item, quantity: qty - take })
-      } else {
-        items.push(item)
-      }
-    }
-    return { items }
-  }
-  const storage = drain(c.storage)
-  const onHand = drain(c.onHand)
-  return { storage, onHand, taken: Math.max(0, Math.floor(amount)) - left }
+/** Redstone dust in the given sections. */
+export function countRedstone(c: Pick<Character, 'stashes' | 'onHand'>, sections: Section[]): number {
+  return countIn(c, sections, isRedstoneDust)
+}
+
+export function takeRedstone(c: Pick<Character, 'stashes' | 'onHand'>, sections: Section[], amount: number) {
+  return takeFrom(c, sections, amount, isRedstoneDust)
 }
 
 /** Add `quantity` blocks named `name` to a section, stacking onto an existing

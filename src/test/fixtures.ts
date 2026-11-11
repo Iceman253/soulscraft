@@ -29,7 +29,6 @@ export function makeChar(overrides: Partial<Character> = {}): Character {
     subLocationId: null,
     currency: { copper: 0, iron: 0, gold: 0, emeralds: 0, diamonds: 0 },
     onHand: { items: [] },
-    storage: { items: [] },
     rations: 0,
     notes: '',
     ...overrides,

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { X, Trash2, Pencil, RotateCcw } from 'lucide-react'
-import { useBuildStore } from './store'
+import { useBuildStore, reachableSections } from './store'
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
 import { Modal } from '../../ui/Modal'
@@ -8,7 +8,7 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 import { PixelIcon } from './PixelIcon'
 import { PixelEditor } from './PixelEditor'
-import { PROJECT_TIERS, PROJECT_TIER_ORDER, projectRequirements, isArchitect, countBlocks, buildCondition, tectonBuilders } from '../../lib/building'
+import { PROJECT_TIERS, PROJECT_TIER_ORDER, projectRequirements, isArchitect, countBlocksIn, buildCondition, tectonBuilders } from '../../lib/building'
 import { allPlaceOptions, defaultPositionFor, placeOptionValue } from '../../lib/places'
 import type { ProjectTier, Structure } from '../../types'
 
@@ -59,7 +59,9 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
   const rulebook = projectRequirements(s.tier, architect)
   const offRulebook = rulebook.blocks !== s.blocksRequired || rulebook.days !== s.daysRequired || rulebook.redstone !== s.redstoneRequired
   const giver = living.find(c => c.id === (giverId || builders[0]?.id)) ?? null
-  const giverBlocks = giver ? countBlocks(giver.storage.items) + countBlocks(giver.onHand.items) : 0
+  // What they could put in from where they are: storage there, an Ender Chest with them, on hand.
+  const reachableBlocks = (c: typeof living[number]) => countBlocksIn(c, reachableSections(c))
+  const giverBlocks = giver ? reachableBlocks(giver) : 0
   const blocksLeft = Math.max(0, s.blocksRequired - s.blocksCommitted)
 
   const toggleBuilder = (id: string) =>
@@ -187,7 +189,7 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
               <div className="flex gap-1.5">
                 <select value={giver?.id ?? ''} onChange={e => setGiverId(e.target.value)} className="flex-1 min-w-0 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-1 text-stone-200 text-xs outline-hidden">
                   {[...builders, ...living.filter(c => !s.builderIds.includes(c.id))].map(c => (
-                    <option key={c.id} value={c.id}>{c.name} ({countBlocks(c.storage.items) + countBlocks(c.onHand.items)} blocks)</option>
+                    <option key={c.id} value={c.id}>{c.name} ({reachableBlocks(c)} blocks to hand)</option>
                   ))}
                 </select>
                 <input type="number" min={1} placeholder={String(Math.min(blocksLeft, giverBlocks))} value={giveAmount}

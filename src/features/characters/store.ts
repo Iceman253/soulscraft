@@ -14,6 +14,7 @@ import type { DefaultSkill } from '../../lib/classes'
 import { CLASS_ABILITIES } from '../../lib/classAbilities'
 import { rollDiceSpec } from '../../lib/dice'
 import { BLOCK_CARRY_LIMIT, carryLimitOf, carryRoom, countBlocks, enforceCarryLimit, moveBlocks, nextCarryLimit } from '../../lib/building'
+import { dropKey, migrateStorage, moveItem, sectionOf, setSection, stashOf, withStash, type Section, type StoreKey } from '../../lib/stashes'
 
 // ── One-time hydration migration ───────────────────────────────────────
 // Re-syncs combatRoles and appliedEffects on stored abilities + the Discipline
@@ -187,18 +188,23 @@ interface CharacterStore {
   addOnHandItem: (id: string, item: Omit<CharacterItem, 'id'>) => string
   updateOnHandItem: (id: string, itemId: string, patch: Partial<CharacterItem>) => void
   removeOnHandItem: (id: string, itemId: string) => void
-  addStorageItem: (id: string, item: Omit<CharacterItem, 'id'>) => void
-  updateStorageItem: (id: string, itemId: string, patch: Partial<CharacterItem>) => void
-  removeStorageItem: (id: string, itemId: string) => void
-  moveItemToStorage: (id: string, itemId: string) => void
-  /** Set a temporary carry limit, or end it with null. Extra blocks go to storage. */
+  /** Add an item to one of a character's stores (storage at a place, their Ender
+   *  Chest, or unplaced). See lib/stashes. */
+  addStoredItem: (id: string, key: StoreKey, item: Omit<CharacterItem, 'id'>) => void
+  updateStoredItem: (id: string, key: StoreKey, itemId: string, patch: Partial<CharacterItem>) => void
+  removeStoredItem: (id: string, key: StoreKey, itemId: string) => void
+  /** Move an item between on hand and a store, or between stores. Blocks going on
+   *  hand stop at the carry limit and the rest stays where it was. */
+  moveItem: (id: string, itemId: string, from: Section, to: Section) => void
+  /** GM: everything in one store goes to another (say, old storage to the base). */
+  moveStore: (id: string, from: StoreKey, to: StoreKey) => void
+  /** Set a temporary carry limit, or end it with null. Extra blocks are put down where they are. */
   setCarryLimit: (id: string, limit: number | null) => void
-  /** Leave up to `amount` on-hand blocks at a mine. Returns blocks left. */
-  leaveBlocksAtMine: (id: string, placeId: string, amount: number) => number
-  /** Pick up blocks left at a mine, up to the carry limit. Returns blocks taken. */
-  takeBlocksFromMine: (id: string, placeId: string, amount: number) => number
-  moveItemToHand: (id: string, itemId: string) => void
-  giveItemToCharacter: (fromId: string, itemId: string, fromSection: 'onHand' | 'storage', toId: string) => void
+  /** Put up to `amount` on-hand blocks into a store. Returns blocks left there. */
+  leaveBlocks: (id: string, key: StoreKey, amount: number) => number
+  /** Pick up blocks from a store, up to the carry limit. Returns blocks taken. */
+  pickUpBlocks: (id: string, key: StoreKey, amount: number) => number
+  giveItemToCharacter: (fromId: string, itemId: string, fromSection: Section, toId: string) => void
   setCurrency: (id: string, patch: Partial<Character['currency']>) => void
   setRations: (id: string, count: number) => void
 
@@ -250,9 +256,9 @@ function settleCarry(before: Character[], after: Character[], id: string): Chara
   const ended = carryLimit !== c.carryLimit
   if (ended) log('character-move', `📦 ${c.name}'s carry limit is back to ${BLOCK_CARRY_LIMIT} blocks.`)
   const settled = ended ? { ...c, carryLimit } : c
-  const { onHand, storage, moved } = enforceCarryLimit(settled, newId)
-  if (moved > 0) log('character-move', `📦 ${c.name} can only carry ${carryLimitOf(settled)} blocks, so ${moved} went to storage.`)
-  return ended || moved > 0 ? mapChar(after, id, () => ({ ...settled, onHand, storage })) : after
+  const { onHand, stashes, moved } = enforceCarryLimit(settled, newId)
+  if (moved > 0) log('character-move', `📦 ${c.name} can only carry ${carryLimitOf(settled)} blocks, so ${moved} ${dropKey(c) === 'unplaced' ? 'were left behind' : 'went into storage here'}.`)
+  return ended || moved > 0 ? mapChar(after, id, () => ({ ...settled, onHand, stashes })) : after
 }
 
 function defaultClassFeatureState(characterClass: string): ClassFeatureState {
@@ -396,7 +402,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   hydrate(characters, xpLog) {
     // Migrate stale ability/edge combatRoles tags from any pre-refactor saves.
-    const migrated = characters.map(migrateCharacter)
+    const migrated = characters.map(c => migrateStorage(migrateCharacter(c)))
     set({ characters: migrated, xpLog })
     // Persist the migrated shape so we don't repeat work on every page load.
     if (migrated.length > 0) save(migrated, xpLog)
@@ -1155,24 +1161,57 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     set({ characters }); save(characters, get().xpLog)
   },
 
-  addStorageItem(id, item) {
+  addStoredItem(id, key, item) {
     const characters = mapChar(get().characters, id, c => ({
-      ...c, storage: { items: [...c.storage.items, { ...item, id: newId() }] },
+      ...c, stashes: withStash(c, key, { items: [...stashOf(c, key).items, { ...item, id: newId() }] }),
     }))
     set({ characters }); save(characters, get().xpLog)
   },
 
-  updateStorageItem(id, itemId, patch) {
+  updateStoredItem(id, key, itemId, patch) {
     const characters = mapChar(get().characters, id, c => ({
-      ...c, storage: { items: c.storage.items.map(i => i.id === itemId ? { ...i, ...patch } : i) },
+      ...c, stashes: withStash(c, key, { items: stashOf(c, key).items.map(i => i.id === itemId ? { ...i, ...patch } : i) }),
     }))
     set({ characters }); save(characters, get().xpLog)
   },
 
-  removeStorageItem(id, itemId) {
+  removeStoredItem(id, key, itemId) {
     const characters = mapChar(get().characters, id, c => ({
-      ...c, storage: { items: c.storage.items.filter(i => i.id !== itemId) },
+      ...c, stashes: withStash(c, key, { items: stashOf(c, key).items.filter(i => i.id !== itemId) }),
     }))
+    set({ characters }); save(characters, get().xpLog)
+  },
+
+  moveItem(id, itemId, from, to) {
+    const c = get().characters.find(x => x.id === id)
+    if (!c || from === to) return
+    const item = sectionOf(c, from).items.find(i => i.id === itemId)
+    if (!item) return
+    let patch: Partial<Character> | null
+    if (to === 'onHand' && item.isBlock) {
+      // Only what fits: the rest of the stack stays where it was.
+      const qty = Math.min(item.quantity ?? 1, carryRoom(c))
+      if (qty === 0) return
+      const { from: source, to: hand } = moveBlocks({ items: [item] }, c.onHand, qty, newId)
+      const rest = sectionOf(c, from).items.flatMap(i => i.id !== itemId ? [i] : source.items)
+      patch = { ...setSection(c, from, { items: rest }), onHand: hand }
+    } else {
+      patch = moveItem(c, itemId, from, to)
+    }
+    if (!patch) return
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, x => ({ ...x, ...patch })), id)
+    set({ characters }); save(characters, get().xpLog)
+  },
+
+  moveStore(id, from, to) {
+    const c = get().characters.find(x => x.id === id)
+    if (!c || from === to || stashOf(c, from).items.length === 0) return
+    const merged = { items: [...stashOf(c, to).items, ...stashOf(c, from).items] }
+    const characters = mapChar(get().characters, id, x => {
+      const stashes = withStash(x, to, merged)
+      delete stashes[from]
+      return { ...x, stashes }
+    })
     set({ characters }); save(characters, get().xpLog)
   },
 
@@ -1181,65 +1220,37 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     if (!character) return
     const set_ = mapChar(get().characters, id, c => ({ ...c, carryLimit: limit ?? undefined }))
     const c = set_.find(x => x.id === id)!
-    const { onHand, storage, moved } = enforceCarryLimit(c, newId)
-    const characters = moved > 0 ? mapChar(set_, id, x => ({ ...x, onHand, storage })) : set_
+    const { onHand, stashes, moved } = enforceCarryLimit(c, newId)
+    const characters = moved > 0 ? mapChar(set_, id, x => ({ ...x, onHand, stashes })) : set_
     set({ characters }); save(characters, get().xpLog)
     log('character-move', limit
       ? `📦 ${character.name} can carry up to ${limit} blocks for now. This ends once they're carrying fewer than ${BLOCK_CARRY_LIMIT}.`
       : `📦 ${character.name}'s carry limit is back to ${BLOCK_CARRY_LIMIT} blocks.`)
-    if (moved > 0) log('character-move', `📦 ${moved} of ${character.name}'s blocks went to storage.`)
+    if (moved > 0) log('character-move', `📦 ${moved} of ${character.name}'s blocks ${dropKey(c) === 'unplaced' ? 'were left behind' : 'went into storage here'}.`)
   },
 
-  leaveBlocksAtMine(id, placeId, amount) {
+  leaveBlocks(id, key, amount) {
     const c = get().characters.find(x => x.id === id)
     if (!c) return 0
-    const stash = c.mineStashes?.[placeId] ?? { items: [] }
-    const { from, to, moved } = moveBlocks(c.onHand, stash, amount, newId)
+    const { from, to, moved } = moveBlocks(c.onHand, stashOf(c, key), amount, newId)
     if (moved === 0) return 0
     const characters = settleCarry(get().characters, mapChar(get().characters, id, x => ({
-      ...x, onHand: from, mineStashes: { ...x.mineStashes, [placeId]: to },
+      ...x, onHand: from, stashes: withStash(x, key, to),
     })), id)
     set({ characters }); save(characters, get().xpLog)
     return moved
   },
 
-  takeBlocksFromMine(id, placeId, amount) {
+  pickUpBlocks(id, key, amount) {
     const c = get().characters.find(x => x.id === id)
-    const stash = c?.mineStashes?.[placeId]
-    if (!c || !stash) return 0
-    const { from, to, moved } = moveBlocks(stash, c.onHand, Math.min(amount, carryRoom(c)), newId)
+    if (!c) return 0
+    const { from, to, moved } = moveBlocks(stashOf(c, key), c.onHand, Math.min(amount, carryRoom(c)), newId)
     if (moved === 0) return 0
-    const mineStashes = { ...c.mineStashes, [placeId]: from }
-    if (from.items.length === 0) delete mineStashes[placeId]
-    const characters = settleCarry(get().characters, mapChar(get().characters, id, x => ({ ...x, onHand: to, mineStashes })), id)
+    const characters = settleCarry(get().characters, mapChar(get().characters, id, x => ({
+      ...x, onHand: to, stashes: withStash(x, key, from),
+    })), id)
     set({ characters }); save(characters, get().xpLog)
     return moved
-  },
-
-  moveItemToStorage(id, itemId) {
-    const characters = settleCarry(get().characters, mapChar(get().characters, id, c => {
-      const item = c.onHand.items.find(i => i.id === itemId)
-      if (!item) return c
-      return {
-        ...c,
-        onHand: { items: c.onHand.items.filter(i => i.id !== itemId) },
-        storage: { items: [...c.storage.items, item] },
-      }
-    }), id)
-    set({ characters }); save(characters, get().xpLog)
-  },
-
-  moveItemToHand(id, itemId) {
-    const characters = settleCarry(get().characters, mapChar(get().characters, id, c => {
-      const item = c.storage.items.find(i => i.id === itemId)
-      if (!item) return c
-      return {
-        ...c,
-        storage: { items: c.storage.items.filter(i => i.id !== itemId) },
-        onHand: { items: [...c.onHand.items, item] },
-      }
-    }), id)
-    set({ characters }); save(characters, get().xpLog)
   },
 
   giveItemToCharacter(fromId, itemId, fromSection, toId) {
@@ -1247,18 +1258,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const fromChar = state.characters.find(c => c.id === fromId)
     const toChar = state.characters.find(c => c.id === toId)
     if (!fromChar || !toChar) return
-    const item = fromSection === 'onHand'
-      ? fromChar.onHand.items.find(i => i.id === itemId)
-      : fromChar.storage.items.find(i => i.id === itemId)
+    const item = sectionOf(fromChar, fromSection).items.find(i => i.id === itemId)
     if (!item) return
     const newItemId = newId()
     let characters = state.characters
     // Remove from source
-    characters = settleCarry(characters, mapChar(characters, fromId, c =>
-      fromSection === 'onHand'
-        ? { ...c, onHand: { items: c.onHand.items.filter(i => i.id !== itemId) } }
-        : { ...c, storage: { items: c.storage.items.filter(i => i.id !== itemId) } }
-    ), fromId)
+    characters = settleCarry(characters, mapChar(characters, fromId, c => ({
+      ...c, ...setSection(c, fromSection, { items: sectionOf(c, fromSection).items.filter(i => i.id !== itemId) }),
+    })), fromId)
     // Add to target's onHand
     characters = settleCarry(characters, mapChar(characters, toId, c => ({
       ...c, onHand: { items: [...c.onHand.items, { ...item, id: newItemId }] },

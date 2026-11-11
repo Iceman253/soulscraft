@@ -51,10 +51,8 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const [roll, setRoll] = useState<number | ''>('')
   const [penalty, setPenalty] = useState(0)   // missed-rest penalty, rolled with the dice
   const [gained, setGained] = useState<number | null>(null)
-  const [pickedDestination, setDestination] = useState<MiningDestination | null>(null)
-  const destination: MiningDestination = pickedDestination && (pickedDestination !== 'mine' || area?.isMine)
-    ? pickedDestination
-    : area?.isMine ? 'mine' : 'storage'
+  // Blocks are left where they were mined unless they're carried off (p.7).
+  const [destination, setDestination] = useState<MiningDestination>('storage')
 
   // Default: pre-check Traits that sound like mining (e.g. Deep Dwymir "Miner").
   const autoTraits = useMemo(() => miningTraits(character?.traits ?? []).map(t => t.id), [character])
@@ -83,7 +81,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
 
   const apply = () => {
     if (!character || total === null) return
-    mine({ characterId: character.id, areaName: area?.label, materials, requested, total, gained: awarded, destination, placeId: destination === 'mine' ? area?.id : undefined, doubleSix: roll === 12 })
+    mine({ characterId: character.id, areaName: area?.label, materials, requested, total, gained: awarded, destination, placeId: area?.id, doubleSix: roll === 12 })
     onClose()
   }
 
@@ -235,14 +233,13 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
             <div>
               <label className={labelCls}>Put them</label>
               <select value={destination} onChange={e => setDestination(e.target.value as MiningDestination)} className={inputCls}>
-                {area?.isMine && <option value="mine">Left at the mine</option>}
-                <option value="storage">In storage (chests)</option>
+                <option value="storage">Left where they were mined</option>
                 <option value="onHand">On hand</option>
               </select>
             </div>
             {destination === 'onHand' && awarded > room && (
               <div className="col-span-2 text-[11px] text-amber-400">
-                {character?.name} can carry {character ? carryLimitOf(character) : 0} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest goes`} to storage.
+                {character?.name} can carry {character ? carryLimitOf(character) : 0} blocks at most, so {room === 0 ? 'these all go' : `only ${room} more fit and the rest stays`} where they were mined.
               </div>
             )}
             {awarded > 0 && (
