@@ -46,7 +46,27 @@ export const TOOL_BONUS: Record<ToolTier, number> = {
   netherite: 4,
 }
 
-const TOOL_NAME = /\b(pickaxe|pick|axe|shovel|spade|hoe)\b/i
+export type ToolKind = 'pickaxe' | 'axe' | 'shovel' | 'hoe'
+
+const KIND_WORDS: [ToolKind, RegExp][] = [
+  ['pickaxe', /\b(pickaxe|pick)\b/i],
+  ['axe', /\baxe\b/i],
+  ['shovel', /\b(shovel|spade)\b/i],
+  ['hoe', /\bhoe\b/i],
+]
+
+/** What each tool other than a pickaxe is made for (a pickaxe suits everything).
+ *  Off its material it is far worse: see miningToolBonus. */
+const SUITED: Record<Exclude<ToolKind, 'pickaxe'>, { what: string; re: RegExp }> = {
+  axe: { what: 'wood', re: /\b(wood\w*|logs?|planks?|timber|lumber|oak|spruce|birch|jungle|acacia|mangrove|cherry|bamboo|stems?|hyphae|trees?)\b/i },
+  shovel: { what: 'dirt, sand or gravel', re: /\b(dirt|sand|gravel|clay|mud|snow|soil|grass|podzol|mycelium)\b/i },
+  hoe: { what: 'leaves and plants', re: /\b(leaves|leaf|hay|moss|sculk|warts?|sponges?|vines?)\b/i },
+}
+
+/** How much worse an axe, shovel or hoe is than a pickaxe of the same material
+ *  when used on something it isn't made for. Never worse than no tool at all. */
+export const OFF_TOOL_PENALTY = 3
+
 const TIER_WORDS: [ToolTier, RegExp][] = [
   ['netherite', /\bnetherite\b/i],
   ['diamond', /\bdiamond\b/i],
@@ -65,43 +85,85 @@ const TIER_OF_MATERIAL: Partial<Record<WeaponMaterial, ToolTier>> = {
 
 export interface CarriedTool {
   tier: Exclude<ToolTier, 'none'>
+  kind: ToolKind
   itemName: string
 }
 
-/** Mining tools a character actually has with them, best first: on-hand items whose
- *  name gives a tool and its material, plus mining equipment in a weapon slot. Other
- *  weapons don't count, and chests stay at base (p.7), so storage doesn't either.
- *  One entry per tier. */
+/** Identifies one carried tool in a picker, e.g. "axe:iron". */
+export const toolKey = (t: Pick<CarriedTool, 'kind' | 'tier'>) => `${t.kind}:${t.tier}`
+
+/** Mining tools a character actually has with them, best material first: on-hand
+ *  items whose name gives a tool and its material, plus mining equipment in a weapon
+ *  slot. Other weapons don't count, and chests stay at base (p.7), so storage doesn't
+ *  either. One entry per kind and material. */
 export function carriedMiningTools(c: Pick<Character, 'onHand' | 'weaponLoadout'>): CarriedTool[] {
-  const found = new Map<ToolTier, CarriedTool>()
-  const add = (tier: ToolTier | undefined, itemName: string) => {
-    if (tier && tier !== 'none' && !found.has(tier)) found.set(tier, { tier, itemName })
+  const found = new Map<string, CarriedTool>()
+  const add = (kind: ToolKind | undefined, tier: ToolTier | undefined, itemName: string) => {
+    if (!kind || !tier || tier === 'none') return
+    const tool = { tier, kind, itemName }
+    if (!found.has(toolKey(tool))) found.set(toolKey(tool), tool)
   }
   for (const item of c.onHand.items) {
     const name = `${item.customName ?? ''} ${item.name}`
-    if (TOOL_NAME.test(name)) add(TIER_WORDS.find(([, re]) => re.test(name))?.[0], item.customName ?? item.name)
+    const kind = KIND_WORDS.find(([, re]) => re.test(name))?.[0]
+    if (kind) add(kind, TIER_WORDS.find(([, re]) => re.test(name))?.[0], item.customName ?? item.name)
   }
   for (const weapon of [c.weaponLoadout?.mainHand, c.weaponLoadout?.offHand]) {
-    if (weapon && SLOT_TOOL_TYPES.includes(weapon.type)) add(TIER_OF_MATERIAL[weapon.material], weapon.name)
+    if (weapon && SLOT_TOOL_TYPES.includes(weapon.type)) add(weapon.type as ToolKind, TIER_OF_MATERIAL[weapon.material], weapon.name)
   }
   return [...found.values()].sort((a, b) => TOOL_BONUS[b.tier] - TOOL_BONUS[a.tier])
 }
 
-/** The tool in use: what was picked if the character still has it, otherwise their
- *  best tool. Choosing no tool is always allowed. */
-export function resolveMiningTool(picked: ToolTier | null, tools: CarriedTool[]): ToolTier {
-  if (picked === 'none') return 'none'
-  if (picked && tools.some(t => t.tier === picked)) return picked
-  return tools[0]?.tier ?? 'none'
+/** Is this tool made for everything being mined? A pickaxe always is; an axe only
+ *  when it's all wood, and so on. Nothing named yet counts as not suited. */
+export function toolSuits(kind: ToolKind, materials: string[]): boolean {
+  if (kind === 'pickaxe') return true
+  return materials.length > 0 && materials.every(m => SUITED[kind].re.test(m))
 }
 
-/** The tool picker's choices: only tools the character has, plus no tool. */
-export function miningToolOptions(tools: CarriedTool[]): { value: ToolTier; label: string }[] {
-  const signed = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`
+/** What a tool adds to a mining roll. A pickaxe gets its material's bonus (p.82). An
+ *  axe, shovel or hoe gets it only on what it's made for (an axe on wood); otherwise
+ *  it is OFF_TOOL_PENALTY worse, and never worse than no tool. */
+export function miningToolBonus(tool: Pick<CarriedTool, 'kind' | 'tier'> | null, materials: string[]): number {
+  if (!tool) return TOOL_BONUS.none
+  if (toolSuits(tool.kind, materials)) return TOOL_BONUS[tool.tier]
+  return Math.max(TOOL_BONUS.none, TOOL_BONUS[tool.tier] - OFF_TOOL_PENALTY)
+}
+
+/** The tool in use: what was picked (by toolKey) if the character still has it,
+ *  otherwise their best tool for these materials. 'none' (no tool) is always allowed. */
+export function resolveMiningTool(picked: string | null, tools: CarriedTool[], materials: string[] = []): CarriedTool | null {
+  if (picked === 'none') return null
+  const chosen = picked ? tools.find(t => toolKey(t) === picked) : undefined
+  if (chosen) return chosen
+  // Best bonus wins; on a tie, the earlier (better material) tool.
+  return tools.reduce<CarriedTool | null>((best, t) =>
+    !best || miningToolBonus(t, materials) > miningToolBonus(best, materials) ? t : best, null)
+}
+
+const signed = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`
+
+/** The tool picker's choices: only tools the character has, best for these
+ *  materials first, plus no tool. */
+export function miningToolOptions(tools: CarriedTool[], materials: string[] = []): { value: string; label: string }[] {
   return [
-    ...tools.map(t => ({ value: t.tier as ToolTier, label: `${t.itemName} (${signed(TOOL_BONUS[t.tier])})` })),
-    { value: 'none' as const, label: `No tool (${signed(TOOL_BONUS.none)})` },
+    ...[...tools]
+      .sort((a, b) => miningToolBonus(b, materials) - miningToolBonus(a, materials))
+      .map(t => {
+        const bonus = miningToolBonus(t, materials)
+        const off = t.kind !== 'pickaxe' && !toolSuits(t.kind, materials)
+        return { value: toolKey(t), label: `${t.itemName} (${signed(bonus)}${off ? `, best on ${SUITED[t.kind as Exclude<ToolKind, 'pickaxe'>].what}` : ''})` }
+      }),
+    { value: 'none', label: `No tool (${signed(TOOL_BONUS.none)})` },
   ]
+}
+
+/** "+1 Iron pickaxe", or "−3 Iron axe (not wood)" for the roll breakdown. */
+export function miningToolLabel(tool: CarriedTool | null, materials: string[]): string {
+  if (!tool) return `${signed(TOOL_BONUS.none)} no tool`
+  const name = `${tool.tier[0].toUpperCase()}${tool.tier.slice(1)} ${tool.kind}`
+  const off = tool.kind !== 'pickaxe' && !toolSuits(tool.kind, materials)
+  return `${signed(miningToolBonus(tool, materials))} ${name}${off ? ` (not ${SUITED[tool.kind as Exclude<ToolKind, 'pickaxe'>].what})` : ''}`
 }
 
 export type ActionOutcome = 'success' | 'partial' | 'failure'
@@ -149,20 +211,18 @@ export function miningEffectNotes(c: Pick<Character, 'activeEffects'>): string[]
   return c.activeEffects.filter(e => /^(cursed|luck|fatigue)$/i.test(e.name.trim())).map(e => e.name)
 }
 
-/** The roll spelled out for the GM, e.g. "9 (2d6) +1 Iron tool +1 Miner +2 Delving". */
+/** The roll spelled out for the GM, e.g. "9 (2d6) +1 Iron pickaxe +1 Miner +2 Delving". */
 export function miningBreakdown(parts: {
   dice: number
-  tool: ToolTier
+  tool: CarriedTool | null
+  materials?: string[]
   traits: string[]
   skill?: { name: string; bonus: number }
   other?: number
   sdBoost?: number
   penalty?: number
 }): string {
-  const signed = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`
-  const bits = [`${parts.dice} (2d6)`]
-  if (parts.tool === 'none') bits.push(`${signed(TOOL_BONUS.none)} no tool`)
-  else bits.push(`${signed(TOOL_BONUS[parts.tool])} ${parts.tool[0].toUpperCase()}${parts.tool.slice(1)} tool`)
+  const bits = [`${parts.dice} (2d6)`, miningToolLabel(parts.tool, parts.materials ?? [])]
   for (const t of parts.traits) bits.push(`+1 ${t}`)
   if (parts.skill) bits.push(`+${parts.skill.bonus} ${parts.skill.name}`)
   if (parts.other) bits.push(`${signed(parts.other)} other`)
@@ -290,6 +350,62 @@ export function structureProgress(s: Pick<Structure, 'blocksRequired' | 'blocksC
     fraction,
     status: s.completedAt ? 'complete' as const : started ? 'building' as const : 'planned' as const,
   }
+}
+
+export type BuildCondition = 'planned' | 'building' | 'complete' | 'damaged' | 'destroyed'
+
+/** Where a build stands: its progress, or damaged / destroyed once finished. */
+export function buildCondition(s: Parameters<typeof structureProgress>[0] & Pick<Structure, 'damage' | 'destroyedAt'>): BuildCondition {
+  if (s.destroyedAt) return 'destroyed'
+  if (s.completedAt && s.damage) return 'damaged'
+  return structureProgress(s).status
+}
+
+/** Blocks still needed to repair a damaged build. */
+export function repairLeft(s: Pick<Structure, 'damage'>): number {
+  return s.damage ? Math.max(0, s.damage.needed - s.damage.repaired) : 0
+}
+
+/** Does the build count as a proper shelter for a rest (p.89)? Only a finished one
+ *  that is still whole. */
+export function sheltersRest(s: Parameters<typeof buildCondition>[0]): boolean {
+  return buildCondition(s) === 'complete'
+}
+
+/** Builds a party could rest in, for the rest log: finished ones that aren't ruins,
+ *  those in the party's areas first. Damaged ones are listed but don't shelter. */
+export function restBuilds<S extends Parameters<typeof buildCondition>[0] & Pick<Structure, 'name' | 'areaId'>>(
+  structures: S[],
+  partyAreaIds: Set<string | null> = new Set(),
+): { structure: S; shelters: boolean }[] {
+  return structures
+    .filter(s => { const c = buildCondition(s); return c === 'complete' || c === 'damaged' })
+    .map(s => ({ structure: s, shelters: sheltersRest(s) }))
+    .sort((a, b) =>
+      Number(partyAreaIds.has(b.structure.areaId)) - Number(partyAreaIds.has(a.structure.areaId))
+      || Number(b.shelters) - Number(a.shelters)
+      || a.structure.name.localeCompare(b.structure.name))
+}
+
+/** Tectons among a build's builders. The Prime Order (p.62) applies to anything a
+ *  Tecton builds. */
+export function tectonBuilders<C extends Pick<Character, 'id' | 'class'>>(s: Pick<Structure, 'builderIds'>, characters: C[]): C[] {
+  return characters.filter(c => c.class === 'Tecton' && s.builderIds.includes(c.id))
+}
+
+/** The Prime Order (p.62) on a build: +1 to action rolls made with it, +2 when its
+ *  Tecton builder is the one using it. Not attack rolls. Nothing until it's finished,
+ *  or once it's destroyed. */
+export function tectonBuildBonus(
+  s: Parameters<typeof buildCondition>[0] & Pick<Structure, 'builderIds'>,
+  characters: Pick<Character, 'id' | 'class'>[],
+  userId?: string,
+): number {
+  const condition = buildCondition(s)
+  if (condition !== 'complete' && condition !== 'damaged') return 0
+  const tectons = tectonBuilders(s, characters)
+  if (tectons.length === 0) return 0
+  return userId && tectons.some(c => c.id === userId) ? 2 : 1
 }
 
 // ── Inventory helpers ───────────────────────────────────────────────────

@@ -121,4 +121,9 @@ export interface Structure {
   icon?: string
   createdAt: number
   completedAt?: number
+  /** A finished build that's been damaged: blocks it needs to be whole again, and
+   *  how many have gone back in. Cleared once repaired. */
+  damage?: { needed: number; repaired: number; note?: string }
+  /** Set when a build is destroyed. It stays on the map as ruins until rebuilt or deleted. */
+  destroyedAt?: number
 }

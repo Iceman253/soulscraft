@@ -6,8 +6,8 @@ import { useWorldStore } from '../map/store'
 import { useBuildStore, type MiningDestination } from './store'
 import { mineAt, miningSites } from '../../lib/places'
 import {
-  MINING_AMOUNTS, miningDays, TOOL_BONUS, carriedMiningTools, miningToolOptions, resolveMiningTool, actionOutcome,
-  carryLimitOf, carryRoom, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
+  MINING_AMOUNTS, miningDays, miningToolBonus, toolKey, carriedMiningTools, miningToolOptions, resolveMiningTool, actionOutcome,
+  carryLimitOf, carryRoom, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks,
 } from '../../lib/building'
 
 const OUTCOME_TEXT = {
@@ -43,8 +43,8 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const [customMaterial, setCustomMaterial] = useState('')
   const [requested, setRequested] = useState(50)
   const tools = useMemo(() => character ? carriedMiningTools(character) : [], [character])
-  const [tool, setTool] = useState<ToolTier | null>(null)
-  const effectiveTool = resolveMiningTool(tool, tools)
+  const [tool, setTool] = useState<string | null>(null)
+  const effectiveTool = resolveMiningTool(tool, tools, materials)
   const [skillId, setSkillId] = useState('')
   const [traitIds, setTraitIds] = useState<string[] | null>(null)
   const [otherBonus, setOtherBonus] = useState(0)
@@ -60,7 +60,7 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
   const autoTraits = useMemo(() => miningTraits(character?.traits ?? []).map(t => t.id), [character])
   const checkedTraits = traitIds ?? autoTraits
   const skill = character?.skills.find(s => s.id === skillId)
-  const bonus = TOOL_BONUS[effectiveTool] + checkedTraits.length + (skill?.bonus ?? 0) + otherBonus
+  const bonus = miningToolBonus(effectiveTool, materials) + checkedTraits.length + (skill?.bonus ?? 0) + otherBonus
   const total = roll === '' ? null : roll + bonus - penalty
   const outcome = total === null ? null : actionOutcome(total)
   const awarded = gained ?? (total === null ? 0 : suggestedMiningBlocks(total, requested))
@@ -166,8 +166,8 @@ export function MiningModal({ initialAreaId, initialCharacterId, onClose }: { in
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className={labelCls}>Tool</label>
-            <select value={effectiveTool} onChange={e => setTool(e.target.value as ToolTier)} className={inputCls}>
-              {miningToolOptions(tools).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <select value={effectiveTool ? toolKey(effectiveTool) : 'none'} onChange={e => setTool(e.target.value)} className={inputCls}>
+              {miningToolOptions(tools, materials).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             {tools.length === 0 && <div className="text-[10px] text-stone-500 mt-0.5">No mining tool with them</div>}
           </div>

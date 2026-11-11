@@ -5,7 +5,7 @@ import { log } from '../log/store'
 import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import {
-  PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
+  PROJECT_TIERS, projectRequirements, isArchitect, structureProgress, repairLeft,
   takeBlocks, takeRedstone, addBlocks, enforceCarryLimit, minedStackName, miningDays, actionOutcome,
 } from '../../lib/building'
 
@@ -55,6 +55,17 @@ interface BuildStore {
   addProgress: (id: string, delta: { blocks?: number; redstone?: number; days?: number }) => void
   setCompleted: (id: string, completed: boolean) => void
 
+  /** Damage a finished build: it needs `blocks` put back in to be whole again. */
+  damageStructure: (id: string, blocks: number, note?: string) => void
+  /** Put blocks from a character's inventory into repairing a build. Returns blocks taken. */
+  repairStructure: (id: string, characterId: string, amount: number) => number
+  /** The GM calls it repaired without the blocks. */
+  markRepaired: (id: string) => void
+  /** Destroy a build. It stays on the map as ruins. */
+  destroyStructure: (id: string) => void
+  /** Start over on a destroyed build: a fresh project of the same size, same place. */
+  rebuildStructure: (id: string) => void
+
   /** Resolve a mining trip: add the awarded blocks to the character and log it. */
   mine: (p: MineParams) => void
 }
@@ -76,6 +87,13 @@ function minedWhere(destination: MiningDestination, qty: number, overflow: numbe
   if (destination === 'mine') return ` (left at ${place ?? 'the mine'})`
   if (destination === 'storage' || overflow >= qty) return ' (to storage)'
   return overflow > 0 ? ` (${qty - overflow} on hand, ${overflow} to storage)` : ' (on hand)'
+}
+
+function withoutDamage(s: Structure): Structure {
+  if (!s.damage) return s
+  const rest = { ...s }
+  delete rest.damage
+  return rest
 }
 
 /** Mark a structure complete (and log it) once every requirement is met. */
@@ -198,6 +216,65 @@ export const useBuildStore = create<BuildStore>((set, get) => {
         }
         return s
       })
+    },
+
+    damageStructure(id, blocks, note) {
+      const needed = Math.max(0, Math.floor(blocks))
+      const s = get().structures.find(x => x.id === id)
+      if (!s || !s.completedAt || s.destroyedAt || needed === 0) return
+      const trimmed = note?.trim()
+      mapOne(id, x => ({ ...x, damage: { needed, repaired: 0, ...(trimmed ? { note: trimmed } : {}) } }))
+      log('building', `💥 ${s.name} was damaged${trimmed ? ` (${trimmed})` : ''}: ${needed} block${needed === 1 ? '' : 's'} to repair.`)
+    },
+
+    repairStructure(id, characterId, amount) {
+      const s = get().structures.find(x => x.id === id)
+      const charStore = useCharacterStore.getState()
+      const c = charStore.characters.find(x => x.id === characterId)
+      if (!s?.damage || !c || amount <= 0) return 0
+      const { storage, onHand, taken } = takeBlocks(c, Math.min(amount, repairLeft(s)))
+      if (taken === 0) return 0
+      charStore.updateCharacter(characterId, { storage, onHand })
+      const repaired = s.damage.repaired + taken
+      if (repaired >= s.damage.needed) {
+        mapOne(id, x => withoutDamage(x))
+        log('building', `🔨 ${c.name} put ${taken} block${taken === 1 ? '' : 's'} into ${s.name}. It's fully repaired.`)
+      } else {
+        mapOne(id, x => x.damage ? { ...x, damage: { ...x.damage, repaired } } : x)
+        log('building', `🔨 ${c.name} put ${taken} block${taken === 1 ? '' : 's'} into repairing ${s.name} (${repaired}/${s.damage.needed}).`)
+      }
+      return taken
+    },
+
+    markRepaired(id) {
+      const s = get().structures.find(x => x.id === id)
+      if (!s?.damage) return
+      mapOne(id, x => withoutDamage(x))
+      log('building', `🔨 ${s.name} is repaired.`)
+    },
+
+    destroyStructure(id) {
+      const s = get().structures.find(x => x.id === id)
+      if (!s || s.destroyedAt) return
+      mapOne(id, x => ({ ...withoutDamage(x), destroyedAt: Date.now() }))
+      log('building', `🪨 ${s.name} was destroyed.`)
+    },
+
+    rebuildStructure(id) {
+      const s = get().structures.find(x => x.id === id)
+      if (!s?.destroyedAt) return
+      const req = projectRequirements(s.tier, hasArchitect(s.builderIds))
+      mapOne(id, x => {
+        const fresh: Structure = {
+          ...withoutDamage(x),
+          blocksRequired: req.blocks, daysRequired: req.days, redstoneRequired: req.redstone,
+          blocksCommitted: 0, redstoneCommitted: 0, daysWorked: 0,
+        }
+        delete fresh.completedAt
+        delete fresh.destroyedAt
+        return fresh
+      })
+      log('building', `🏗️ Rebuilding ${s.name} from its ruins (${req.blocks} blocks, ${req.days} day${req.days === 1 ? '' : 's'}).`)
     },
 
     mine({ characterId, areaName, materials, requested, total, gained, destination, placeId, doubleSix }) {

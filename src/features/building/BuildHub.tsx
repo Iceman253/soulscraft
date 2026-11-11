@@ -8,7 +8,7 @@ import { BuildSheet } from './BuildSheet'
 import { MineFlow } from './MineFlow'
 import { MineStash } from './MineStash'
 import { StartBuildFlow } from './StartBuildFlow'
-import { BLOCK_CARRY_LIMIT, PROJECT_TIERS, carryLimitOf, countBlocks, structureProgress } from '../../lib/building'
+import { BLOCK_CARRY_LIMIT, PROJECT_TIERS, buildCondition, carryLimitOf, countBlocks, repairLeft, structureProgress } from '../../lib/building'
 import { placementLabel } from '../../lib/places'
 import type { Character, PlayerRequest, RequestType } from '../../types'
 
@@ -110,7 +110,9 @@ export function BuildHub({ character }: { character: Character }) {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-base font-medium text-stone-100">{s.name}</span>
                     <span className="block truncate text-sm text-stone-500">{PROJECT_TIERS[s.tier].label} · {placementLabel(s, areas)}</span>
-                    {p.status === 'complete'
+                    {buildCondition(s) === 'destroyed' ? <span className="block text-sm text-stone-400">🪨 Ruins</span>
+                      : buildCondition(s) === 'damaged' ? <span className="block text-sm text-orange-300">💥 Damaged: needs {repairLeft(s)} blocks</span>
+                      : p.status === 'complete'
                       ? <span className="block text-sm text-emerald">🏰 Complete</span>
                       : <span className="mt-1 block h-1.5 overflow-hidden rounded-sm bg-stone-800"><span className="block h-full bg-amber-500" style={{ width: `${Math.round(p.fraction * 100)}%` }} /></span>}
                   </span>

@@ -73,11 +73,12 @@ A read-only full-screen overlay the GM can flip to for a second monitor or table
 
 ### Mining and Building
 Players do this on their own device, phone or desktop, and the GM signs off:
-- **Go Mining** — pick the place, materials and amount, then roll. The GM sees the result and awards the blocks.
+- **Go Mining** — pick the place, materials and amount, then roll. The GM sees the result and awards the blocks. A pickaxe mines anything; an axe only gets its full bonus on wood (a shovel on dirt and sand, a hoe on leaves) and is 3 worse on anything else.
 - **Mines** — a place type on the main map or in a sub-location. Each character can leave blocks at a mine and pick them up when they're back there.
 - **Carrying** — characters carry 10 blocks at most, and anything past that goes to storage. A player can ask the GM for more: the GM sets a temporary limit, which ends once they're carrying fewer than 10 blocks.
 - **Start a Build** — draw a 16×16 icon (or start from a shape), say what it's for, pick a size, and place it on the world map or inside any area or sub-location. The GM sees the icon, the description and the spot on the map, and approves it in one tap.
 - **Working on a build** — players put in their own blocks and redstone dust directly. Days worked and requests to speed a build up go to the GM.
+- **After it's built** — the GM can damage a build (it needs blocks put back in, which players do from its sheet) or destroy it, leaving ruins its builders can rebuild. A finished, undamaged build can be picked as the shelter when logging a rest. Builds by a Tecton show their Prime Order bonus.
 - Tap a build on the map for its progress, or tap an area to look inside it. Secret sub-locations stay hidden from players.
 
 ---

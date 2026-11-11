@@ -5,9 +5,9 @@ import { useCharacterStore } from '../characters/store'
 import { useRequestStore } from '../requests/store'
 import { FullScreen, fieldCls, fieldLabelCls, primaryBtn } from './FullScreen'
 import {
-  MINING_AMOUNTS, TOOL_BONUS, actionOutcome, canBoostWithSd, carriedMiningTools, carryLimitOf, carryRoom,
+  MINING_AMOUNTS, actionOutcome, canBoostWithSd, carriedMiningTools, carryLimitOf, carryRoom,
   miningBreakdown, miningDays, miningEffectNotes, miningToolOptions, miningTraits,
-  resolveMiningTool, rollMiningCheck, suggestedMiningBlocks, type ToolTier,
+  miningToolBonus, resolveMiningTool, rollMiningCheck, suggestedMiningBlocks, toolKey,
 } from '../../lib/building'
 import { characterLevel, mineAt, miningSites } from '../../lib/places'
 import type { MiningDestination } from './store'
@@ -48,8 +48,8 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const [requested, setRequested] = useState(50)
 
   const tools = useMemo(() => carriedMiningTools(character), [character])
-  const [pickedTool, setPickedTool] = useState<ToolTier | null>(null)
-  const tool = resolveMiningTool(pickedTool, tools)
+  const [pickedTool, setPickedTool] = useState<string | null>(null)
+  const tool = resolveMiningTool(pickedTool, tools, materials)
   const [skillId, setSkillId] = useState('')
   const [traitIds, setTraitIds] = useState(() => miningTraits(character.traits).map(t => t.id))
   const [pickedDestination, setDestination] = useState<MiningDestination | null>(null)
@@ -62,7 +62,7 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
   const [result, setResult] = useState<{ total: number; breakdown: string; doubleSix: boolean } | null>(null)
 
   const skill = character.skills.find(s => s.id === skillId)
-  const bonus = TOOL_BONUS[tool] + traitIds.length + (skill?.bonus ?? 0) + otherBonus
+  const bonus = miningToolBonus(tool, materials) + traitIds.length + (skill?.bonus ?? 0) + otherBonus
   const canBoost = canBoostWithSd(character)
   const room = carryRoom(character)
   const limit = carryLimitOf(character)
@@ -81,7 +81,7 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
     const outcome = actionOutcome(check.total)
     const what = materials.join(' & ')
     const breakdown = miningBreakdown({
-      dice: check.dice, tool, skill, other: otherBonus, sdBoost: check.sdBoost, penalty: check.penalty,
+      dice: check.dice, tool, materials, skill, other: otherBonus, sdBoost: check.sdBoost, penalty: check.penalty,
       traits: character.traits.filter(t => traitIds.includes(t.id)).map(t => t.name),
     })
     addRequest({
@@ -132,8 +132,8 @@ export function MineFlow({ character, onClose }: { character: Character; onClose
         <div className="space-y-5 p-4">
           <div>
             <label className={fieldLabelCls}>Tool</label>
-            <select value={tool} onChange={e => setPickedTool(e.target.value as ToolTier)} className={fieldCls}>
-              {miningToolOptions(tools).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <select value={tool ? toolKey(tool) : 'none'} onChange={e => setPickedTool(e.target.value)} className={fieldCls}>
+              {miningToolOptions(tools, materials).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             {tools.length === 0 && <div className="mt-1 text-sm text-stone-500">You have no mining tool with you.</div>}
           </div>

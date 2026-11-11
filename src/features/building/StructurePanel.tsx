@@ -8,9 +8,9 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { TokenAvatar } from '../../ui/TokenAvatar'
 import { PixelIcon } from './PixelIcon'
 import { PixelEditor } from './PixelEditor'
-import { PROJECT_TIERS, PROJECT_TIER_ORDER, projectRequirements, isArchitect, structureProgress, countBlocks } from '../../lib/building'
+import { PROJECT_TIERS, PROJECT_TIER_ORDER, projectRequirements, isArchitect, countBlocks, buildCondition, tectonBuilders } from '../../lib/building'
 import { allPlaceOptions, defaultPositionFor, placeOptionValue } from '../../lib/places'
-import type { ProjectTier } from '../../types'
+import type { ProjectTier, Structure } from '../../types'
 
 const inputCls = 'w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-100 text-sm outline-hidden focus:border-gold/50'
 const numCls = 'w-16 bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-100 text-xs font-mono outline-hidden focus:border-gold/50'
@@ -50,7 +50,10 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
   const [flash, setFlash] = useState<string | null>(null)
 
   if (!s) return null
-  const progress = structureProgress(s)
+  const condition = buildCondition(s)
+  const tectons = tectonBuilders(s, living)
+  // Damaged builds are repaired from the players' sheets, and ruins rebuilt; adding progress makes no sense.
+  const broken = condition === 'damaged' || condition === 'destroyed'
   const builders = living.filter(c => s.builderIds.includes(c.id))
   const architect = builders.some(isArchitect)
   const rulebook = projectRequirements(s.tier, architect)
@@ -143,6 +146,11 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
             </div>
           )}
           {architect && <div className="text-[11px] text-teal-300 mt-1.5">📐 Architect Edge: half the blocks and time, rounded down.</div>}
+          {tectons.length > 0 && condition !== 'destroyed' && (
+            <div className="text-[11px] text-teal-300 mt-1.5">
+              🔷 Prime Order: +1 to action rolls made with it, +2 for {tectons.map(c => c.name).join(' or ')}. Not attack rolls.{condition === 'complete' || condition === 'damaged' ? '' : " Once it's finished."}
+            </div>
+          )}
         </div>
 
         {/* Requirements */}
@@ -173,7 +181,7 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
           <Bar label="Days of work" have={s.daysWorked} need={s.daysRequired} unit="d" />
 
           {/* Give blocks from a character */}
-          {living.length > 0 && (
+          {living.length > 0 && !broken && (
             <div className="bg-stone-900/60 border border-stone-700/60 rounded-lg p-2 space-y-1.5">
               <div className="text-[11px] text-stone-400">Put in blocks from a character's inventory</div>
               <div className="flex gap-1.5">
@@ -191,7 +199,7 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
           )}
 
           {/* Other progress */}
-          <div className="bg-stone-900/60 border border-stone-700/60 rounded-lg p-2 space-y-1.5">
+          {!broken && <div className="bg-stone-900/60 border border-stone-700/60 rounded-lg p-2 space-y-1.5">
             <div className="text-[11px] text-stone-400">Add from elsewhere (bought, gifted, time spent)</div>
             <div className="flex flex-wrap gap-2 text-xs text-stone-400">
               <span className="flex items-center gap-1">
@@ -210,13 +218,18 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
                 <button onClick={() => { if (extraDays) addProgress(s.id, { days: extraDays }); setExtraDays('') }} className="px-1.5 py-1 rounded-sm border border-stone-600 hover:border-gold/50">+ days</button>
               </span>
             </div>
-          </div>
+          </div>}
 
-          {progress.status === 'complete' ? (
-            <div className="flex items-center justify-between rounded-lg border border-emerald/60 bg-emerald/10 px-3 py-2">
-              <span className="text-sm text-emerald">🏰 Complete</span>
-              <button onClick={() => setCompleted(s.id, false)} className="text-[11px] text-stone-400 hover:text-stone-200">Reopen</button>
-            </div>
+          {condition === 'complete' || condition === 'damaged' || condition === 'destroyed' ? (
+            <>
+              {condition === 'complete' && (
+                <div className="flex items-center justify-between rounded-lg border border-emerald/60 bg-emerald/10 px-3 py-2">
+                  <span className="text-sm text-emerald">🏰 Complete</span>
+                  <button onClick={() => setCompleted(s.id, false)} className="text-[11px] text-stone-400 hover:text-stone-200">Reopen</button>
+                </div>
+              )}
+              <ConditionControls s={s} />
+            </>
           ) : (
             <button onClick={() => setCompleted(s.id, true)} className="w-full py-1.5 rounded-sm border border-dashed border-stone-600 text-xs text-stone-400 hover:text-emerald hover:border-emerald/60">
               Mark complete now (GM's call)
@@ -241,5 +254,75 @@ export function StructurePanel({ structureId, onClose }: { structureId: string; 
         />
       )}
     </div>
+  )
+}
+
+/** GM controls for something happening to a finished build: damage that the players
+ *  repair with blocks, or destruction that leaves ruins they can rebuild. */
+function ConditionControls({ s }: { s: Structure }) {
+  const { damageStructure, markRepaired, destroyStructure, rebuildStructure } = useBuildStore()
+  const [blocks, setBlocks] = useState<number | ''>('')
+  const [note, setNote] = useState('')
+  const [confirmDestroy, setConfirmDestroy] = useState(false)
+  const condition = buildCondition(s)
+  const quarter = Math.max(1, Math.ceil(s.blocksRequired / 4))
+  const half = Math.max(1, Math.ceil(s.blocksRequired / 2))
+  const damage = (n: number) => { damageStructure(s.id, n, note); setBlocks(''); setNote('') }
+  const chip = 'px-2 py-1 rounded-sm border border-stone-600 text-xs text-stone-300 hover:border-orange-500/60 hover:text-orange-200'
+
+  if (condition === 'destroyed') {
+    return (
+      <div className="flex items-center justify-between rounded-lg border border-stone-600 bg-stone-900/60 px-3 py-2">
+        <span className="text-sm text-stone-300">🪨 Destroyed (ruins on the map)</span>
+        <button onClick={() => rebuildStructure(s.id)} className="text-[11px] text-stone-400 hover:text-gold">Rebuild</button>
+      </div>
+    )
+  }
+
+  if (condition === 'damaged' && s.damage) {
+    return (
+      <div className="space-y-1.5 rounded-lg border border-orange-700/60 bg-orange-950/30 px-3 py-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-orange-200">💥 Damaged{s.damage.note ? `: ${s.damage.note}` : ''}</span>
+          <span className="font-mono text-xs text-orange-200">{s.damage.repaired}/{s.damage.needed} repaired</span>
+        </div>
+        <div className="text-[11px] text-stone-400">The players put blocks back in from their build sheet. It isn't a shelter for rests until then.</div>
+        <div className="flex gap-3">
+          <button onClick={() => markRepaired(s.id)} className="text-[11px] text-stone-400 hover:text-emerald">Mark repaired now</button>
+          <button onClick={() => setConfirmDestroy(true)} className="text-[11px] text-stone-400 hover:text-red-400">Destroyed instead</button>
+        </div>
+        {confirmDestroy && <DestroyConfirm s={s} onConfirm={() => destroyStructure(s.id)} onClose={() => setConfirmDestroy(false)} />}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1.5 rounded-lg border border-stone-700/60 bg-stone-900/60 p-2">
+      <div className="text-[11px] text-stone-400">Something hit it? Damage it, and say how many blocks it needs to be whole again.</div>
+      <input value={note} onChange={e => setNote(e.target.value)} placeholder="What happened (optional): creeper blast…"
+        className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1 text-stone-200 text-xs outline-hidden focus:border-gold/50" />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button onClick={() => damage(quarter)} className={chip}>Light ({quarter})</button>
+        <button onClick={() => damage(half)} className={chip}>Heavy ({half})</button>
+        <input type="number" min={1} placeholder="blocks" value={blocks}
+          onChange={e => setBlocks(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))} className={numCls} />
+        <button onClick={() => blocks && damage(blocks)} disabled={!blocks} className={`${chip} disabled:opacity-40`}>Damage</button>
+        <button onClick={() => setConfirmDestroy(true)} className="ml-auto px-2 py-1 rounded-sm border border-red-800/60 text-xs text-red-300 hover:bg-red-950/40">Destroy</button>
+      </div>
+      {confirmDestroy && <DestroyConfirm s={s} onConfirm={() => destroyStructure(s.id)} onClose={() => setConfirmDestroy(false)} />}
+    </div>
+  )
+}
+
+function DestroyConfirm({ s, onConfirm, onClose }: { s: Structure; onConfirm: () => void; onClose: () => void }) {
+  return (
+    <ConfirmDialog
+      title="Destroy build"
+      message={`Destroy "${s.name}"? It stays on the map as ruins, and its builders can start rebuilding it from scratch.`}
+      confirmLabel="Destroy"
+      danger
+      onConfirm={onConfirm}
+      onClose={onClose}
+    />
   )
 }

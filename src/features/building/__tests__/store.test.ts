@@ -324,3 +324,88 @@ describe('mine', () => {
     expect(log).not.toHaveBeenCalled()
   })
 })
+
+describe('damage, repair and ruins', () => {
+  const finishedBuild = (extra = {}) => {
+    const id = build().addStructure({ name: 'Hut', tier: 'small', areaId: 'a1', position: at, builderIds: ['c1'] })
+    build().addProgress(id, { blocks: 50, days: 2 })
+    if (Object.keys(extra).length) build().updateStructure(id, extra)
+    return id
+  }
+  const carrying = (quantity: number) =>
+    useCharacterStore.setState({ characters: [makeChar({ onHand: { items: [blocks('Stone', quantity)] } })] })
+
+  it('damages a finished build', () => {
+    const id = finishedBuild()
+    build().damageStructure(id, 12, ' creeper blast ')
+    expect(structure(id).damage).toEqual({ needed: 12, repaired: 0, note: 'creeper blast' })
+    expect(log).toHaveBeenCalledWith('building', '💥 Hut was damaged (creeper blast): 12 blocks to repair.')
+  })
+
+  it('leaves unfinished builds, ruins and zero damage alone', () => {
+    const planned = build().addStructure({ tier: 'small', areaId: 'a1', position: at })
+    build().damageStructure(planned, 10)
+    expect(structure(planned).damage).toBeUndefined()
+    const id = finishedBuild()
+    build().damageStructure(id, 0)
+    expect(structure(id).damage).toBeUndefined()
+    build().destroyStructure(id)
+    build().damageStructure(id, 10)
+    expect(structure(id).damage).toBeUndefined()
+  })
+
+  it('takes repair blocks from the character, capped at what is needed', () => {
+    carrying(10)
+    const id = finishedBuild()
+    build().damageStructure(id, 6)
+    expect(build().repairStructure(id, 'c1', 4)).toBe(4)
+    expect(structure(id).damage).toMatchObject({ needed: 6, repaired: 4 })
+    expect(build().repairStructure(id, 'c1', 50)).toBe(2)
+    expect(structure(id).damage).toBeUndefined()
+    expect(char().onHand.items[0].quantity).toBe(4)
+    expect(log).toHaveBeenLastCalledWith('building', "🔨 Steve put 2 blocks into Hut. It's fully repaired.")
+  })
+
+  it('repairs nothing on a build that is not damaged, or without blocks', () => {
+    carrying(10)
+    const id = finishedBuild()
+    expect(build().repairStructure(id, 'c1', 5)).toBe(0)
+    useCharacterStore.setState({ characters: [makeChar()] })
+    build().damageStructure(id, 5)
+    expect(build().repairStructure(id, 'c1', 5)).toBe(0)
+    expect(structure(id).damage?.repaired).toBe(0)
+  })
+
+  it('lets the GM call it repaired', () => {
+    const id = finishedBuild()
+    build().damageStructure(id, 5)
+    build().markRepaired(id)
+    expect(structure(id).damage).toBeUndefined()
+    expect(structure(id).completedAt).toBeDefined()
+  })
+
+  it('destroys a build into ruins, dropping any damage', () => {
+    const id = finishedBuild()
+    build().damageStructure(id, 5)
+    build().destroyStructure(id)
+    expect(structure(id).destroyedAt).toBeDefined()
+    expect(structure(id).damage).toBeUndefined()
+    expect(log).toHaveBeenLastCalledWith('building', '🪨 Hut was destroyed.')
+  })
+
+  it('rebuilds ruins as a fresh project in the same place', () => {
+    const id = finishedBuild()
+    build().destroyStructure(id)
+    build().rebuildStructure(id)
+    expect(structure(id)).toMatchObject({ name: 'Hut', areaId: 'a1', position: at, blocksRequired: 50, blocksCommitted: 0, daysWorked: 0 })
+    expect(structure(id).destroyedAt).toBeUndefined()
+    expect(structure(id).completedAt).toBeUndefined()
+  })
+
+  it('only rebuilds what was destroyed', () => {
+    const id = finishedBuild()
+    build().rebuildStructure(id)
+    expect(structure(id).blocksCommitted).toBe(50)
+    expect(structure(id).completedAt).toBeDefined()
+  })
+})

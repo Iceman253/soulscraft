@@ -8,7 +8,7 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { AREA_TYPES, REALMS } from '../../lib/constants'
 import { defaultMarketForArea } from '../../lib/economyEngine'
-import { PROJECT_TIERS, structureProgress } from '../../lib/building'
+import { PROJECT_TIERS, buildCondition, structureProgress } from '../../lib/building'
 import { useBuildStore } from '../building/store'
 import { MaterialsEditor } from './MaterialsEditor'
 import { placementLabel } from '../../lib/places'
@@ -129,13 +129,14 @@ export function NodePanel({ area, onClose, onOpenSubMap, onSelectStructure, onPl
             <div className="space-y-1">
               {structures.map(st => {
                 const p = structureProgress(st)
+                const condition = buildCondition(st)
                 return (
                   <button key={st.id} onClick={() => onSelectStructure?.(st.id)} className="w-full flex items-center gap-2 px-1.5 py-1 rounded-sm hover:bg-stone-700/60 text-left">
                     <PixelIcon icon={st.icon} tier={st.tier} size={22} />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-stone-200 truncate">{st.name}</div>
                       <div className="text-[10px] text-stone-500">
-                        {PROJECT_TIERS[st.tier].label} · {st.subNodeId !== undefined ? `${placementLabel(st, areas)} · ` : ''}{p.status === 'complete' ? 'complete' : `${Math.round(p.fraction * 100)}% built`}
+                        {PROJECT_TIERS[st.tier].label} · {st.subNodeId !== undefined ? `${placementLabel(st, areas)} · ` : ''}{condition === 'destroyed' ? 'ruins' : condition === 'damaged' ? 'damaged' : condition === 'complete' ? 'complete' : `${Math.round(p.fraction * 100)}% built`}
                       </div>
                     </div>
                   </button>

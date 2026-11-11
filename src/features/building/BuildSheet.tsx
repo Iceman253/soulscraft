@@ -8,7 +8,7 @@ import { TokenAvatar } from '../../ui/TokenAvatar'
 import { FullScreen, fieldCls } from './FullScreen'
 import { PixelEditor } from './PixelEditor'
 import { PixelIcon } from './PixelIcon'
-import { PROJECT_TIERS, countBlocks, countRedstone, structureProgress } from '../../lib/building'
+import { PROJECT_TIERS, buildCondition, countBlocks, countRedstone, repairLeft, structureProgress, tectonBuilders } from '../../lib/building'
 import { placementLabel } from '../../lib/places'
 import type { Character, Structure } from '../../types'
 
@@ -48,7 +48,7 @@ function PutIn({ label, have, left, onPut }: { label: string; have: number; left
  *  days worked and asking for less time go to the GM to sign off. */
 export function BuildSheet({ structureId, character, onClose }: { structureId: string; character?: Character; onClose: () => void }) {
   const s = useBuildStore(st => st.structures.find(x => x.id === structureId))
-  const { commitBlocks, commitRedstone, joinBuild, updateStructure } = useBuildStore()
+  const { commitBlocks, commitRedstone, joinBuild, updateStructure, repairStructure, rebuildStructure } = useBuildStore()
   const characters = useCharacterStore(st => st.characters)
   const areas = useWorldStore(st => st.areas)
   const addRequest = useRequestStore(st => st.addRequest)
@@ -60,6 +60,8 @@ export function BuildSheet({ structureId, character, onClose }: { structureId: s
   if (!s) return null
 
   const p = structureProgress(s)
+  const condition = buildCondition(s)
+  const tectons = tectonBuilders(s, characters)
   const builders = characters.filter(c => s.builderIds.includes(c.id))
   const isBuilder = !!character && s.builderIds.includes(character.id)
   const blocksHeld = character ? countBlocks(character.storage.items) + countBlocks(character.onHand.items) : 0
@@ -97,7 +99,30 @@ export function BuildSheet({ structureId, character, onClose }: { structureId: s
           {s.description && <p className="text-base leading-relaxed text-stone-300 whitespace-pre-wrap">{s.description}</p>}
           {toast && <div className="rounded-xl border border-emerald/40 bg-emerald/15 px-3 py-2 text-center text-base text-emerald">{toast}</div>}
 
-          {p.status === 'complete' ? (
+          {tectons.length > 0 && condition !== 'destroyed' && (
+            <div className="rounded-xl border border-teal-700/50 bg-teal-950/40 px-3.5 py-2.5 text-base text-teal-200">
+              🔷 Built by {tectons.map(c => c.name).join(' & ')}: +1 to action rolls made with it, +2 when {tectons.length === 1 ? tectons[0].name : 'one of them'} uses it. Not attack rolls.
+              {condition !== 'complete' && condition !== 'damaged' && <span className="text-teal-400/80"> Once it's finished.</span>}
+            </div>
+          )}
+
+          {condition === 'destroyed' ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-stone-600 bg-stone-900 px-4 py-3 text-center text-lg text-stone-300">🪨 Destroyed. Only ruins are left.</div>
+              {isBuilder && <button onClick={() => { rebuildStructure(s.id); flash('Started rebuilding.') }} className={`${stepBtn} w-full`}>Rebuild it</button>}
+            </div>
+          ) : condition === 'damaged' && s.damage ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-orange-700/60 bg-orange-950/40 px-4 py-3 text-base text-orange-200">
+                💥 Damaged{s.damage.note ? `: ${s.damage.note}` : ''}. It doesn't count as shelter for a rest until it's repaired.
+              </div>
+              <Bar label="Blocks to repair" have={s.damage.repaired} need={s.damage.needed} />
+              {character && (
+                <PutIn label="blocks" have={blocksHeld} left={repairLeft(s)}
+                  onPut={n => flash(`Put in ${repairStructure(s.id, character.id, n)} blocks.`)} />
+              )}
+            </div>
+          ) : p.status === 'complete' ? (
             <div className="rounded-xl border border-emerald/50 bg-emerald/10 px-4 py-3 text-center text-lg text-emerald">🏰 Complete</div>
           ) : (
             <div className="space-y-3">

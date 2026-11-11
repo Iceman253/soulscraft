@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import type { CharacterItem, WeaponMaterial, WeaponType } from '../types'
 import {
   BLOCK_CARRY_LIMIT, countBlocks, MINING_AMOUNTS, miningDays, TOOL_BONUS,
-  carriedMiningTools, resolveMiningTool, miningToolOptions,
+  carriedMiningTools, resolveMiningTool, miningToolOptions, miningToolBonus, miningToolLabel, toolKey, toolSuits, OFF_TOOL_PENALTY,
+  buildCondition, repairLeft, sheltersRest, restBuilds, tectonBuilders, tectonBuildBonus,
   actionOutcome, PROJECT_TIERS, projectRequirements, isArchitect, structureProgress,
   takeBlocks, addBlocks, minedStackName, miningTraits, suggestedMiningBlocks, rollMiningCheck,
   canBoostWithSd, miningEffectNotes, miningBreakdown, carryRoom, enforceCarryLimit, blocksPerUnit, looksLikeBlocks,
@@ -51,15 +52,24 @@ describe('mining tools', () => {
   const inSlot = (type: WeaponType, material: WeaponMaterial, name: string) =>
     ({ id: name, name, type, material, baseDamageBonus: 0, currentDamageBonus: 0, enchantments: [] })
 
-  it('reads the tier from what is carried', () => {
-    expect(carriedMiningTools(carrying(item('Iron Pickaxe')))).toEqual([{ tier: 'iron', itemName: 'Iron Pickaxe' }])
+  const pick = (tier: string, kind = 'pickaxe') => expect.objectContaining({ tier, kind })
+
+  it('reads the tool and its material from what is carried', () => {
+    expect(carriedMiningTools(carrying(item('Iron Pickaxe')))).toEqual([{ tier: 'iron', kind: 'pickaxe', itemName: 'Iron Pickaxe' }])
     expect(carriedMiningTools(carrying(item('Golden Pickaxe')))[0].tier).toBe('gold')
-    expect(carriedMiningTools(carrying(item('Wooden Shovel')))[0].tier).toBe('wooden')
+    expect(carriedMiningTools(carrying(item('Wooden Shovel')))[0]).toEqual(pick('wooden', 'shovel'))
+    expect(carriedMiningTools(carrying(item('Iron Axe')))[0]).toEqual(pick('iron', 'axe'))
+    expect(carriedMiningTools(carrying(item('Diamond Hoe')))[0]).toEqual(pick('diamond', 'hoe'))
   })
 
-  it('lists every carried tool, best first, once per tier', () => {
-    const tools = carriedMiningTools(carrying(item('Stone Pickaxe'), item('Diamond Pickaxe'), item('Iron Axe'), item('Stone Shovel')))
-    expect(tools.map(t => t.tier)).toEqual(['diamond', 'iron', 'stone'])
+  it('does not mistake a pickaxe for an axe', () => {
+    expect(carriedMiningTools(carrying(item('Stone Pickaxe')))[0].kind).toBe('pickaxe')
+    expect(carriedMiningTools(carrying(item('Stone Pick')))[0].kind).toBe('pickaxe')
+  })
+
+  it('lists every carried tool, best material first, once per kind and material', () => {
+    const tools = carriedMiningTools(carrying(item('Stone Pickaxe'), item('Diamond Pickaxe'), item('Iron Axe'), item('Stone Shovel'), item('Stone Pickaxe', 1, false, 'dupe')))
+    expect(tools.map(toolKey)).toEqual(['pickaxe:diamond', 'axe:iron', 'pickaxe:stone', 'shovel:stone'])
   })
 
   it('ignores non-tools and tools with no known material', () => {
@@ -67,12 +77,16 @@ describe('mining tools', () => {
   })
 
   it('reads custom names', () => {
-    expect(carriedMiningTools(carrying({ ...item('Pickaxe'), customName: 'Netherite Pick "Old Faithful"' }))[0]).toEqual({ tier: 'netherite', itemName: 'Netherite Pick "Old Faithful"' })
+    expect(carriedMiningTools(carrying({ ...item('Pickaxe'), customName: 'Netherite Pick "Old Faithful"' }))[0])
+      .toEqual({ tier: 'netherite', kind: 'pickaxe', itemName: 'Netherite Pick "Old Faithful"' })
   })
 
   it('counts mining equipment in either weapon slot', () => {
-    const c = { onHand: { items: [] }, weaponLoadout: { mainHand: inSlot('pickaxe', 'diamond', 'Diamond Pickaxe'), offHand: inSlot('shovel', 'wood', 'Wooden Shovel') } }
-    expect(carriedMiningTools(c)).toEqual([{ tier: 'diamond', itemName: 'Diamond Pickaxe' }, { tier: 'wooden', itemName: 'Wooden Shovel' }])
+    const c = { onHand: { items: [] }, weaponLoadout: { mainHand: inSlot('pickaxe', 'diamond', 'Diamond Pickaxe'), offHand: inSlot('axe', 'wood', 'Wooden Axe') } }
+    expect(carriedMiningTools(c)).toEqual([
+      { tier: 'diamond', kind: 'pickaxe', itemName: 'Diamond Pickaxe' },
+      { tier: 'wooden', kind: 'axe', itemName: 'Wooden Axe' },
+    ])
   })
 
   it('never counts real weapons, on hand or in a weapon slot', () => {
@@ -81,7 +95,7 @@ describe('mining tools', () => {
     expect(carriedMiningTools(c)).toEqual([])
   })
 
-  it('lists the same tier once when a tool is both carried and equipped', () => {
+  it('lists a tool once when it is both carried and equipped', () => {
     const c = { onHand: { items: [item('Iron Pickaxe')] }, weaponLoadout: { mainHand: inSlot('pickaxe', 'iron', 'Iron Pickaxe'), offHand: null } }
     expect(carriedMiningTools(c)).toHaveLength(1)
   })
@@ -97,29 +111,84 @@ describe('mining tools', () => {
 
   it('only offers tools the character has, plus no tool', () => {
     const tools = carriedMiningTools(carrying(item('Iron Pickaxe')))
-    expect(miningToolOptions(tools)).toEqual([
-      { value: 'iron', label: 'Iron Pickaxe (+1)' },
+    expect(miningToolOptions(tools, ['Stone'])).toEqual([
+      { value: 'pickaxe:iron', label: 'Iron Pickaxe (+1)' },
       { value: 'none', label: 'No tool (−3)' },
     ])
     expect(miningToolOptions([])).toEqual([{ value: 'none', label: 'No tool (−3)' }])
   })
 
-  it('defaults to the best tool, or no tool without one', () => {
+  it('defaults to the best tool for the job, or no tool without one', () => {
     const tools = carriedMiningTools(carrying(item('Stone Pickaxe'), item('Iron Pickaxe')))
-    expect(resolveMiningTool(null, tools)).toBe('iron')
-    expect(resolveMiningTool(null, [])).toBe('none')
+    expect(resolveMiningTool(null, tools, ['Stone'])).toEqual(pick('iron'))
+    expect(resolveMiningTool(null, [], ['Stone'])).toBeNull()
   })
 
   it('keeps a choice the character can make, including no tool', () => {
     const tools = carriedMiningTools(carrying(item('Stone Pickaxe'), item('Iron Pickaxe')))
-    expect(resolveMiningTool('stone', tools)).toBe('stone')
-    expect(resolveMiningTool('none', tools)).toBe('none')
+    expect(resolveMiningTool('pickaxe:stone', tools)).toEqual(pick('stone'))
+    expect(resolveMiningTool('none', tools)).toBeNull()
   })
 
   it('refuses a tool the character does not have', () => {
     const tools = carriedMiningTools(carrying(item('Stone Pickaxe')))
-    expect(resolveMiningTool('netherite', tools)).toBe('stone')
-    expect(resolveMiningTool('diamond', [])).toBe('none')
+    expect(resolveMiningTool('pickaxe:netherite', tools)).toEqual(pick('stone'))
+    expect(resolveMiningTool('pickaxe:diamond', [])).toBeNull()
+  })
+})
+
+describe('axes, shovels and hoes', () => {
+  const axe = { kind: 'axe' as const, tier: 'iron' as const }
+  const carry = (...names: string[]) => carriedMiningTools({ onHand: { items: names.map(n => item(n)) }, weaponLoadout: { mainHand: null, offHand: null } })
+
+  it('gives an axe its full bonus on wood', () => {
+    expect(miningToolBonus(axe, ['Oak Logs'])).toBe(1)
+    expect(miningToolBonus(axe, ['wood', 'Spruce planks'])).toBe(1)
+    expect(miningToolBonus({ kind: 'axe', tier: 'diamond' }, ['Birch'])).toBe(3)
+  })
+
+  it('makes an axe far worse than a pickaxe on anything else', () => {
+    expect(miningToolBonus({ kind: 'axe', tier: 'netherite' }, ['Stone'])).toBe(4 - OFF_TOOL_PENALTY)
+    expect(miningToolBonus({ kind: 'axe', tier: 'diamond' }, ['Iron ore'])).toBe(0)
+    expect(miningToolBonus({ kind: 'pickaxe', tier: 'diamond' }, ['Iron ore'])).toBe(3)
+  })
+
+  it('never makes a tool worse than having none', () => {
+    expect(miningToolBonus({ kind: 'axe', tier: 'wooden' }, ['Stone'])).toBe(TOOL_BONUS.none)
+    expect(miningToolBonus({ kind: 'axe', tier: 'stone' }, ['Stone'])).toBe(TOOL_BONUS.none)
+    expect(miningToolBonus(axe, ['Stone'])).toBe(-2)
+  })
+
+  it('needs everything mined to be wood', () => {
+    expect(miningToolBonus(axe, ['Oak', 'Stone'])).toBe(-2)
+    expect(miningToolBonus(axe, [])).toBe(-2)
+  })
+
+  it('lets a pickaxe mine anything', () => {
+    expect(toolSuits('pickaxe', ['Oak'])).toBe(true)
+    expect(toolSuits('pickaxe', [])).toBe(true)
+  })
+
+  it('suits shovels to dirt and sand, and hoes to leaves', () => {
+    expect(toolSuits('shovel', ['Sand', 'Gravel'])).toBe(true)
+    expect(toolSuits('shovel', ['Stone'])).toBe(false)
+    expect(toolSuits('hoe', ['Oak leaves'])).toBe(true)
+  })
+
+  it('picks the axe for wood and the pickaxe for stone', () => {
+    const tools = carry('Iron Pickaxe', 'Diamond Axe')
+    expect(resolveMiningTool(null, tools, ['Oak'])?.kind).toBe('axe')
+    expect(resolveMiningTool(null, tools, ['Stone'])?.kind).toBe('pickaxe')
+  })
+
+  it('shows the cost of the wrong tool in the picker', () => {
+    expect(miningToolOptions(carry('Iron Axe'), ['Stone'])[0].label).toBe('Iron Axe (−2, best on wood)')
+    expect(miningToolOptions(carry('Iron Axe'), ['Oak'])[0].label).toBe('Iron Axe (+1)')
+  })
+
+  it('spells out the wrong tool in the roll', () => {
+    expect(miningToolLabel({ ...axe, itemName: 'Iron Axe' }, ['Stone'])).toBe('−2 Iron axe (not wood)')
+    expect(miningToolLabel({ ...axe, itemName: 'Iron Axe' }, ['Oak'])).toBe('+1 Iron axe')
   })
 })
 
@@ -289,10 +358,11 @@ describe('mining on a phone', () => {
   })
 
   it('spells out the roll', () => {
-    expect(miningBreakdown({ dice: 9, tool: 'diamond', traits: ['Miner'], skill: { name: 'Delving', bonus: 2 }, other: 1, sdBoost: 3, penalty: 2 }))
-      .toBe('9 (2d6) +3 Diamond tool +1 Miner +2 Delving +1 other +3 SD −2 missed rest')
-    expect(miningBreakdown({ dice: 5, tool: 'wooden', traits: [] })).toBe('5 (2d6) −2 Wooden tool')
-    expect(miningBreakdown({ dice: 5, tool: 'none', traits: [] })).toBe('5 (2d6) −3 no tool')
+    const tool = (tier: 'diamond' | 'wooden') => ({ tier, kind: 'pickaxe' as const, itemName: 'x' })
+    expect(miningBreakdown({ dice: 9, tool: tool('diamond'), traits: ['Miner'], skill: { name: 'Delving', bonus: 2 }, other: 1, sdBoost: 3, penalty: 2 }))
+      .toBe('9 (2d6) +3 Diamond pickaxe +1 Miner +2 Delving +1 other +3 SD −2 missed rest')
+    expect(miningBreakdown({ dice: 5, tool: tool('wooden'), traits: [] })).toBe('5 (2d6) −2 Wooden pickaxe')
+    expect(miningBreakdown({ dice: 5, tool: null, traits: [] })).toBe('5 (2d6) −3 no tool')
   })
 
   it('knows how many more blocks can be carried', () => {
@@ -465,5 +535,65 @@ describe('reading a build proposal', () => {
       name: '', description: '', tier: 'small', icon: '.'.repeat(256), areaId: null,
       position: { x: 0, y: 0 }, builderIds: ['c1'],
     })
+  })
+})
+
+const finished = { blocksRequired: 50, blocksCommitted: 50, daysRequired: 2, daysWorked: 2, redstoneRequired: 0, redstoneCommitted: 0, completedAt: 1 }
+
+describe('damaged and destroyed builds', () => {
+  it('reads the condition', () => {
+    expect(buildCondition({ ...finished, completedAt: undefined, blocksCommitted: 0, daysWorked: 0 })).toBe('planned')
+    expect(buildCondition(finished)).toBe('complete')
+    expect(buildCondition({ ...finished, damage: { needed: 10, repaired: 0 } })).toBe('damaged')
+    expect(buildCondition({ ...finished, destroyedAt: 2 })).toBe('destroyed')
+    expect(buildCondition({ ...finished, damage: { needed: 10, repaired: 0 }, destroyedAt: 2 })).toBe('destroyed')
+  })
+
+  it('counts the blocks left to repair', () => {
+    expect(repairLeft({ damage: { needed: 10, repaired: 4 } })).toBe(6)
+    expect(repairLeft({})).toBe(0)
+  })
+
+  it('only shelters a rest when finished and whole', () => {
+    expect(sheltersRest(finished)).toBe(true)
+    expect(sheltersRest({ ...finished, damage: { needed: 10, repaired: 0 } })).toBe(false)
+    expect(sheltersRest({ ...finished, destroyedAt: 2 })).toBe(false)
+    expect(sheltersRest({ ...finished, completedAt: undefined, daysWorked: 1 })).toBe(false)
+  })
+
+  it("lists builds to rest at, the party's area first, without ruins or unfinished ones", () => {
+    const b = (name: string, areaId: string | null, extra = {}) => ({ ...finished, name, areaId, ...extra })
+    const list = restBuilds([
+      b('Zed hut', 'far'), b('Abbey', 'far'), b('Home', 'here'),
+      b('Shed', 'here', { damage: { needed: 5, repaired: 0 } }),
+      b('Ruin', 'here', { destroyedAt: 1 }), b('Plan', 'here', { completedAt: undefined, daysWorked: 0 }),
+    ], new Set(['here']))
+    expect(list.map(x => [x.structure.name, x.shelters])).toEqual([['Home', true], ['Shed', false], ['Abbey', true], ['Zed hut', true]])
+  })
+})
+
+describe('Tecton builds (Prime Order, p.62)', () => {
+  const people = [{ id: 't', class: 'Tecton' }, { id: 'w', class: 'Warrior' }]
+
+  it('finds the Tectons who built it', () => {
+    expect(tectonBuilders({ builderIds: ['t', 'w'] }, people).map(c => c.id)).toEqual(['t'])
+    expect(tectonBuilders({ builderIds: ['w'] }, people)).toEqual([])
+  })
+
+  it('gives +1 to anyone and +2 to the Tecton', () => {
+    const s = { ...finished, builderIds: ['t', 'w'] }
+    expect(tectonBuildBonus(s, people)).toBe(1)
+    expect(tectonBuildBonus(s, people, 'w')).toBe(1)
+    expect(tectonBuildBonus(s, people, 't')).toBe(2)
+  })
+
+  it('gives nothing without a Tecton builder, before it is finished, or once destroyed', () => {
+    expect(tectonBuildBonus({ ...finished, builderIds: ['w'] }, people, 'w')).toBe(0)
+    expect(tectonBuildBonus({ ...finished, builderIds: ['t'], completedAt: undefined, daysWorked: 0 }, people, 't')).toBe(0)
+    expect(tectonBuildBonus({ ...finished, builderIds: ['t'], destroyedAt: 2 }, people, 't')).toBe(0)
+  })
+
+  it('still counts while damaged', () => {
+    expect(tectonBuildBonus({ ...finished, builderIds: ['t'], damage: { needed: 5, repaired: 0 } }, people)).toBe(1)
   })
 })

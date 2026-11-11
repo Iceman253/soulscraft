@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Moon, Check, AlertTriangle, RotateCcw } from 'lucide-react'
 import { useRestStore } from './store'
 import { useCharacterStore } from '../characters/store'
+import { useBuildStore } from '../building/store'
+import { useWorldStore } from '../map/store'
+import { restBuilds } from '../../lib/building'
+import { placementLabel } from '../../lib/places'
 import type { RestConditions } from '../../types'
 
 export function RestPanel() {
@@ -11,6 +15,22 @@ export function RestPanel() {
   const [selectedChars, setSelectedChars] = useState<string[]>([])
   const [location, setLocation] = useState('')
   const [conditions, setConditions] = useState<RestConditions>({ fed: false, shelter: false, safe: false, calmMind: false })
+  const structures = useBuildStore(s => s.structures)
+  const areas = useWorldStore(s => s.areas)
+  const [buildId, setBuildId] = useState('')
+  const builds = useMemo(() => {
+    const here = new Set(characters.filter(c => selectedChars.includes(c.id)).map(c => c.locationId))
+    return restBuilds(structures, here)
+  }, [structures, characters, selectedChars])
+
+  // A finished, undamaged build is a proper shelter (p.89). The GM can still untick it.
+  const restAtBuild = (id: string) => {
+    setBuildId(id)
+    const b = structures.find(s => s.id === id)
+    if (!b) return
+    setLocation(`${b.name} (${placementLabel(b, areas)})`)
+    setConditions(prev => ({ ...prev, shelter: true }))
+  }
 
   const toggleChar = (id: string) => setSelectedChars(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
   const toggleCond = (key: keyof RestConditions) => setConditions(prev => ({ ...prev, [key]: !prev[key] }))
@@ -24,6 +44,7 @@ export function RestPanel() {
     if (selectedChars.length === 0 || !location.trim()) return
     logRest(location.trim(), conditions, selectedChars)
     setSelectedChars([])
+    setBuildId('')
   }
 
   return (
@@ -38,6 +59,20 @@ export function RestPanel() {
           <div className="font-medium text-stone-200 text-sm font-heading tracking-wide">Log a Rest</div>
 
           {/* Location */}
+          {builds.length > 0 && (
+            <div>
+              <label className="text-xs text-stone-500 block mb-1">Resting at a build?</label>
+              <select value={buildId} onChange={e => restAtBuild(e.target.value)}
+                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-sm outline-hidden focus:border-gold/50">
+                <option value="">No</option>
+                {builds.map(({ structure: b, shelters }) => (
+                  <option key={b.id} value={b.id} disabled={!shelters}>
+                    {b.name}{shelters ? '' : ' (damaged: no shelter)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="text-xs text-stone-500 block mb-1">Where did they rest?</label>
             <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Camp by the river..."
