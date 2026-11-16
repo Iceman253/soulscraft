@@ -9,8 +9,8 @@ import { MineFlow } from './MineFlow'
 import { BlockStores } from './BlockStores'
 import { useStorageReach } from '../characters/useStorageReach'
 import { StartBuildFlow } from './StartBuildFlow'
-import { BLOCK_CARRY_LIMIT, PROJECT_TIERS, buildCondition, carryLimitOf, countBlocks, countBlocksIn, repairLeft, structureProgress } from '../../lib/building'
-import { placementLabel } from '../../lib/places'
+import { BLOCK_CARRY_LIMIT, PROJECT_TIERS, buildCondition, carryLimitOf, countBlocks, countBlocksIn, repairLeft, structureProgress } from '../../lib/world/building'
+import { placementLabel } from '../../lib/world/places'
 import type { Character, PlayerRequest, RequestType } from '../../types'
 
 const BUILD_REQUESTS: RequestType[] = ['mine', 'build-start', 'build-days', 'build-speedup', 'carry-limit']

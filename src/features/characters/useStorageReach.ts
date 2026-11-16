@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useCharacterStore } from './store'
 import { useWorldStore } from '../map/store'
-import { ENDER, UNPLACED, dropKey, enderReachable, placeExists, placesAround, type Section, type StoreKey } from '../../lib/stashes'
+import { ENDER, UNPLACED, dropKey, enderReachable, placeExists, placesAround, type Section, type StoreKey } from '../../lib/world/stashes'
 import type { Character } from '../../types'
 
 export interface StorageReach {

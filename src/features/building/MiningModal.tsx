@@ -4,11 +4,11 @@ import { Modal } from '../../ui/Modal'
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
 import { useBuildStore, type MiningDestination } from './store'
-import { mineAt, miningSites } from '../../lib/places'
+import { mineAt, miningSites } from '../../lib/world/places'
 import {
   MINING_AMOUNTS, miningDays, miningToolBonus, toolKey, carriedMiningTools, miningToolOptions, resolveMiningTool, actionOutcome,
   carryLimitOf, carryRoom, minedStackName, miningTraits, rollMiningCheck, suggestedMiningBlocks,
-} from '../../lib/building'
+} from '../../lib/world/building'
 
 const OUTCOME_TEXT = {
   success: { label: 'Full success', cls: 'text-emerald border-emerald/60 bg-emerald/10', hint: 'They get what they were after — maybe more (the rulebook example turns 100 into 110).' },

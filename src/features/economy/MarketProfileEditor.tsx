@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Wand2 } from 'lucide-react'
 import { useEconomyStore } from './store'
 import { useWorldStore } from '../map/store'
-import { suggestRemotenessFromMap } from '../../lib/economyEngine'
-import { ALL_GOOD_TAGS } from '../../lib/goods'
+import { suggestRemotenessFromMap } from '../../lib/economy/economyEngine'
+import { ALL_GOOD_TAGS } from '../../lib/economy/goods'
 import type { MarketProfile, GoodTag } from '../../types'
 
 const SCALE_LABELS: Record<string, string[]> = {

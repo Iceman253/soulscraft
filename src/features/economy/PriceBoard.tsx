@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react'
-import { Search, Lock, Unlock, Plus, X, ShoppingCart, Coins, Wand2, Infinity as InfinityIcon } from 'lucide-react'
+import { Search, Plus, Coins, Wand2 } from 'lucide-react'
 import { useEconomyStore, allGoods } from './store'
-import { quoteGood, suggestListingsForMarket, suggestStock } from '../../lib/economyEngine'
-import { formatCopper, formatCopperLong } from '../../lib/currency'
-import { GOOD_CATEGORIES } from '../../lib/goods'
+import { suggestListingsForMarket, suggestStock } from '../../lib/economy/economyEngine'
+import { COIN_VALUE, coinName } from '../../lib/economy/currency'
+import { GOOD_CATEGORIES } from '../../lib/economy/goods'
 import { ConfirmDialog } from '../../ui/ConfirmDialog'
+import { CoinSelect } from '../../ui/CoinPrice'
 import { TransactModal } from './TransactModal'
 import { GoodEditorModal } from './GoodEditorModal'
-import type { MarketProfile, Good, PriceQuote, MarketListing } from '../../types'
+import { GoodRow } from './PriceRow'
+import { PRICE_GRID } from './priceGrid'
+import { usePriceCoin } from './usePriceCoin'
+import type { MarketProfile, Good, PriceQuote } from '../../types'
 
 interface Props { market: MarketProfile }
 
@@ -23,6 +27,8 @@ export function PriceBoard({ market }: Props) {
   const [sellMode, setSellMode] = useState(false)
   const [editGood, setEditGood] = useState<Good | 'new' | null>(null)
   const [confirmRebuild, setConfirmRebuild] = useState(false)
+  const [coin, setCoin] = usePriceCoin()
+  const coinLabel = coinName(coin, 2)
 
   const goods = useMemo(() => allGoods(economy), [economy])
   const listingByGood = useMemo(() => new Map(market.listings.map(l => [l.goodId, l])), [market.listings])
@@ -124,13 +130,22 @@ export function PriceBoard({ market }: Props) {
         </button>
       </div>
 
+      {/* Which coin prices are typed in */}
+      <div className="shrink-0 flex items-center gap-2 flex-wrap px-4 py-1.5 border-b border-stone-700/40 text-[11px] text-stone-500">
+        <span>Type prices in</span>
+        <CoinSelect value={coin} onChange={setCoin} />
+        <span>
+          1 {coinName(coin, 1)} = {COIN_VALUE[coin].toLocaleString()} Copper. Each price also shows in coins, e.g. 250 Copper = 2 Gold 5 Iron.
+        </span>
+      </div>
+
       {/* Column headers */}
-      <div className="shrink-0 grid grid-cols-[1fr_90px_110px_110px_100px_120px] gap-2 px-4 py-2 border-b border-stone-700/40 text-xs text-stone-500 uppercase tracking-wider font-heading">
+      <div className={`shrink-0 ${PRICE_GRID} gap-2 px-4 py-2 border-b border-stone-700/40 text-xs text-stone-500 uppercase tracking-wider font-heading`}>
         <div>Ware</div>
         <div className="text-center">Stock</div>
         <div className="text-right" title="The engine's price from this market's profile — click a row's price to see why">Suggested</div>
-        <div className="text-right">Final (yours)</div>
-        <div className="text-right">Buys at</div>
+        <div className="text-right" title="What players pay. Blank uses the suggested price.">Sells for <span className="normal-case text-stone-600">({coinLabel})</span></div>
+        <div className="text-right" title="What the merchant pays players for it. Blank uses the suggested price.">Buys for <span className="normal-case text-stone-600">({coinLabel})</span></div>
         <div />
       </div>
 
@@ -154,6 +169,7 @@ export function PriceBoard({ market }: Props) {
                 good={good}
                 market={market}
                 listing={listingByGood.get(good.id)}
+                coin={coin}
                 expanded={expandedId === good.id}
                 onToggleExpand={() => setExpandedId(expandedId === good.id ? null : good.id)}
                 onBuy={quote => setBuyGood({ good, quote })}
@@ -197,183 +213,6 @@ export function PriceBoard({ market }: Props) {
           onConfirm={suggestAndReplace}
           onClose={() => setConfirmRebuild(false)}
         />
-      )}
-    </div>
-  )
-}
-
-// ── One ware row ────────────────────────────────────────────────────────
-
-function GoodRow({ good, market, listing, expanded, onToggleExpand, onBuy, onStock, onUnstock, onUpdate, onEditCustom }: {
-  good: Good
-  market: MarketProfile
-  listing?: MarketListing
-  expanded: boolean
-  onToggleExpand: () => void
-  onBuy: (quote: PriceQuote) => void
-  onStock: () => void
-  onUnstock: () => void
-  onUpdate: (patch: Partial<MarketListing>) => void
-  onEditCustom?: () => void
-}) {
-  const economy = useEconomyStore(s => s.economy)
-  const quote = quoteGood(good, market, economy, listing)
-  const stocked = !!listing
-  const soldOut = stocked && listing.stock === 0
-
-  return (
-    <div className={`border-b border-stone-800 ${soldOut ? 'opacity-50' : ''}`}>
-      <div className="grid grid-cols-[1fr_90px_110px_110px_100px_120px] gap-2 items-center px-4 py-1.5 hover:bg-stone-800/40 transition-colors">
-
-        {/* Name */}
-        <div className="min-w-0">
-          <span className={`text-sm truncate ${good.custom ? 'text-teal-300' : 'text-stone-200'}`}>
-            {good.name}
-            {good.custom && onEditCustom && (
-              <button onClick={onEditCustom} className="ml-1.5 text-[10px] text-stone-500 hover:text-teal-300 underline">edit</button>
-            )}
-          </span>
-          {good.unit && <span className="ml-1.5 text-[10px] text-stone-600">{good.unit}</span>}
-        </div>
-
-        {/* Stock */}
-        <div className="flex items-center justify-center gap-1">
-          {stocked ? (
-            <>
-              {listing.stock === -1 ? (
-                <button
-                  onClick={() => onUpdate({ stock: suggestStock(good, market) })}
-                  title="Unlimited — click for finite stock"
-                  className="px-2 py-0.5 rounded-sm text-stone-300 hover:bg-stone-700"
-                >
-                  <InfinityIcon size={13} />
-                </button>
-              ) : (
-                <input
-                  type="number" min={0} value={listing.stock}
-                  onChange={e => onUpdate({ stock: Math.max(0, parseInt(e.target.value) || 0) })}
-                  className="w-12 bg-stone-800 border border-stone-700 rounded-sm px-1 py-0.5 text-stone-200 text-xs text-center outline-hidden focus:border-stone-500 font-mono tabular-nums"
-                />
-              )}
-            </>
-          ) : (
-            <span className="text-xs text-stone-600">—</span>
-          )}
-        </div>
-
-        {/* Suggested — click to see why */}
-        <button
-          onClick={onToggleExpand}
-          title={formatCopperLong(quote.suggested)}
-          className="text-right text-xs font-mono tabular-nums text-stone-400 hover:text-amber-300 transition-colors"
-        >
-          {formatCopper(quote.suggested)}
-        </button>
-
-        {/* Final — GM override */}
-        <div className="flex items-center justify-end gap-1">
-          <input
-            type="number" min={0}
-            value={listing?.priceOverride ?? ''}
-            placeholder={String(quote.suggested)}
-            onChange={e => {
-              if (!stocked) return
-              const v = e.target.value
-              onUpdate({ priceOverride: v === '' ? undefined : Math.max(0, parseInt(v) || 0) })
-            }}
-            disabled={!stocked}
-            title={stocked
-              ? `In copper. Blank = use suggested. ${quote.overridden ? `Currently fixed at ${formatCopperLong(quote.final)}.` : ''}`
-              : 'Stock this ware to set a price'}
-            className={`w-20 bg-stone-800 border rounded-sm px-1.5 py-0.5 text-xs text-right outline-hidden font-mono tabular-nums disabled:opacity-40 ${
-              quote.overridden ? 'border-amber-600/70 text-amber-200' : 'border-stone-700 text-stone-300 focus:border-stone-500 placeholder:text-stone-600'
-            }`}
-          />
-        </div>
-
-        {/* Sell (merchant buys at) */}
-        <div className="flex items-center justify-end gap-1">
-          <input
-            type="number" min={0}
-            value={listing?.sellOverride ?? ''}
-            placeholder={String(quote.sellSuggested)}
-            onChange={e => {
-              if (!stocked) return
-              const v = e.target.value
-              onUpdate({ sellOverride: v === '' ? undefined : Math.max(0, parseInt(v) || 0) })
-            }}
-            disabled={!stocked}
-            className={`w-16 bg-stone-800 border rounded-sm px-1.5 py-0.5 text-xs text-right outline-hidden font-mono tabular-nums disabled:opacity-40 ${
-              listing?.sellOverride !== undefined ? 'border-amber-600/70 text-amber-200' : 'border-stone-700 text-stone-500 focus:border-stone-500 placeholder:text-stone-600'
-            }`}
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-1">
-          {stocked ? (
-            <>
-              <button
-                onClick={() => onUpdate({ locked: !listing.locked })}
-                title={listing.locked ? 'Locked — daily drift and restock skip this line' : 'Unlocked — drifts with the market'}
-                className={`p-1 rounded-sm transition-colors ${listing.locked ? 'text-amber-400 hover:text-amber-300' : 'text-stone-600 hover:text-stone-400'}`}
-              >
-                {listing.locked ? <Lock size={12} /> : <Unlock size={12} />}
-              </button>
-              <button
-                onClick={() => onBuy(quote)}
-                disabled={soldOut}
-                className="flex items-center gap-1 px-2 py-1 rounded-sm text-[11px] bg-amber-900/40 border border-amber-700/50 text-amber-200 hover:bg-amber-800/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ShoppingCart size={10} /> {soldOut ? 'Sold out' : 'Buy'}
-              </button>
-              <button onClick={onUnstock} title="Remove from this market's stock" className="p-1 rounded-sm text-stone-600 hover:text-red-400">
-                <X size={12} />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={onStock}
-              className="px-2 py-1 rounded-sm text-[11px] bg-stone-700 text-stone-300 hover:bg-stone-600 transition-colors"
-            >
-              + Stock it
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Why this price — factor breakdown */}
-      {expanded && (
-        <div className="px-4 pb-2.5 pt-1 bg-stone-800/30">
-          <div className="max-w-md text-xs space-y-0.5">
-            <div className="flex justify-between text-stone-400">
-              <span>Base price{economy.basePriceOverrides[good.id] !== undefined && <span className="text-amber-400"> (your global override)</span>}</span>
-              <span className="font-mono tabular-nums">{formatCopper(quote.base)}</span>
-            </div>
-            {quote.factors.map((f, i) => (
-              <div key={i} className="flex justify-between text-stone-500">
-                <span>{f.label}</span>
-                <span className={`font-mono tabular-nums ${f.factor > 1 ? 'text-red-400/80' : 'text-emerald/80'}`}>
-                  ×{f.factor.toFixed(2)}
-                </span>
-              </div>
-            ))}
-            <div className="flex justify-between text-stone-300 border-t border-stone-700 pt-1 mt-1">
-              <span>Suggested</span>
-              <span className="font-mono tabular-nums">{formatCopper(quote.suggested)}</span>
-            </div>
-            {quote.overridden && (
-              <div className="flex justify-between text-amber-300">
-                <span>Your final price</span>
-                <span className="font-mono tabular-nums">{formatCopper(quote.final)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-stone-500">
-              <span>Merchant buys at</span>
-              <span className="font-mono tabular-nums">{formatCopper(quote.sellFinal)}</span>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )

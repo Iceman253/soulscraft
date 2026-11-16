@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Search, FlaskConical, Sparkles, ChevronDown, ChevronRight, Info, Flame } from 'lucide-react'
-import { POTION_RECIPES, ENCHANTER_SIGNS_DATA } from '../../lib/constants'
-import type { PotionRecipe, EnchanterSign } from '../../lib/constants'
+import { POTION_RECIPES, ENCHANTER_SIGNS_DATA } from '../../lib/rules/constants'
+import type { PotionRecipe, EnchanterSign } from '../../lib/rules/constants'
 
 type RefTab = 'potions' | 'enchanting' | 'hazards'
 

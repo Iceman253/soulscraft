@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Hammer } from 'lucide-react'
 import { useEconomyStore, allGoods } from './store'
-import { craftCostAt } from '../../lib/economyEngine'
-import { formatCopper } from '../../lib/currency'
+import { craftCostAt } from '../../lib/economy/economyEngine'
+import { formatCopper } from '../../lib/economy/currency'
 import type { MarketProfile } from '../../types'
 
 interface Props { market: MarketProfile }

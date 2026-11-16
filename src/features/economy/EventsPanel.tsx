@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Zap, X, Globe, MapPin } from 'lucide-react'
 import { useEconomyStore } from './store'
 import { useWorldStore } from '../map/store'
-import { EVENT_PRESETS } from '../../lib/economyEngine'
-import { ALL_GOOD_TAGS } from '../../lib/goods'
+import { EVENT_PRESETS } from '../../lib/economy/economyEngine'
+import { ALL_GOOD_TAGS } from '../../lib/economy/goods'
 import type { GoodTag } from '../../types'
 
 export function EventsPanel() {

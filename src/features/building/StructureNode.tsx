@@ -1,6 +1,6 @@
 import type { NodeProps } from '@xyflow/react'
 import { PixelIcon } from './PixelIcon'
-import { buildCondition, structureProgress } from '../../lib/building'
+import { buildCondition, structureProgress } from '../../lib/world/building'
 import type { Structure } from '../../types'
 
 const LABEL_PREFIX = { planned: '🚧 ', building: '🚧 ', complete: '', damaged: '💥 ', destroyed: '🪨 ' }

@@ -5,7 +5,7 @@ import { PlaceMap } from './PlaceMap'
 import {
   characterLevel, findSubPath, levelCrumbs, levelOfPlacement, placementAt, placesOnLevel, sameLevel,
   WORLD_LEVEL, type MapLevel, type Placement, type PlaceFilter,
-} from '../../lib/places'
+} from '../../lib/world/places'
 import type { Character, ProjectTier } from '../../types'
 
 /** Ids a character is standing in, so a secret sub-location they're already

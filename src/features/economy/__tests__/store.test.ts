@@ -45,6 +45,20 @@ describe('buying blocks', () => {
   })
 })
 
+describe('buying a weapon', () => {
+  it('delivers an item that keeps the weapon stats', () => {
+    const weapon = { type: 'axe', material: 'diamond', damageBonus: 4, enchantments: [{ id: 'e', name: 'Sharpness', durationType: 'permanent' }] }
+    useEconomyStore.setState({
+      economy: {
+        markets: [{ ...market, listings: [] }], events: [],
+        customGoods: [{ id: 'cleaver', name: 'Cleaver', category: 'weapon', basePriceCopper: 500, tags: [], description: 'Heavy', weapon }],
+      } as unknown as EconomyData,
+    })
+    expect(economy().buy('m', 'cleaver', 1, 'c1', 500)).toEqual({ ok: true })
+    expect(char().onHand.items).toEqual([expect.objectContaining({ name: 'Cleaver', quantity: 1, isBlock: false, description: 'Heavy', weapon })])
+  })
+})
+
 describe('selling blocks', () => {
   const hold = (quantity: number) => useCharacterStore.setState({
     characters: [makeChar({ onHand: { items: [{ id: 'b', name: 'Stone Blocks', quantity, isBlock: true }] } })],

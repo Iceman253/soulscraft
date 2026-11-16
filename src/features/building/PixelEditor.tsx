@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Pencil, Eraser, PaintBucket, Pipette, Undo2, Trash2 } from 'lucide-react'
-import { ICON_SIZE, PALETTE, TRANSPARENT, normalizeIcon, emptyIcon, setPixel, floodFill, getPixel, colorOf, lineCells, isBlankIcon } from '../../lib/pixelArt'
-import { ICON_TEMPLATES } from '../../lib/iconTemplates'
+import { ICON_SIZE, PALETTE, TRANSPARENT, normalizeIcon, emptyIcon, setPixel, floodFill, getPixel, colorOf, lineCells, isBlankIcon } from '../../lib/art/pixelArt'
+import { ICON_TEMPLATES } from '../../lib/art/iconTemplates'
 import { PixelIcon } from './PixelIcon'
 
 type Tool = 'pencil' | 'eraser' | 'fill' | 'picker'

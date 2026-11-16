@@ -3,66 +3,46 @@ import {
   ReactFlow, Background, Controls, MiniMap, ConnectionMode,
   applyNodeChanges,
   type Node, type Edge, type NodeChange, type EdgeChange,
-  type Connection, type NodeProps, type ReactFlowInstance,
+  type Connection, type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Plus, Image, Eye, EyeOff, Users, ChevronDown } from 'lucide-react'
+import { Plus, Image, Eye, EyeOff } from 'lucide-react'
 import { useWorldStore } from './store'
-import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
-import { loadMapBg, saveMapBg, fileToDataUrl } from '../../lib/imageCache'
-import { AreaNodeComponent, CHAR_DND } from './AreaNode'
-import { AreaEdgeComponent } from './AreaEdgeComponent'
+import { useMapBackground } from './world/useMapBackground'
+import { CHAR_DND } from './AreaNode'
 import { NodePanel } from './NodePanel'
 import { SubMap } from './SubMap'
 import { AddNodeModal } from './AddNodeModal'
 import { ContextMenu } from '../../ui/ContextMenu'
-import { TokenAvatar } from '../../ui/TokenAvatar'
 import { useBuildStore } from '../building/store'
 import { StructurePanel } from '../building/StructurePanel'
 import { MiningModal } from '../building/MiningModal'
+import { structuresOnLevel, WORLD_LEVEL } from '../../lib/world/places'
+import type { AreaEdge as AreaEdgeType } from '../../types'
+import { TokenNode, MapBackgroundNode } from './world/WorldMapNodes'
+import { AreaNodeComponent } from './AreaNode'
+import { AreaEdgeComponent } from './AreaEdgeComponent'
 import { StructureNode } from '../building/StructureNode'
-import { structuresOnLevel, WORLD_LEVEL } from '../../lib/places'
-import type { AreaEdge as AreaEdgeType, Character } from '../../types'
+import { RevealPartyButton } from './world/RevealPartyButton'
+import { PartyTray } from './world/PartyTray'
+import { ScaleBackgroundBar } from './world/ScaleBackgroundBar'
 
-/** A free-floating character token on the world map (dropped on empty canvas). */
-function TokenNode({ data }: NodeProps) {
-  const c = (data as { char: Character }).char
-  return (
-    <div className="flex flex-col items-center gap-0.5" title={c.name}>
-      <div className="rounded-full ring-2 ring-gold/70 shadow-lg">
-        <TokenAvatar name={c.name} characterId={c.id} size={34} />
-      </div>
-      <span className="text-[10px] text-stone-100 bg-stone-900/85 px-1 rounded-sm whitespace-nowrap max-w-24 truncate">{c.name}</span>
-    </div>
-  )
-}
-
-/** Map background rendered in flow space, so it pans/zooms with the nodes. */
-function MapBackgroundNode({ data }: NodeProps) {
-  const { url, w, h } = data as unknown as { url: string; w: number; h: number }
-  return (
-    <div style={{ width: w, height: h, backgroundImage: `url(${url})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', opacity: 0.5, borderRadius: 4 }} />
-  )
-}
 
 const nodeTypes = { area: AreaNodeComponent, token: TokenNode, mapBackground: MapBackgroundNode, structure: StructureNode }
 const edgeTypes = { area: AreaEdgeComponent }
 
 export function WorldMap() {
   const { areas, edges, fogEnabled, playerVisibleAreaIds, mapBackground, setMapBackground, addArea, deleteArea, moveArea, addEdge: addWorldEdge, updateEdge, deleteEdge, toggleFog, revealArea, addPlayerVisibleArea, removePlayerVisibleArea } = useWorldStore()
-  const { activeId } = useCampaignStore()
+  const background = useMapBackground()
   const { characters, setLocation, setSubLocation, setInTower, setMapPos } = useCharacterStore()
   const rfRef = useRef<ReactFlowInstance | null>(null)
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set())
   const [subMapAreaId, setSubMapAreaId] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [bgUrl, setBgUrl] = useState<string | null>(activeId ? loadMapBg(activeId) : null)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; areaId: string | null } | null>(null)
   const [subMapInitialSubNodeId, setSubMapInitialSubNodeId] = useState<string | null>(null)
-  const [showRevealDropdown, setShowRevealDropdown] = useState(false)
-  const [scaleMode, setScaleMode] = useState(false)
   const { structures, addStructure, moveStructure } = useBuildStore()
   const [selectedStructureId, setSelectedStructureId] = useState<string | null>(null)
   // undefined = closed; null = open with no area preselected.
@@ -139,22 +119,10 @@ export function WorldMap() {
     zIndex: 5,
   })), [structures, areas, selectedStructureId])
 
-  // Background as a flow-space node (pans/zooms with the nodes). Draggable only
-  // while scaling; otherwise pointer-events off so panning works over it.
-  const bgNode = useMemo<Node | null>(() => (bgUrl && mapBackground) ? {
-    id: 'mapbg',
-    type: 'mapBackground',
-    position: { x: mapBackground.x, y: mapBackground.y },
-    data: { url: bgUrl, w: mapBackground.w, h: mapBackground.h },
-    draggable: scaleMode,
-    selectable: false,
-    zIndex: -1,
-    style: scaleMode ? { cursor: 'move' } : { pointerEvents: 'none' },
-  } : null, [bgUrl, mapBackground, scaleMode])
 
   const allNodes = useMemo(
-    () => [bgNode, ...baseNodes, ...structureNodes, ...tokenNodes].filter(Boolean) as Node[],
-    [bgNode, baseNodes, structureNodes, tokenNodes],
+    () => [background.bgNode, ...baseNodes, ...structureNodes, ...tokenNodes].filter(Boolean) as Node[],
+    [background.bgNode, baseNodes, structureNodes, tokenNodes],
   )
 
   // Local state for ReactFlow to apply smooth drag updates against without round-tripping the store.
@@ -230,50 +198,6 @@ export function WorldMap() {
     }
   }, [updateEdge])
 
-  const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !activeId) return
-    const url = await fileToDataUrl(file, 1600)
-    saveMapBg(activeId, url)
-    setBgUrl(url)
-    // Place it centered over the current node spread and open scaling mode.
-    // (window.Image — the lucide `Image` icon import shadows the global here.)
-    const img = new window.Image()
-    img.onload = () => {
-      let cx = 0, cy = 0, span = 800
-      if (areas.length > 0) {
-        const xs = areas.map(a => a.position.x), ys = areas.map(a => a.position.y)
-        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys)
-        cx = (minX + maxX) / 2; cy = (minY + maxY) / 2
-        span = Math.max(maxX - minX, 300) * 1.6
-      }
-      const w = span
-      const h = w * (img.naturalHeight / Math.max(1, img.naturalWidth))
-      setMapBackground({ x: cx - w / 2, y: cy - h / 2, w, h })
-      setScaleMode(true)
-    }
-    img.src = url
-  }
-
-  // Resize the background around its center (keeps aspect ratio).
-  const scaleBg = (factor: number) => {
-    if (!mapBackground) return
-    const { x, y, w, h } = mapBackground
-    const nw = Math.max(80, w * factor), nh = Math.max(80, h * factor)
-    setMapBackground({ x: x - (nw - w) / 2, y: y - (nh - h) / 2, w: nw, h: nh })
-  }
-
-  // While scaling, Enter finishes (locks the background to zoom/pan with the nodes).
-  useEffect(() => {
-    if (!scaleMode) return
-    const onKey = (ev: KeyboardEvent) => {
-      const el = ev.target as HTMLElement
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return
-      if (ev.key === 'Enter') { ev.preventDefault(); setScaleMode(false) }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [scaleMode])
 
   if (subMapArea) {
     return (
@@ -341,112 +265,14 @@ export function WorldMap() {
         >
           {fogEnabled ? <Eye size={14} /> : <EyeOff size={14} />} Fog {fogEnabled ? 'ON' : 'OFF'}
         </button>
-        {(() => {
-          // Only count characters whose locationId actually exists in the areas array
-          const charsWithLocation = characters.filter(c => c.locationId && areas.some(a => a.id === c.locationId))
-          const partyAreaIds = [...new Set(charsWithLocation.map(c => c.locationId) as string[])]
-          const hiddenCount = partyAreaIds.filter(id => !playerVisibleAreaIds.includes(id)).length
-          const allVisible = hiddenCount === 0 && partyAreaIds.length > 0
-          const noParty = partyAreaIds.length === 0
-
-          return (
-            <div className="relative flex shadow-lg">
-              {/* Main button */}
-              <button
-                onClick={() => {
-                  if (noParty) return
-                  if (allVisible) {
-                    partyAreaIds.forEach(id => removePlayerVisibleArea(id))
-                  } else {
-                    partyAreaIds.forEach(id => addPlayerVisibleArea(id))
-                  }
-                }}
-                className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-l-sm border border-r-0 text-sm transition-colors ${
-                  noParty
-                    ? 'bg-stone-800 border-stone-600 text-stone-600 cursor-not-allowed'
-                    : allVisible
-                      ? 'bg-stone-800 border-stone-600 text-stone-400 hover:border-stone-500 hover:text-stone-300'
-                      : 'bg-stone-800 border-stone-600 text-teal-400 hover:border-teal-500/50 hover:text-teal-300'
-                }`}
-                title={
-                  noParty
-                    ? 'No characters placed on the map — use right-click → Place Characters Here'
-                    : allVisible
-                      ? 'Hide all party locations from players'
-                      : 'Reveal all party locations to players'
-                }
-              >
-                <Users size={14} />
-                {allVisible ? 'Hide Party' : 'Reveal Party'}
-                {hiddenCount > 0
-                  ? <span className="text-xs bg-amber-700/60 text-amber-300 font-bold px-1.5 py-0.5 rounded-full">{hiddenCount}</span>
-                  : partyAreaIds.length > 0
-                    ? <span className="text-xs text-stone-500 font-mono">✓</span>
-                    : null
-                }
-              </button>
-
-              {/* Dropdown toggle */}
-              <button
-                onClick={() => setShowRevealDropdown(v => !v)}
-                className={`flex items-center px-1.5 py-1.5 rounded-r-sm border border-stone-600 text-sm transition-colors ${
-                  showRevealDropdown
-                    ? 'bg-stone-700 border-teal-500/50 text-teal-300'
-                    : 'bg-stone-800 text-teal-400 hover:bg-stone-700 hover:text-teal-300'
-                }`}
-                title="Toggle individual character locations"
-              >
-                <ChevronDown size={13} className={`transition-transform ${showRevealDropdown ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Per-character dropdown */}
-              {showRevealDropdown && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowRevealDropdown(false)} />
-                  <div className="absolute top-full left-0 mt-1 w-56 bg-stone-900 border border-stone-600 rounded-lg shadow-2xl z-50 overflow-hidden">
-                    <div className="px-3 py-1.5 text-xs text-stone-500 border-b border-stone-700">Toggle individual location</div>
-                    {charsWithLocation.length === 0 && (
-                      <div className="px-3 py-2 text-xs text-stone-500 italic">
-                        No characters placed on the map.<br />
-                        <span className="text-stone-500">Right-click an area → Place Characters Here.</span>
-                      </div>
-                    )}
-                    {charsWithLocation.map(c => {
-                      const area = areas.find(a => a.id === c.locationId)
-                      const isVisible = playerVisibleAreaIds.includes(c.locationId!)
-                      return (
-                        <button
-                          key={c.id}
-                          onClick={() => {
-                            if (isVisible) removePlayerVisibleArea(c.locationId!)
-                            else addPlayerVisibleArea(c.locationId!)
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 hover:bg-stone-800 text-left transition-colors"
-                        >
-                          <div className="min-w-0">
-                            <div className="text-sm text-stone-200 truncate">{c.name}</div>
-                            <div className="text-xs text-stone-500 truncate">📍 {area?.name ?? '?'}</div>
-                          </div>
-                          {isVisible
-                            ? <span className="text-xs text-teal-500 shrink-0 ml-2">✓ shown</span>
-                            : <span className="text-xs text-amber-400 shrink-0 ml-2">hidden</span>
-                          }
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          )
-        })()}
+        <RevealPartyButton />
         <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stone-800 border border-stone-600 text-stone-400 hover:text-stone-200 cursor-pointer text-sm shadow-lg">
           <Image size={14} /> Map BG
-          <input type="file" accept="image/*" className="hidden" onChange={handleBgUpload} />
+          <input type="file" accept="image/*" className="hidden" onChange={background.upload} />
         </label>
-        {bgUrl && mapBackground && !scaleMode && (
+        {background.hasImage && !background.scaleMode && (
           <button
-            onClick={() => setScaleMode(true)}
+            onClick={() => background.setScaleMode(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stone-800 border border-stone-600 text-stone-400 hover:text-gold hover:border-gold/50 text-sm shadow-lg"
           >
             <Image size={14} /> Scale BG
@@ -455,65 +281,10 @@ export function WorldMap() {
       </div>
 
       {/* Background scaling controls */}
-      {scaleMode && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-stone-900/95 border border-gold/40 rounded-lg shadow-2xl px-3 py-2">
-          <span className="text-xs text-stone-300 font-medium">Scale background</span>
-          <button onClick={() => scaleBg(1 / 1.1)} title="Smaller" className="w-7 h-7 rounded-sm bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-base leading-none">−</button>
-          <button onClick={() => scaleBg(1.1)} title="Larger" className="w-7 h-7 rounded-sm bg-stone-800 border border-stone-600 text-stone-200 hover:border-gold/50 text-base leading-none">+</button>
-          <span className="text-[10px] text-stone-500 mx-1">drag the image to position it</span>
-          <button
-            onClick={() => setScaleMode(false)}
-            className="px-2.5 py-1 rounded-sm bg-gold text-stone-900 text-xs font-semibold hover:bg-yellow-400"
-          >
-            Finished Scaling ⏎
-          </button>
-        </div>
-      )}
+      {background.scaleMode && <ScaleBackgroundBar scaleBg={background.scale} onDone={() => background.setScaleMode(false)} />}
 
       {/* Character token tray — drag a token onto a location to place; drop back here to remove */}
-      {characters.filter(c => !c.isDead).length > 0 && (
-        <div
-          className="absolute top-16 left-3 z-10 w-56 bg-stone-900/95 border border-stone-700 rounded-lg shadow-2xl p-2"
-          onDragOver={e => { if (e.dataTransfer.types.includes(CHAR_DND)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }}
-          onDrop={e => {
-            const charId = e.dataTransfer.getData(CHAR_DND)
-            if (charId) { e.preventDefault(); e.stopPropagation(); setLocation(charId, null); setSubLocation(charId, null); setInTower(charId, false); setMapPos(charId, null) }
-          }}
-        >
-          <div className="text-xs text-stone-500 mb-1.5 px-1 flex items-center gap-1">
-            <Users size={11} /> Party — drag onto a location or the map
-          </div>
-          <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
-            {characters.filter(c => !c.isDead).map(c => {
-              const loc = c.locationId ? areas.find(a => a.id === c.locationId) : null
-              return (
-                <div
-                  key={c.id}
-                  draggable
-                  onDragStart={e => { e.dataTransfer.setData(CHAR_DND, c.id); e.dataTransfer.effectAllowed = 'move' }}
-                  className="flex items-center gap-2 px-1.5 py-1 rounded-sm hover:bg-stone-800 cursor-grab active:cursor-grabbing"
-                  title="Drag onto a location on the map"
-                >
-                  <TokenAvatar name={c.name} characterId={c.id} size={22} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs text-stone-200 truncate">{c.name}{c.inTower ? ' 🗼' : ''}</div>
-                    <div className="text-xs text-stone-500 truncate">{loc ? `📍 ${loc.name}` : c.mapPos ? '🗺️ On map' : 'Unplaced'}</div>
-                  </div>
-                  {(loc || c.mapPos) && (
-                    <button
-                      onClick={() => { setLocation(c.id, null); setSubLocation(c.id, null); setInTower(c.id, false); setMapPos(c.id, null) }}
-                      title="Remove from map"
-                      className="text-stone-600 hover:text-red-400 shrink-0 px-1"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      <PartyTray />
 
       {/* Node panel sidebar */}
       {selectedArea && !selectedStructureId && (

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import { COMMON_MATERIALS } from '../../lib/building'
+import { COMMON_MATERIALS } from '../../lib/world/building'
 
 /** Tag what can be mined at a place (Guidebook p.81). */
 export function MaterialsEditor({ materials, onChange }: { materials: string[]; onChange: (materials: string[]) => void }) {

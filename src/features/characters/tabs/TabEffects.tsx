@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useCharacterStore } from '../store'
 import { Badge } from '../../../ui/Badge'
-import { QUICK_EFFECTS } from '../../../lib/constants'
+import { QUICK_EFFECTS } from '../../../lib/rules/constants'
 import type { Character, ActiveEffect } from '../../../types'
 
 interface TabEffectsProps { character: Character }

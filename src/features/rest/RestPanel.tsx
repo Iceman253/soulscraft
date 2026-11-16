@@ -4,8 +4,8 @@ import { useRestStore } from './store'
 import { useCharacterStore } from '../characters/store'
 import { useBuildStore } from '../building/store'
 import { useWorldStore } from '../map/store'
-import { restBuilds } from '../../lib/building'
-import { placementLabel } from '../../lib/places'
+import { restBuilds } from '../../lib/world/building'
+import { placementLabel } from '../../lib/world/places'
 import type { RestConditions } from '../../types'
 
 export function RestPanel() {

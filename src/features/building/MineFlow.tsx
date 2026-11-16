@@ -8,8 +8,8 @@ import {
   MINING_AMOUNTS, actionOutcome, canBoostWithSd, carriedMiningTools, carryLimitOf, carryRoom,
   miningBreakdown, miningDays, miningEffectNotes, miningToolOptions, miningTraits,
   miningToolBonus, resolveMiningTool, rollMiningCheck, suggestedMiningBlocks, toolKey,
-} from '../../lib/building'
-import { characterLevel, mineAt, miningSites } from '../../lib/places'
+} from '../../lib/world/building'
+import { characterLevel, mineAt, miningSites } from '../../lib/world/places'
 import type { MiningDestination } from './store'
 import type { Character } from '../../types'
 

@@ -51,3 +51,15 @@ export interface WeaponLoadout {
   mainHand: Weapon | null
   offHand: Weapon | null
 }
+
+/** A weapon's stats as sold or carried, before it's equipped. Merchant goods
+ *  and On Hand items carry one so the weapon keeps its power when it changes hands. */
+export interface WeaponSpec {
+  type: WeaponType
+  material: WeaponMaterial
+  /** The weapon's power level: its damage bonus. */
+  damageBonus: number
+  /** Its abilities. */
+  enchantments: GearEnchantment[]
+  notes?: string
+}

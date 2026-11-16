@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { LogEntry, LogEntryType } from '../../types'
-import { newId } from '../../lib/id'
+import { newId } from '../../lib/platform/id'
 import { useCampaignStore } from '../campaigns/store'
 
 interface LogStore {

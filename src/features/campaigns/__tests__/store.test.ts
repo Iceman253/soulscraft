@@ -3,7 +3,7 @@ import type { CampaignData } from '../../../types'
 import { mergeCampaign } from '../../../../server/merge.js'
 
 const { patchCampaign, enterCampaign } = vi.hoisted(() => ({ patchCampaign: vi.fn(), enterCampaign: vi.fn() }))
-vi.mock('../../../lib/api', () => ({
+vi.mock('../../../lib/platform/api', () => ({
   patchCampaign,
   listCampaigns: vi.fn(),
   createCampaignOnServer: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock('../../../lib/api', () => ({
   deleteCampaignOnServer: vi.fn(),
   ApiError: class extends Error {},
 }))
-vi.mock('../../../lib/imageCache', () => ({ setImageSyncContext: vi.fn(), hydrateImages: vi.fn() }))
+vi.mock('../../../lib/platform/imageCache', () => ({ setImageSyncContext: vi.fn(), hydrateImages: vi.fn() }))
 
 import { useCampaignStore, runWithoutSave } from '../store'
 

@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { X, Sword, AlertTriangle } from 'lucide-react'
 import { maxOfDie } from './combatUtils'
 import { useCharacterStore } from '../characters/store'
-import { AbilityApplyPanel, totalBonus, hasDamageMod } from '../characters/AbilityApplyPanel'
-import type { AppliedModifier } from '../characters/AbilityApplyPanel'
+import { AbilityApplyPanel } from '../characters/AbilityApplyPanel'
+import { totalBonus, hasDamageMod } from '../characters/modifiers'
+import type { AppliedModifier } from '../characters/modifiers'
 import type { CombatSession } from '../../types'
 
 // ── Types ────────────────────────────────────────────────────────────────

@@ -1,9 +1,9 @@
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
 import { useStorageReach } from '../characters/useStorageReach'
-import { carryRoom, countBlocks } from '../../lib/building'
-import { findMine } from '../../lib/places'
-import { ENDER, stashOf, storeLabel, type StoreKey } from '../../lib/stashes'
+import { carryRoom, countBlocks } from '../../lib/world/building'
+import { findMine } from '../../lib/world/places'
+import { ENDER, stashOf, storeLabel, type StoreKey } from '../../lib/world/stashes'
 import type { Character } from '../../types'
 
 const stepBtn = 'flex-1 rounded-xl border border-stone-600 bg-stone-950 py-2.5 text-base font-semibold text-stone-100 active:border-gold/60 hover:border-gold/60 disabled:opacity-35'

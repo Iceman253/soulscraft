@@ -1,4 +1,4 @@
-import type { ArmorLoadout, WeaponLoadout } from './gear'
+import type { ArmorLoadout, WeaponLoadout, WeaponSpec } from './gear'
 
 // ── Class Feature State ────────────────────────────────────────────────
 export interface RestCharge {
@@ -102,6 +102,8 @@ export interface CharacterItem {
   description?: string
   isBlock?: boolean
   gearSlot?: 'mainHand' | 'offHand' | 'armor' | 'shield'
+  /** Stats of a bought or carried weapon; equipping uses these. */
+  weapon?: WeaponSpec
 }
 
 export interface InventorySection { items: CharacterItem[] }
@@ -225,6 +227,9 @@ export interface Character {
   mineStashes?: Record<string, InventorySection>
   rations: number
   notes: string
+  /** Player-controlled: when true, other players may see this character's
+   *  on-hand items, currency, and rations in the Player View. Default private. */
+  inventoryShared?: boolean
   // Death state (rulebook p.74)
   isDead?: boolean    // character has died (HP 0, SD 0)
   isGhost?: boolean   // in ghost mode during Tower of Trials attempt

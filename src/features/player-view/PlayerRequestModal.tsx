@@ -1,10 +1,10 @@
-import { carryLimitOf } from '../../lib/building'
+import { carryLimitOf } from '../../lib/world/building'
 import { useState } from 'react'
 import { Send } from 'lucide-react'
 import { useRequestStore, type RequestType } from '../requests/store'
 import { useQuestStore } from '../quests/store'
 import { Modal } from '../../ui/Modal'
-import { CURRENCY_OPTIONS } from '../../lib/currency'
+import { CURRENCY_OPTIONS } from '../../lib/economy/currency'
 import type { Character } from '../../types'
 
 interface Props {

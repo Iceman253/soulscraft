@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { BestiaryEntry } from '../../types'
-import { newId } from '../../lib/id'
+import { newId } from '../../lib/platform/id'
 import { useCampaignStore } from '../campaigns/store'
 
 const RULEBOOK_CREATURES: Omit<BestiaryEntry, 'id'>[] = [

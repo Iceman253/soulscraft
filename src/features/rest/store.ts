@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { RestEvent, RestConditions } from '../../types'
-import { newId } from '../../lib/id'
+import { newId } from '../../lib/platform/id'
 import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import { log } from '../log/store'

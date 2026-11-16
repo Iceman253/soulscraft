@@ -1,15 +1,14 @@
 import { useState } from 'react'
-import { ArrowLeft, Camera, Trash2, Plus, Check, Compass } from 'lucide-react'
+import { ArrowLeft, Trash2, Plus, Check, Compass } from 'lucide-react'
 import { useCharacterStore } from './store'
 import { useWorldStore } from '../map/store'
 import { log } from '../log/store'
 
 const ECHO_COMPASS = 'Echo Compass'
-import { TokenAvatar } from '../../ui/TokenAvatar'
+import { PortraitPicker } from './PortraitPicker'
 import { HpBar } from '../../ui/HpBar'
 import { SdDots } from '../../ui/SdDots'
-import { computeDef } from '../../lib/armor'
-import { savePortrait, fileToDataUrl } from '../../lib/imageCache'
+import { computeDef } from '../../lib/rules/armor'
 import { TabStats } from './tabs/TabStats'
 import { TabGear } from './tabs/TabGear'
 import { TabInventory } from './tabs/TabInventory'
@@ -38,7 +37,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
   const [tab, setTab] = useState<SheetTab>('stats')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmDeath, setConfirmDeath] = useState(false)
-  const { adjustHp, adjustSd, updateCharacter, deleteCharacter, markDead, setGhost, resurrect, setInTower } = useCharacterStore()
+  const { adjustHp, adjustSd, deleteCharacter, markDead, setGhost, resurrect, setInTower } = useCharacterStore()
   const characters = useCharacterStore(s => s.characters)
   const addOnHandItem = useCharacterStore(s => s.addOnHandItem)
   const { towerTrials, beginTowerTrials, setTowerKeepersAgreed, addTowerFloor, toggleTowerFloor, removeTowerFloor, endTowerTrials } = useWorldStore()
@@ -60,14 +59,6 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
   const handleDelete = () => {
     deleteCharacter(c.id)
     onBack()
-  }
-
-  const handlePortraitUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const url = await fileToDataUrl(file, 400)
-    savePortrait(c.id, url)
-    updateCharacter(c.id, {})
   }
 
   // Avoid Death — spend SD to regain HP when at 0
@@ -307,13 +298,7 @@ export function CharacterSheet({ character: c, onBack }: CharacterSheetProps) {
 
         <div className="flex items-start gap-4">
           {/* Portrait */}
-          <label className="relative cursor-pointer group shrink-0">
-            <TokenAvatar name={c.name} characterId={c.id} size={60} />
-            <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-              <Camera size={16} className="text-white" />
-            </div>
-            <input type="file" accept="image/*" className="hidden" onChange={handlePortraitUpload} />
-          </label>
+          <PortraitPicker name={c.name} characterId={c.id} size={60} />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 flex-wrap">

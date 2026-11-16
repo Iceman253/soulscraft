@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import { X, ShoppingCart, Coins, AlertTriangle } from 'lucide-react'
 import { useEconomyStore, allGoods } from './store'
 import { useCharacterStore } from '../characters/store'
-import { quoteGood } from '../../lib/economyEngine'
-import { toCopper, formatCopper, formatCopperLong } from '../../lib/currency'
+import { quoteGood } from '../../lib/economy/economyEngine'
+import { toCopper, formatCopper, formatCopperLong, coinName, coinWords } from '../../lib/economy/currency'
+import { CoinPriceInput, CoinSelect } from '../../ui/CoinPrice'
+import { usePriceCoin } from './usePriceCoin'
 import type { MarketProfile, Good, PriceQuote } from '../../types'
 
 type Props =
@@ -21,6 +23,7 @@ export function TransactModal(props: Props) {
   const [unitPrice, setUnitPrice] = useState<number>(props.mode === 'buy' ? props.quote.final : 0)
   const [force, setForce] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [coin, setCoin] = usePriceCoin()
 
   const char = characters.find(c => c.id === charId) ?? null
   const item = props.mode === 'sell' && char ? char.onHand.items.find(i => i.id === itemId) ?? null : null
@@ -146,18 +149,18 @@ export function TransactModal(props: Props) {
             </div>
             <div>
               <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-1.5 font-heading">
-                Unit price <span className="normal-case text-stone-600">(copper — yours to set)</span>
+                Unit price <span className="normal-case text-stone-600">(in {coinName(coin, 2)} — yours to set)</span>
               </label>
-              <input
-                type="number" min={0} value={unitPrice}
-                onChange={e => setUnitPrice(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-full bg-stone-800 border border-amber-700/40 rounded-lg px-3 py-2 text-amber-100 text-sm outline-hidden focus:border-amber-600 font-mono tabular-nums"
-              />
+              <div className="flex items-start gap-2">
+                <CoinPriceInput copper={unitPrice} coin={coin} onChange={c => setUnitPrice(c ?? 0)} set
+                  label="Unit price" inputClassName="w-24 py-1.5! text-sm!" />
+                <CoinSelect value={coin} onChange={setCoin} className="py-1.5" />
+              </div>
               <div className="text-[10px] text-stone-600 mt-1">
                 {props.mode === 'buy'
-                  ? <>Engine suggests {formatCopper(props.quote.suggested)}{props.quote.overridden && ' (you fixed this price)'}</>
+                  ? <>Engine suggests {coinWords(props.quote.suggested)}{props.quote.overridden && ' (you fixed this price)'}</>
                   : suggestedSell !== null
-                    ? <>Engine suggests {formatCopper(suggestedSell)}</>
+                    ? <>Engine suggests {coinWords(suggestedSell)}</>
                     : item ? 'Unknown to the merchant — name your price' : ''}
               </div>
             </div>

@@ -1,96 +1,14 @@
 import { useState } from 'react'
 import { Plus, UserPlus } from 'lucide-react'
-import { useCharacterStore, defaultClassFeatureState } from './store'
+import { useCharacterStore } from './store'
 import { log } from '../log/store'
 import { CharacterCard } from './CharacterCard'
 import { CharacterSheet } from './CharacterSheet'
 import { Modal } from '../../ui/Modal'
-import { SPECIES, CLASSES, CLASS_DAMAGE_DICE, CLASS_DISCIPLINES, DISCIPLINE_EDGES, DEFAULT_CLASS_SKILLS, SPECIES_DATA, calcMaxHp, calcMaxSd } from '../../lib/constants'
-import { CLASS_ABILITIES } from '../../lib/classAbilities'
-import { emptyLoadout } from '../../lib/armor'
-import { newId } from '../../lib/id'
-import type { Character, Skill, Ability } from '../../types'
-
-// Skill bonus per class
-const CLASS_SKILL_BONUS: Record<string, 1|2|3> = {
-  Warrior: 1, Vindicator: 1, Hunter: 2, Evoker: 2,
-  Delver: 3, Wildspeaker: 3, Enchanter: 3, Tecton: 3, Alchemist: 3,
-}
-
-export function buildNewCharacter(name: string, species: string, variantName: string, characterClass: string, discipline: string): Omit<Character, 'id'> {
-  const skillBonus = CLASS_SKILL_BONUS[characterClass] ?? 1
-  const defaultSkills: Skill[] = (DEFAULT_CLASS_SKILLS[characterClass] ?? []).map(s => ({
-    id: newId(),
-    name: s.name,
-    bonus: skillBonus as 1|2|3,
-    description: s.description,
-    combatRoles: s.combatRoles,
-  }))
-  const speciesInfo = SPECIES_DATA[species]
-  const speciesVariants = speciesInfo?.variants ?? []
-  const variant = speciesVariants.find(v => v.name === variantName) ?? speciesVariants[0]
-  const defaultTraits = [
-    ...(speciesInfo ? [{ id: newId(), name: speciesInfo.speciesTrait.name, description: speciesInfo.speciesTrait.description, combatRoles: speciesInfo.speciesTrait.combatRoles }] : []),
-    ...(variant ? [{ id: newId(), name: variant.trait.name, description: variant.trait.description, combatRoles: variant.trait.combatRoles }] : []),
-  ]
-  const damageDie = CLASS_DAMAGE_DICE[characterClass] ?? 'd6'
-
-  // Rulebook p.7: "You start with three available Special Abilities at Level 1"
-  const startingAbilities: Ability[] = (CLASS_ABILITIES[characterClass] ?? [])
-    .filter(a => a.tier === 'level1')
-    .map(a => ({
-      id: newId(),
-      name: a.name,
-      sdCost: a.sdCost,
-      description: a.description,
-      recharge: 'rest' as const,
-      combatRole: a.combatRole,            // legacy single tag (compat)
-      combatRoles: a.combatRoles ?? (a.combatRole ? [a.combatRole] : undefined),
-      appliedEffects: a.appliedEffects,
-    }))
-
-  const maxHp = calcMaxHp(characterClass, 1)
-  const maxSd = calcMaxSd(1)
-
-  return {
-    name,
-    species,
-    variant: variantName,
-    class: characterClass,
-    level: 1,
-    xp: 0,
-    maxHp,
-    currentHp: maxHp,
-    maxSd,
-    currentSd: maxSd,
-    damageDie,
-    discipline,
-    skills: defaultSkills,
-    traits: defaultTraits,
-    abilities: startingAbilities,
-    disciplineEdge: DISCIPLINE_EDGES[discipline]
-      ? {
-          name: DISCIPLINE_EDGES[discipline].name,
-          description: DISCIPLINE_EDGES[discipline].description,
-          combatRoles: DISCIPLINE_EDGES[discipline].combatRoles,
-          appliedEffects: DISCIPLINE_EDGES[discipline].appliedEffects,
-          used: false,
-        }
-      : { name: '', description: '', used: false },
-    classFeatureState: defaultClassFeatureState(characterClass),
-    armorLoadout: emptyLoadout(),
-    weaponLoadout: { mainHand: null, offHand: null },
-    activeEffects: [],
-    onHand: { items: [] },
-    storage: { items: [] },
-    currency: { copper: 0, iron: 0, gold: 0, emeralds: 0, diamonds: 0 },
-    rations: 0,
-    missedRests: 0,
-    locationId: null,
-    subLocationId: null,
-    notes: '',
-  }
-}
+import { SPECIES, CLASSES, CLASS_DATA, CLASS_DAMAGE_DICE, CLASS_DISCIPLINES, DISCIPLINE_EDGES, DISCIPLINE_INFO, SPECIES_DATA, calcMaxHp, calcMaxSd } from '../../lib/rules/constants'
+import { CLASS_ABILITIES } from '../../lib/rules/classAbilities'
+import { buildNewCharacter, CLASS_SKILL_BONUS, DEFAULT_GEAR_SELECTIONS, type GearSelections } from '../../lib/rules/newCharacter'
+import { StartingGearPicker } from './StartingGearPicker'
 
 export function CharacterPanel() {
   const { characters, addCharacter } = useCharacterStore()
@@ -101,6 +19,7 @@ export function CharacterPanel() {
   const [variant, setVariant] = useState<string>(SPECIES_DATA[SPECIES[0]].variants[0].name)
   const [characterClass, setCharacterClass] = useState<string>(CLASSES[0])
   const [discipline, setDiscipline] = useState<string>(CLASS_DISCIPLINES[CLASSES[0]]?.[0] ?? '')
+  const [gearSel, setGearSel] = useState<GearSelections>(DEFAULT_GEAR_SELECTIONS)
 
   const speciesVariants = SPECIES_DATA[species]?.variants ?? []
   const selectedVariant = speciesVariants.find(v => v.name === variant) ?? speciesVariants[0]
@@ -122,7 +41,7 @@ export function CharacterPanel() {
 
   const handleCreate = () => {
     if (!name.trim()) return
-    const base = buildNewCharacter(name.trim(), species, variant, characterClass, discipline)
+    const base = buildNewCharacter(name.trim(), species, variant, characterClass, discipline, gearSel)
     // Easter egg: Infinite gets... infinite HP
     const isInfinite = name.trim().toLowerCase() === 'infinite'
     if (isInfinite) { base.maxHp = 999999; base.currentHp = 999999 }
@@ -232,6 +151,7 @@ export function CharacterPanel() {
             {/* Species info + trait preview */}
             {SPECIES_DATA[species] && (
               <div className="bg-stone-900 border border-stone-600 rounded-lg px-3 py-2.5 space-y-2">
+                <div className="text-xs text-stone-300 leading-relaxed">{SPECIES_DATA[species].description}</div>
                 <div className="text-xs text-stone-500 italic">{SPECIES_DATA[species].tags}</div>
                 <div>
                   <span className="text-xs text-stone-400 font-semibold">Species trait — </span>
@@ -261,19 +181,36 @@ export function CharacterPanel() {
               </div>
             </div>
 
-            {/* Edge preview */}
-            {selectedEdge && (
-              <div className="bg-stone-900 border border-stone-600 rounded-lg px-3 py-2.5 space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-stone-200">{selectedEdge.name}</span>
-                  <span className="text-xs text-stone-600">resets on {selectedEdge.resetsOn}</span>
-                </div>
-                <div className="text-xs text-stone-400">{selectedEdge.description}</div>
+            {/* Discipline bonus skill + Edge preview */}
+            {(DISCIPLINE_INFO[discipline] || selectedEdge) && (
+              <div className="bg-stone-900 border border-stone-600 rounded-lg px-3 py-2.5 space-y-2">
+                {DISCIPLINE_INFO[discipline] && (
+                  <div>
+                    <span className="text-xs text-stone-400 font-semibold">Bonus skill — </span>
+                    <span className="text-xs font-semibold text-gold">{DISCIPLINE_INFO[discipline].skill.name}: </span>
+                    <span className="text-xs text-stone-400">{DISCIPLINE_INFO[discipline].skill.description}</span>
+                  </div>
+                )}
+                {selectedEdge && (
+                  <div className={DISCIPLINE_INFO[discipline] ? 'border-t border-stone-700 pt-2' : ''}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-stone-200">{selectedEdge.name}</span>
+                      <span className="text-xs text-stone-600">resets on {selectedEdge.resetsOn}</span>
+                    </div>
+                    <div className="text-xs text-stone-400">{selectedEdge.description}</div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Class stats + starting abilities preview */}
+            {/* Class description, stats + starting abilities preview */}
             <div className="bg-stone-900 border border-stone-600 rounded-lg px-3 py-2.5 space-y-2">
+              {CLASS_DATA[characterClass] && (
+                <div>
+                  <div className="text-xs font-semibold text-gold">{CLASS_DATA[characterClass].summary}</div>
+                  <div className="text-xs text-stone-400 leading-relaxed mt-0.5">{CLASS_DATA[characterClass].description}</div>
+                </div>
+              )}
               <div className="flex gap-4 text-xs">
                 <span>HP: <span className="text-gold font-bold font-mono tabular-nums">{calcMaxHp(characterClass, 1)}</span></span>
                 <span>SD: <span className="text-gold font-bold font-mono tabular-nums">{calcMaxSd(1)}</span></span>
@@ -291,6 +228,12 @@ export function CharacterPanel() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* Starting gear (class pages) */}
+            <div className="bg-stone-900 border border-stone-600 rounded-lg px-3 py-2.5">
+              <div className="text-xs text-stone-500 font-medium mb-2 font-heading tracking-wide">Starting Gear</div>
+              <StartingGearPicker characterClass={characterClass} selections={gearSel} onChange={setGearSel} />
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

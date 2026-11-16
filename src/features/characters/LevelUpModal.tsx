@@ -3,10 +3,11 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Modal } from '../../ui/Modal'
 import { useCharacterStore } from './store'
 import { useRequestStore } from '../requests/store'
-import { calcMaxHp, calcMaxSd } from '../../lib/constants'
-import { CLASS_ABILITIES } from '../../lib/classAbilities'
+import { calcMaxHp, calcMaxSd } from '../../lib/rules/constants'
+import { CLASS_ABILITIES } from '../../lib/rules/classAbilities'
 import { STATUS_EFFECTS } from '../combat/statusEffects'
 import type { Character, CombatRole, AppliedStatusEffectSpec, StatusEffectTarget, EffectDuration } from '../../types'
+import { ALL_ROLES, ALL_TARGETS, DURATION_OPTIONS, CLASS_SKILL_BONUS } from './levelUpOptions'
 
 /** Optional pre-filled state passed when reopening the modal after the GM
  *  denied a previous skill proposal — lets the player adjust rather than redo. */
@@ -16,41 +17,6 @@ export interface LevelUpInitialState {
   skillDescription?: string
   skillRoles?: CombatRole[]
   skillEffects?: AppliedStatusEffectSpec[]
-}
-
-const ALL_ROLES: { role: CombatRole; label: string; hint: string }[] = [
-  { role: 'attack',  label: 'Attack',  hint: 'Surfaces when this character is attacking' },
-  { role: 'defense', label: 'Defense', hint: 'Surfaces when this character is being attacked' },
-  { role: 'general', label: 'General', hint: 'Surfaces on both combat sides + the dice roller' },
-  { role: 'utility', label: 'Utility', hint: 'Out-of-combat only (skill checks, social, exploration)' },
-]
-
-const ALL_TARGETS: { target: StatusEffectTarget; label: string }[] = [
-  { target: 'self',        label: 'Self' },
-  { target: 'target',      label: 'Target' },
-  { target: 'ally',        label: 'Ally' },
-  { target: 'all-allies',  label: 'All allies' },
-]
-
-const DURATION_OPTIONS: { value: EffectDuration; label: string; needsCount: boolean }[] = [
-  { value: 'manual',     label: 'Manual',     needsCount: false },
-  { value: 'scenes',     label: 'Scenes',     needsCount: true  },
-  { value: 'days',       label: 'Days',       needsCount: true  },
-  { value: 'until-rest', label: 'Until rest', needsCount: false },
-  { value: 'permanent',  label: 'Permanent',  needsCount: false },
-]
-
-// Skill bonus per class at character creation
-const CLASS_SKILL_BONUS: Record<string, 1 | 2 | 3> = {
-  Warrior:     1,
-  Vindicator:  1,
-  Hunter:      2,
-  Evoker:      2,
-  Delver:      3,
-  Wildspeaker: 3,
-  Enchanter:   3,
-  Tecton:      3,
-  Alchemist:   3,
 }
 
 interface Props {

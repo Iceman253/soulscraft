@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { X, Trash2 } from 'lucide-react'
 import { useEconomyStore } from './store'
-import { GOOD_CATEGORIES, ALL_GOOD_TAGS } from '../../lib/goods'
-import { formatCopper } from '../../lib/currency'
+import { GOOD_CATEGORIES, ALL_GOOD_TAGS } from '../../lib/economy/goods'
+import { coinName } from '../../lib/economy/currency'
+import { CoinPriceInput, CoinSelect } from '../../ui/CoinPrice'
+import { usePriceCoin } from './usePriceCoin'
 import { ConfirmDialog } from '../../ui/ConfirmDialog'
+import { defaultWeaponSpec } from '../../lib/rules/weaponSpec'
+import { WeaponSpecEditor } from './WeaponSpecEditor'
 import type { Good, GoodTag } from '../../types'
 
 interface Props {
@@ -20,6 +24,8 @@ export function GoodEditorModal({ good, onClose }: Props) {
   const [tags, setTags] = useState<GoodTag[]>(good?.tags ?? [])
   const [unit, setUnit] = useState(good?.unit ?? '')
   const [description, setDescription] = useState(good?.description ?? '')
+  const [weapon, setWeapon] = useState(good?.weapon ?? defaultWeaponSpec())
+  const [coin, setCoin] = usePriceCoin()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const toggleTag = (tag: GoodTag) =>
@@ -29,6 +35,7 @@ export function GoodEditorModal({ good, onClose }: Props) {
     const data = {
       name: name.trim(), category, basePriceCopper: Math.max(1, price),
       tags, unit: unit.trim() || undefined, description: description.trim() || undefined,
+      weapon: category === 'weapon' ? weapon : undefined,
     }
     if (good) updateCustomGood(good.id, data)
     else addCustomGood(data)
@@ -79,17 +86,16 @@ export function GoodEditorModal({ good, onClose }: Props) {
             </div>
           </div>
 
+          {category === 'weapon' && <WeaponSpecEditor spec={weapon} onChange={setWeapon} />}
+
           <div>
             <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-1.5 font-heading">
-              Base price <span className="normal-case text-stone-600">(copper)</span>
+              Base price <span className="normal-case text-stone-600">(in {coinName(coin, 2)})</span>
             </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number" min={1} value={price}
-                onChange={e => setPrice(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-32 bg-stone-800 border border-stone-700 rounded-lg px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-stone-500 font-mono tabular-nums"
-              />
-              <span className="text-xs text-stone-400 font-mono">= {formatCopper(price)}</span>
+            <div className="flex items-start gap-2">
+              <CoinPriceInput copper={price} coin={coin} onChange={c => setPrice(Math.max(1, c ?? 1))}
+                label="Base price" inputClassName="w-28 py-1.5! text-sm!" />
+              <CoinSelect value={coin} onChange={setCoin} className="py-1.5" />
             </div>
             <div className="text-[10px] text-stone-600 mt-1">1 iron = 10c · 1 gold = 100c · 1 emerald = 1,000c · 1 diamond = 10,000c</div>
           </div>

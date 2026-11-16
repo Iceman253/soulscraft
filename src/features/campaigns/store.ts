@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import type { CampaignData } from '../../types'
-import { downloadJson, deserializeCampaign } from '../../lib/export'
-import { newId } from '../../lib/id'
-import { emptyEconomy } from '../../lib/economyEngine'
+import { downloadJson, deserializeCampaign } from '../../lib/platform/export'
+import { newId } from '../../lib/platform/id'
+import { emptyEconomy } from '../../lib/economy/economyEngine'
 import {
   listCampaigns, createCampaignOnServer, enterCampaign as apiEnter,
   patchCampaign, deleteCampaignOnServer, ApiError,
-} from '../../lib/api'
-import { setImageSyncContext, hydrateImages } from '../../lib/imageCache'
+} from '../../lib/platform/api'
+import { setImageSyncContext, hydrateImages } from '../../lib/platform/imageCache'
 
 export interface CampaignListItem { id: string; name: string; updatedAt: number }
 

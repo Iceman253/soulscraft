@@ -3,8 +3,8 @@ import { Plus, Trash2, Search, X } from 'lucide-react'
 import { useBestiaryStore } from './store'
 import { Badge } from '../../ui/Badge'
 import { Modal } from '../../ui/Modal'
-import { CREATURE_TYPES, HP_TIERS, HP_TIER_RANGES } from '../../lib/constants'
-import { fileToDataUrl, saveCreatureImage, loadCreatureImage } from '../../lib/imageCache'
+import { CREATURE_TYPES, HP_TIERS, HP_TIER_RANGES } from '../../lib/rules/constants'
+import { fileToDataUrl, saveCreatureImage, loadCreatureImage } from '../../lib/platform/imageCache'
 import type { BestiaryEntry } from '../../types'
 
 const HP_BADGE: Record<BestiaryEntry['hpTier'], 'muted' | 'gold' | 'orange' | 'red'> = {

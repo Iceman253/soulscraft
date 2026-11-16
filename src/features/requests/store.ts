@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { newId } from '../../lib/id'
+import { newId } from '../../lib/platform/id'
 import { useCampaignStore } from '../campaigns/store'
 import type { PlayerRequest } from '../../types'
 
@@ -13,6 +13,8 @@ interface RequestStore {
   addRequest: (req: Omit<PlayerRequest, 'id' | 'status' | 'createdAt'>) => void
   approveRequest: (id: string) => void   // just marks status; caller executes
   denyRequest: (id: string) => void
+  /** Send a haggle back to the player at the GM's price. */
+  counterRequest: (id: string, unitPriceCopper: number) => void
   clearRequest: (id: string) => void
   clearAll: () => void
   /** GM tweaks to a pending request before approving (e.g. final price). */
@@ -42,6 +44,14 @@ export const useRequestStore = create<RequestStore>((set, get) => ({
 
   denyRequest(id) {
     set({ requests: get().requests.map(r => r.id === id ? { ...r, status: 'denied' } : r) })
+  },
+
+  counterRequest(id, unitPriceCopper) {
+    set({
+      requests: get().requests.map(r =>
+        r.id === id ? { ...r, status: 'countered', payload: { ...r.payload, unitPriceCopper } } : r
+      ),
+    })
   },
 
   clearRequest(id) {

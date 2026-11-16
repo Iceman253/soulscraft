@@ -30,6 +30,7 @@ export interface PlayerRequest {
   type: RequestType
   payload: Record<string, unknown>
   label: string           // short human-readable summary shown to GM
-  status: 'pending' | 'approved' | 'denied'
+  /** `countered`: the GM named a price and it's the player's turn to answer. */
+  status: 'pending' | 'approved' | 'denied' | 'countered'
   createdAt: number
 }

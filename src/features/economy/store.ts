@@ -2,14 +2,15 @@ import { create } from 'zustand'
 import type {
   EconomyData, MarketProfile, MarketListing, Good, Faction, EconomicEvent,
 } from '../../types'
-import { newId } from '../../lib/id'
+import { newId } from '../../lib/platform/id'
 import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import { log } from '../log/store'
-import { GOODS_CATALOG } from '../../lib/goods'
-import { blocksPerUnit } from '../../lib/building'
-import { emptyEconomy, tickEconomyDay } from '../../lib/economyEngine'
-import { toCopper, fromCopper, addToWallet, formatCopper } from '../../lib/currency'
+import { GOODS_CATALOG } from '../../lib/economy/goods'
+import { blocksPerUnit } from '../../lib/world/building'
+import { itemFromGood } from '../../lib/rules/weaponSpec'
+import { emptyEconomy, tickEconomyDay } from '../../lib/economy/economyEngine'
+import { toCopper, fromCopper, addToWallet, formatCopper } from '../../lib/economy/currency'
 
 interface BuyOpts {
   /** GM override: complete the sale even if the buyer can't afford it —
@@ -223,7 +224,7 @@ export const useEconomyStore = create<EconomyStore>((set, get) => {
       charStore.setCurrency(characterId, fromCopper(Math.max(0, have - total)))
       // Goods sold by the stack arrive as real blocks, usable in builds (p.83's mason).
       const perUnit = blocksPerUnit(good.unit)
-      charStore.addOnHandItem(characterId, { name: good.name, quantity: qty * (perUnit || 1), isBlock: perUnit > 0 })
+      charStore.addOnHandItem(characterId, itemFromGood(good, qty, perUnit))
 
       if (listing && listing.stock > 0) {
         get().upsertListing(marketId, { ...listing, stock: Math.max(0, listing.stock - qty) })

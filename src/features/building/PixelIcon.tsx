@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { ICON_SIZE, iconRuns, isBlankIcon } from '../../lib/pixelArt'
-import { TIER_EMOJI } from '../../lib/building'
+import { ICON_SIZE, iconRuns, isBlankIcon } from '../../lib/art/pixelArt'
+import { TIER_EMOJI } from '../../lib/world/building'
 import type { ProjectTier } from '../../types'
 
 /** Renders a 16×16 build icon crisply at any size; falls back to the tier emoji. */

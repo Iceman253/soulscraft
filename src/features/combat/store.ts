@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import type { CombatSession, Combatant, ActiveEffect, Character, BestiaryEntry } from '../../types'
-import { newId } from '../../lib/id'
+import { newId } from '../../lib/platform/id'
 import { log } from '../log/store'
-import { computeDef } from '../../lib/armor'
+import { computeDef } from '../../lib/rules/armor'
 import { useCharacterStore } from '../characters/store'
 import { useCampaignStore } from '../campaigns/store'
-import { rollCombatDice } from '../../lib/dice'
+import { rollCombatDice } from '../../lib/rules/dice'
 
 // Rulebook p.101: Weak 1-4 HP, Average 5-10 HP, Strong 11-12 HP, Mighty 13+ HP.
 // Defaults sit at the midpoint / typical value of each tier.

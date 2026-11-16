@@ -9,8 +9,8 @@ import { FullScreen, fieldCls } from './FullScreen'
 import { PixelEditor } from './PixelEditor'
 import { PixelIcon } from './PixelIcon'
 import { useStorageReach } from '../characters/useStorageReach'
-import { PROJECT_TIERS, buildCondition, countBlocksIn, countRedstone, repairLeft, structureProgress, tectonBuilders } from '../../lib/building'
-import { placementLabel } from '../../lib/places'
+import { PROJECT_TIERS, buildCondition, countBlocksIn, countRedstone, repairLeft, structureProgress, tectonBuilders } from '../../lib/world/building'
+import { placementLabel } from '../../lib/world/places'
 import type { Character, Structure } from '../../types'
 
 function Bar({ label, have, need }: { label: string; have: number; need: number }) {

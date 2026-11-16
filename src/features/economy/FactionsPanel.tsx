@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, Flag } from 'lucide-react'
 import { useEconomyStore } from './store'
-import { standingLabel } from '../../lib/economyEngine'
+import { standingLabel } from '../../lib/economy/economyEngine'
 import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import type { Faction } from '../../types'
 

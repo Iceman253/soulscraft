@@ -1,16 +1,16 @@
 import { create } from 'zustand'
 import type { ProjectTier, Structure } from '../../types'
-import { newId } from '../../lib/id'
+import { newId } from '../../lib/platform/id'
 import { log } from '../log/store'
 import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import { useWorldStore } from '../map/store'
-import { UNPLACED, addBlocksTo, dropKey, reachableStores, type Section } from '../../lib/stashes'
+import { UNPLACED, addBlocksTo, dropKey, reachableStores, type Section } from '../../lib/world/stashes'
 import type { Character } from '../../types'
 import {
   PROJECT_TIERS, projectRequirements, isArchitect, structureProgress, repairLeft,
   takeBlocks, takeRedstone, addBlocks, enforceCarryLimit, minedStackName, miningDays, actionOutcome,
-} from '../../lib/building'
+} from '../../lib/world/building'
 
 /** Where mined blocks go: into storage at the place mined (or where the character
  *  is, if it wasn't a mapped place), or on hand. 'mine' is the same as 'storage';

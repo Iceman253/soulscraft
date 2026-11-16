@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
-import { Eye, Edit3, Check, Swords, Map as MapIcon } from 'lucide-react'
+import { Eye, Edit3, Check, Swords, Map as MapIcon, ScrollText, X } from 'lucide-react'
 import { useCampaignStore } from '../campaigns/store'
 import { useCharacterStore } from '../characters/store'
 import { useCombatStore } from '../combat/store'
 import { useWorldStore } from '../map/store'
-import { useIsPhone } from '../../lib/useIsPhone'
-import { playerNeedsCharacter } from '../../lib/playerRole'
+import { useIsPhone } from '../../lib/platform/useIsPhone'
+import { playerNeedsCharacter } from '../../lib/platform/playerRole'
 import { PlayerMap } from './PlayerMap'
 import { PlayerCombatView } from './PlayerCombatView'
-import { PlayerCharacterPanel } from './PlayerCharacterPanel'
-import { PlayerMobileView } from './PlayerMobileView'
+import { PlayerCharacterPanel } from './sheet/PlayerCharacterPanel'
+import { PlayerMobileView } from './mobile/PlayerMobileView'
+import { PlayerSessionLog } from './PlayerSessionLog'
 
 interface PlayerViewProps {
   onClose: () => void
@@ -37,6 +38,7 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
   // GM can edit the session note inline
   const [editingNote, setEditingNote] = useState(false)
   const [draftNote, setDraftNote] = useState(sessionNote)
+  const [showLog, setShowLog] = useState(false)
 
   const saveNote = () => {
     setSessionNote(draftNote)
@@ -111,6 +113,16 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
         </div>
 
         <button
+          onClick={() => setShowLog(v => !v)}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-sm text-xs transition-colors shrink-0 ${
+            showLog ? 'text-gold bg-stone-800' : 'text-stone-500 hover:text-stone-300'
+          }`}
+          title="Session log"
+        >
+          <ScrollText size={13} /> Log
+        </button>
+
+        <button
           onClick={isPlayerMode ? exitToSwitcher : onClose}
           className="text-xs text-stone-500 hover:text-stone-300 transition-colors shrink-0 ml-2"
         >
@@ -126,7 +138,22 @@ export function PlayerView({ onClose, isPlayerMode, focusedCharacterId, onAdoptC
       )}
 
       {/* Two-column body (iPad / desktop) */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Session log slide-over */}
+        {showLog && (
+          <div className="absolute inset-y-0 right-0 w-80 z-20 bg-stone-900 border-l border-stone-700 flex flex-col shadow-2xl">
+            <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-stone-700">
+              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">Session Log</span>
+              <button onClick={() => setShowLog(false)} className="p-1 rounded-sm text-stone-500 hover:text-stone-200">
+                <X size={13} />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <PlayerSessionLog />
+            </div>
+          </div>
+        )}
+
         {/* Left: map or combat (combat only forced when this player is in it) */}
         <div className="flex-1 min-w-0 min-h-0 relative">
           {showCombat ? <PlayerCombatView focusedCharacterId={focusedCharacterId} /> : <PlayerMap focusedCharacterId={focusedCharacterId} />}

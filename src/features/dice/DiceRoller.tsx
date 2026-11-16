@@ -1,78 +1,14 @@
 import { useState } from 'react'
-import { X, Dices, Star, Flame, Droplets, ArrowDown, Bomb, Wind } from 'lucide-react'
+import { X, Dices, Star } from 'lucide-react'
 import { useCharacterStore } from '../characters/store'
 import { log } from '../log/store'
-import { AbilityApplyPanel, commitAppliedModifiers, totalBonus, totalSdCost } from '../characters/AbilityApplyPanel'
-import type { AppliedModifier } from '../characters/AbilityApplyPanel'
-
-type RollMode = '2d6' | 'difficult' | 'hazard'
+import { AbilityApplyPanel } from '../characters/AbilityApplyPanel'
+import { commitAppliedModifiers, totalBonus, totalSdCost, type AppliedModifier } from '../characters/modifiers'
+import { type RollMode, type SubRoll, type RollResult, secureRandInt, rollD6, rollD4, parseDie, outcomeOf, rollFormula } from './rolling'
+import { type HazardPreset, HAZARDS } from './hazards'
+import { SubRollDisplay } from './SubRollDisplay'
 
 interface DiceRollerProps { onClose: () => void }
-
-interface SubRoll {
-  base: number[]        // 2d6
-  sdDice: number[]      // each 1d4 from SD spent
-  penaltyDice: number[] // each 1d4 from missed rest (subtracted)
-  bonus: number         // skill bonus
-  total: number
-  outcome: 'success' | 'partial' | 'failure'
-}
-
-interface RollResult {
-  mode: RollMode
-  label: string
-  sub: SubRoll[]                 // standard = 1 entry, difficult = 3 entries
-  multiSuccess?: boolean         // difficult mode pass/fail
-  successCount?: number
-  sdConsumed: number
-  hazardLabel?: string
-}
-
-/** Cryptographically secure random integer in [1, sides] using Web Crypto. */
-function secureRandInt(sides: number): number {
-  const buf = new Uint32Array(1)
-  crypto.getRandomValues(buf)
-  return (buf[0] % sides) + 1
-}
-const rollD6 = () => secureRandInt(6)
-const rollD4 = () => secureRandInt(4)
-
-function parseDie(die: string): number {
-  const match = die.match(/d(\d+)/i)
-  return match ? parseInt(match[1]) : 6
-}
-
-function outcomeOf(total: number): 'success' | 'partial' | 'failure' {
-  return total >= 10 ? 'success' : total >= 7 ? 'partial' : 'failure'
-}
-
-interface HazardPreset {
-  name: string
-  formula: string             // e.g. "3d6"
-  description: string
-  icon: React.ReactNode
-  ignoresDef?: boolean
-}
-
-const HAZARDS: HazardPreset[] = [
-  { name: 'Lava — full submerge',  formula: '5d6', description: 'Per round of full submersion. DEF reduced by half (round down).', icon: <Flame size={12} /> },
-  { name: 'Lava — splash',         formula: '2d6', description: 'A splash or brief contact. DEF applies normally.',                  icon: <Flame size={12} /> },
-  { name: 'Fire — engulfed',       formula: '3d6', description: 'Per round on fire. Wet/Resistance halves.',                          icon: <Flame size={12} /> },
-  { name: 'Drowning',              formula: '1d10',description: 'Per round without air. Ignores DEF.',                                icon: <Droplets size={12} />, ignoresDef: true },
-  { name: 'Falling — short',       formula: '2d6', description: '3–5 blocks. DEF applies. Feather Falling halves.',                   icon: <ArrowDown size={12} /> },
-  { name: 'Falling — long',        formula: '4d6', description: '6+ blocks. DEF applies. Feather Falling halves.',                    icon: <ArrowDown size={12} /> },
-  { name: 'Explosion — small',     formula: '3d6', description: 'TNT, creeper at range. DEF applies.',                                icon: <Bomb    size={12} /> },
-  { name: 'Explosion — large',     formula: '6d6', description: 'Direct creeper hit, charged TNT. DEF applies.',                      icon: <Bomb    size={12} /> },
-  { name: 'Suffocation',           formula: '1d6', description: 'Per round trapped in solid block. Ignores DEF.',                     icon: <Wind    size={12} />, ignoresDef: true },
-]
-
-function rollFormula(formula: string): { dice: number[]; total: number } {
-  const m = formula.match(/(\d+)d(\d+)/i)
-  if (!m) return { dice: [], total: 0 }
-  const n = parseInt(m[1]), sides = parseInt(m[2])
-  const dice = Array.from({ length: n }, () => secureRandInt(sides))
-  return { dice, total: dice.reduce((a, b) => a + b, 0) }
-}
 
 export function DiceRoller({ onClose }: DiceRollerProps) {
   const [mode, setMode] = useState<RollMode>('2d6')
@@ -113,7 +49,7 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
     setRolling(true)
     setTimeout(() => {
       let sub: SubRoll[]
-      let rollLabel = label || (mode === 'difficult' ? 'Difficult Action' : 'Standard Roll')
+      const rollLabel = label || (mode === 'difficult' ? 'Difficult Action' : 'Standard Roll')
       let successCount: number | undefined
       let multiSuccess: boolean | undefined
 
@@ -395,51 +331,6 @@ export function DiceRoller({ onClose }: DiceRollerProps) {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-interface SubRollDisplayProps {
-  sub: SubRoll
-  mode: RollMode
-  index?: number
-  hazardLabel?: string
-}
-function SubRollDisplay({ sub, mode, index, hazardLabel }: SubRollDisplayProps) {
-  const isHazard = mode === 'hazard'
-  return (
-    <div className={`rounded-lg p-2.5 border text-center ${
-      isHazard ? 'bg-orange-950/20 border-orange-700/40' :
-      sub.outcome === 'success' ? 'bg-emerald/10 border-emerald/30' :
-      sub.outcome === 'partial' ? 'bg-amber-900/20 border-amber-600/30' :
-      'bg-redstone/10 border-redstone/30'
-    }`}>
-      {index !== undefined && <div className="text-xs text-stone-500 mb-1 font-heading uppercase tracking-wider">Roll {index}</div>}
-      <div className="flex justify-center flex-wrap gap-1.5 mb-1">
-        {sub.base.map((d, i) => (
-          <span key={`b${i}`} className="w-8 h-8 rounded-lg bg-stone-800 border border-stone-600 text-gold flex items-center justify-center text-lg font-heading font-bold">{d}</span>
-        ))}
-        {sub.sdDice.map((d, i) => (
-          <span key={`s${i}`} title="Soul Dice (1d4)" className="w-7 h-7 rounded-lg bg-blue-900/40 border border-blue-600/50 text-blue-200 flex items-center justify-center text-base font-heading font-bold">+{d}</span>
-        ))}
-        {sub.penaltyDice.map((d, i) => (
-          <span key={`p${i}`} title="Missed-rest penalty (1d4)" className="w-7 h-7 rounded-lg bg-orange-900/40 border border-orange-600/50 text-orange-200 flex items-center justify-center text-base font-heading font-bold">−{d}</span>
-        ))}
-        {sub.bonus !== 0 && (
-          <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-base font-heading font-bold ${sub.bonus > 0 ? 'bg-gold/20 border border-gold/50 text-gold' : 'bg-red-900/40 border border-red-600/50 text-red-200'}`}>
-            {sub.bonus > 0 ? `+${sub.bonus}` : sub.bonus}
-          </span>
-        )}
-      </div>
-      <div className="text-3xl font-heading font-bold text-stone-100 tracking-wide">{sub.total}</div>
-      {!isHazard && (
-        <div className="text-xs">
-          {sub.outcome === 'success' && <span className="text-emerald font-semibold">✅ Full Success</span>}
-          {sub.outcome === 'partial' && <span className="text-amber-400 font-semibold">⚡ Partial — succeed with cost</span>}
-          {sub.outcome === 'failure' && <span className="text-red-400 font-semibold">❌ Failure</span>}
-        </div>
-      )}
-      {hazardLabel && <div className="text-xs text-orange-300/70 mt-1 font-mono tracking-wide">{hazardLabel}</div>}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Modal } from '../../ui/Modal'
-import { AREA_TYPES, REALMS } from '../../lib/constants'
+import { AREA_TYPES, REALMS } from '../../lib/rules/constants'
 import type { Area } from '../../types'
 
 interface AddNodeModalProps {

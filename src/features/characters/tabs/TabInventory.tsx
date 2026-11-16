@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react'
 import { useCharacterStore } from '../store'
 import { useWorldStore } from '../../map/store'
 import { useStorageReach } from '../useStorageReach'
-import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, Sword, Shield, Gift, Package } from 'lucide-react'
-import { fileToDataUrl, saveItemImage, loadItemImage } from '../../../lib/imageCache'
-import { CURRENCY_OPTIONS } from '../../../lib/currency'
-import { BLOCK_CARRY_LIMIT, carryLimitOf, countBlocks } from '../../../lib/building'
-import { allPlaceOptions } from '../../../lib/places'
-import { ENDER, carriesEnderChest, partyOf, stashOf, storeLabel, type StoreKey } from '../../../lib/stashes'
+import { Plus, ArrowDownToLine, ArrowUpFromLine, Package, Gift } from 'lucide-react'
+import { CURRENCY_OPTIONS } from '../../../lib/economy/currency'
+import { startingGearFor, DEFAULT_GEAR_SELECTIONS, type GearSelections } from '../../../lib/rules/newCharacter'
+import { StartingGearPicker } from '../StartingGearPicker'
+import { ItemRow, type ItemMove } from './InventoryItemRow'
+import { log } from '../../log/store'
+import { BLOCK_CARRY_LIMIT, carryLimitOf, countBlocks } from '../../../lib/world/building'
+import { allPlaceOptions } from '../../../lib/world/places'
+import { ENDER, carriesEnderChest, partyOf, stashOf, storeLabel, type StoreKey } from '../../../lib/world/stashes'
 import type { Character, CharacterItem } from '../../../types'
 
 // Rulebook equipment packs (pp. 91) — quick-fill starting gear
@@ -38,13 +41,6 @@ const EQUIPMENT_PACKS: { name: string; items: { name: string; quantity: number }
   },
 ]
 
-const GEAR_SLOT_LABELS: Record<NonNullable<CharacterItem['gearSlot']>, { label: string; icon: React.ReactNode }> = {
-  mainHand: { label: 'Main Hand', icon: <Sword size={9} /> },
-  offHand:  { label: 'Off Hand',  icon: <Sword size={9} /> },
-  armor:    { label: 'Armor',     icon: <Shield size={9} /> },
-  shield:   { label: 'Shield',    icon: <Shield size={9} /> },
-}
-
 interface TabInventoryProps { character: Character }
 
 export function TabInventory({ character: c }: TabInventoryProps) {
@@ -52,7 +48,7 @@ export function TabInventory({ character: c }: TabInventoryProps) {
     addOnHandItem, updateOnHandItem, removeOnHandItem,
     addStoredItem, updateStoredItem, removeStoredItem,
     moveItem, moveStore, setCurrency, setRations, setCarryLimit,
-    giveItemToCharacter,
+    giveItemToCharacter, updateClassState,
   } = useCharacterStore()
   const characters = useCharacterStore(s => s.characters)
   const areas = useWorldStore(s => s.areas)
@@ -64,12 +60,29 @@ export function TabInventory({ character: c }: TabInventoryProps) {
   const storeKeys = [reach.drop, ...Object.keys(c.stashes ?? {}).filter(k => k !== ENDER && k !== reach.drop)]
   const enderCarrier = partyOf(c, characters).find(carriesEnderChest)
   const [showPacks, setShowPacks] = useState(false)
+  const [showClassKit, setShowClassKit] = useState(false)
+  const [gearSel, setGearSel] = useState<GearSelections>(DEFAULT_GEAR_SELECTIONS)
 
   function applyPack(pack: typeof EQUIPMENT_PACKS[number]) {
     pack.items.forEach(item => addOnHandItem(c.id, { name: item.name, quantity: item.quantity }))
     if (pack.currency) setCurrency(c.id, { ...c.currency, ...Object.fromEntries(Object.entries(pack.currency).map(([k, v]) => [k, (c.currency[k as keyof typeof c.currency] ?? 0) + (v ?? 0)])) })
     if (pack.rations) setRations(c.id, c.rations + pack.rations)
     setShowPacks(false)
+  }
+
+  // Retroactive class starting gear — for characters created before the app
+  // granted it (class pages: signature item, Crafting Table, 30 Iron,
+  // 5 Rations + three choices). Additive; the GM confirms the choices.
+  function grantClassKit() {
+    const gear = startingGearFor(c.class, gearSel)
+    gear.items.forEach(item => addOnHandItem(c.id, { name: item.name, quantity: item.quantity, description: item.description }))
+    setCurrency(c.id, { iron: (c.currency.iron ?? 0) + gear.iron, gold: (c.currency.gold ?? 0) + gear.gold })
+    setRations(c.id, c.rations + gear.rations)
+    if (gear.lapis > 0 && c.classFeatureState.class === 'Enchanter') {
+      updateClassState(c.id, { lapisCount: c.classFeatureState.state.lapisCount + gear.lapis })
+    }
+    log('manual', `🎒 ${c.name} received the ${c.class} starting gear (${gear.items.map(i => i.name).join(', ')}, 30 Iron, ${gear.gold ? `${gear.gold} Gold, ` : ''}${gear.rations} Rations${gear.lapis ? `, ${gear.lapis} Lapis` : ''}).`)
+    setShowClassKit(false)
   }
 
   const blockCount = countBlocks(c.onHand.items)
@@ -107,9 +120,27 @@ export function TabInventory({ character: c }: TabInventoryProps) {
           <span className="text-stone-100 font-bold w-6 text-center font-mono tabular-nums">{c.rations}</span>
           <button onClick={() => setRations(c.id, c.rations + 1)} className="w-6 h-6 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">+</button>
         </div>
-        {/* Equipment packs quick-start */}
+        {/* Class starting gear (retroactive grant) */}
         <div className="relative ml-auto">
-          <button onClick={() => setShowPacks(v => !v)}
+          <button onClick={() => { setShowClassKit(v => !v); setShowPacks(false) }}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-stone-700 border border-stone-600 text-stone-300 hover:bg-stone-600 text-xs transition-colors">
+            <Gift size={11} /> Class Kit
+          </button>
+          {showClassKit && (
+            <div className="absolute right-0 top-full mt-1 w-80 bg-stone-900 border border-stone-600 rounded-xl shadow-2xl z-20 p-3 space-y-2.5">
+              <div className="text-xs text-stone-400 font-medium">{c.class} Starting Gear</div>
+              <StartingGearPicker characterClass={c.class} selections={gearSel} onChange={setGearSel} />
+              <div className="flex justify-end gap-2 pt-1">
+                <button onClick={() => setShowClassKit(false)} className="px-2.5 py-1 rounded-sm text-xs text-stone-500 hover:text-stone-300">Cancel</button>
+                <button onClick={grantClassKit} className="px-2.5 py-1 rounded-sm bg-gold text-stone-900 font-semibold text-xs hover:bg-yellow-400">Grant</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Equipment packs quick-start */}
+        <div className="relative">
+          <button onClick={() => { setShowPacks(v => !v); setShowClassKit(false) }}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-stone-700 border border-stone-600 text-stone-300 hover:bg-stone-600 text-xs transition-colors">
             <Package size={11} /> Equipment Pack
           </button>
@@ -178,8 +209,6 @@ export function TabInventory({ character: c }: TabInventoryProps) {
     </div>
   )
 }
-
-interface ItemMove { icon: React.ReactNode; title: string; onMove: (id: string) => void }
 
 /** One store: its items, where it is, and (for the GM) moving all of it to a place. */
 function StoreList({ c, storeKey, title, status, places, onRelocate, onAdd, onUpdate, onRemove, onMove, onGive }: {
@@ -262,100 +291,6 @@ function ItemList({ title, badge, items, charId, onAdd, onUpdate, onRemove, move
           <ItemRow key={item.id} item={item} charId={charId} onUpdate={onUpdate} onRemove={onRemove} moves={moves} onGive={onGive} />
         ))}
       </div>
-    </div>
-  )
-}
-
-function ItemRow({ item, charId, onUpdate, onRemove, moves, onGive }: {
-  item: CharacterItem
-  charId: string
-  onUpdate: (id: string, patch: Partial<CharacterItem>) => void
-  onRemove: (id: string) => void
-  moves: ItemMove[]
-  onGive: (itemId: string, toId: string) => void
-}) {
-  const characters = useCharacterStore(s => s.characters)
-  const otherChars = characters.filter(c => c.id !== charId)
-  const img = loadItemImage(item.name)
-  const gearInfo = item.gearSlot ? GEAR_SLOT_LABELS[item.gearSlot] : null
-
-  const handleImgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const url = await fileToDataUrl(file, 200)
-    saveItemImage(item.name, url)
-    onUpdate(item.id, {})
-  }
-
-  return (
-    <div className={`flex items-center gap-2 bg-stone-800 border rounded-lg px-2 py-1.5 ${gearInfo ? 'border-stone-600' : 'border-stone-700'}`}>
-      <label className="w-8 h-8 rounded-sm bg-stone-700 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center">
-        {img ? <img src={img} className="w-full h-full object-cover" /> : <span className="text-stone-500 text-lg">📦</span>}
-        <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload} />
-      </label>
-
-      <input
-        value={item.name}
-        onChange={e => onUpdate(item.id, { name: e.target.value })}
-        placeholder="Item name..."
-        className="flex-1 min-w-0 bg-transparent text-stone-200 text-sm outline-hidden placeholder:text-stone-600"
-      />
-
-      {/* Gear slot badge */}
-      {gearInfo && (
-        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gold/10 border border-gold/30 text-gold text-xs shrink-0">
-          {gearInfo.icon} {gearInfo.label}
-        </span>
-      )}
-
-      {/* Block toggle */}
-      <button
-        onClick={() => onUpdate(item.id, { isBlock: !item.isBlock })}
-        title={item.isBlock ? 'Mark as non-block' : 'Mark as block (counts to 10-block limit)'}
-        className={`text-xs px-1 py-0.5 rounded-sm border shrink-0 transition-colors ${
-          item.isBlock
-            ? 'bg-amber-900/40 border-amber-700 text-amber-400'
-            : 'bg-stone-900 border-stone-700 text-stone-600 hover:text-stone-400'
-        }`}>
-        📦
-      </button>
-
-      <input
-        type="number"
-        value={item.quantity}
-        min={1}
-        onChange={e => onUpdate(item.id, { quantity: parseInt(e.target.value) || 1 })}
-        className="w-12 bg-stone-900 border border-stone-600 rounded-sm px-1.5 py-0.5 text-stone-200 text-xs text-center outline-hidden font-mono tabular-nums"
-      />
-
-      {moves.map(m => (
-        <button key={m.title} onClick={() => m.onMove(item.id)} title={m.title} aria-label={m.title}
-          disabled={!!gearInfo}
-          className="flex items-center gap-1 text-xs text-stone-500 hover:text-stone-300 disabled:opacity-30 disabled:cursor-not-allowed">
-          {m.icon}
-        </button>
-      ))}
-
-      {!gearInfo && otherChars.length > 0 && (
-        <div className="relative shrink-0">
-          <select
-            value=""
-            onChange={e => { if (e.target.value) onGive(item.id, e.target.value) }}
-            title="Give to character"
-            className="absolute inset-0 opacity-0 w-full cursor-pointer"
-          >
-            <option value="">Give to...</option>
-            {otherChars.map(c => (
-              <option key={c.id} value={c.id}>{c.name || 'Unnamed'}</option>
-            ))}
-          </select>
-          <Gift size={12} className="text-stone-500 hover:text-stone-300 pointer-events-none" />
-        </div>
-      )}
-
-      <button onClick={() => onRemove(item.id)} className="p-0.5 text-stone-500 hover:text-red-400">
-        <Trash2 size={12} />
-      </button>
     </div>
   )
 }

@@ -1,269 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// The GM's map of one area's sub-locations, nested up to MAX_SUBMAP_DEPTH deep.
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  ReactFlow, Background, Controls, ConnectionMode,
-  BaseEdge, EdgeLabelRenderer, getSmoothStepPath,
-  Handle, Position, applyNodeChanges,
-  type Node, type Edge, type NodeChange, type Connection, type EdgeChange, type EdgeProps,
+  ReactFlow, Background, Controls, ConnectionMode, applyNodeChanges,
+  type Node, type Edge, type NodeChange, type Connection, type EdgeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { ArrowLeft, ChevronRight, ChevronDown, Plus, X } from 'lucide-react'
 import { useWorldStore } from './store'
 import { useCharacterStore } from '../characters/store'
-import { TokenAvatar } from '../../ui/TokenAvatar'
-import { CHAR_DND } from './AreaNode'
-import { PlaceCharactersModal } from '../../ui/PlaceCharactersModal'
-import type { Area, SubNode, SubEdge, Character } from '../../types'
 import { useBuildStore } from '../building/store'
-import { MaterialsEditor } from './MaterialsEditor'
-import { StructureNode } from '../building/StructureNode'
 import { StructurePanel } from '../building/StructurePanel'
-import { MAX_SUBMAP_DEPTH, SUB_TYPE_ICONS, structuresOnLevel } from '../../lib/places'
-import { SUB_NODE_TYPES } from '../../lib/constants'
-import { Modal } from '../../ui/Modal'
+import { PlaceCharactersModal } from '../../ui/PlaceCharactersModal'
 import { ContextMenu, type ContextMenuItem } from '../../ui/ContextMenu'
-
-const MAX_DEPTH = MAX_SUBMAP_DEPTH
-const TYPE_ICONS = SUB_TYPE_ICONS
-
-// ── Helpers ─────────────────────────────────────────────────────────────
-
-interface NavEntry { nodeId: string; nodeName: string }
-
-function findSubNodePath(nodes: SubNode[], targetId: string): NavEntry[] | null {
-  for (const n of nodes) {
-    if (n.id === targetId) return []
-    const found = findSubNodePath(n.subNodes ?? [], targetId)
-    if (found !== null) return [{ nodeId: n.id, nodeName: n.name }, ...found]
-  }
-  return null
-}
-
-function getSubtreeCharacters(node: SubNode, all: Character[]): Character[] {
-  const ids = new Set<string>()
-  const collect = (n: SubNode) => { ids.add(n.id); (n.subNodes ?? []).forEach(collect) }
-  collect(node)
-  return all.filter(c => c.subLocationId != null && ids.has(c.subLocationId))
-}
-
-function getAtPath(area: Area, path: string[]): { subNodes: SubNode[]; subEdges: SubEdge[] } {
-  if (path.length === 0) return { subNodes: area.subNodes, subEdges: area.subEdges }
-  let subNodes = area.subNodes
-  let subEdges: SubEdge[] = []
-  for (const id of path) {
-    const node = subNodes.find(n => n.id === id)
-    if (!node) return { subNodes: [], subEdges: [] }
-    subNodes = node.subNodes ?? []
-    subEdges = node.subEdges ?? []
-  }
-  return { subNodes, subEdges }
-}
-
-/** Get the sibling nodes at a given depth in the navStack (depth 0 = top level of area.subNodes). */
-function getSiblingsAtDepth(area: Area, navStack: NavEntry[], depth: number): SubNode[] {
-  return getAtPath(area, navStack.slice(0, depth).map(e => e.nodeId)).subNodes
-}
-
-// ── BreadcrumbDropdown ──────────────────────────────────────────────────
-
-/** A breadcrumb segment with a dropdown ▾ that shows siblings at that level. */
-function BreadcrumbSegment({ label, siblings, onNavigate, onClickSelf }: {
-  label: string
-  siblings: SubNode[]
-  onNavigate: (nodeId: string, nodeName: string) => void
-  onClickSelf: () => void
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  // Close on outside click
-  useMemo(() => {}, []) // just a memo to satisfy hook order — see useEffect below
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const closeOnOutside = useCallback((e: MouseEvent) => {
-    if (ref.current && !ref.current.contains(e.target as HTMLElement)) setOpen(false)
-  }, [])
-
-  // manual subscription (no useEffect in non-hook context — this is a component so it's fine)
-  if (typeof window !== 'undefined') {
-    // register lazily — it's idempotent
-  }
-
-  return (
-    <div ref={ref} className="relative flex items-center shrink-0">
-      <button onClick={onClickSelf} className="text-sm text-stone-300 hover:text-gold">
-        {label}
-      </button>
-      {siblings.length > 1 && (
-        <button
-          onClick={e => {
-            e.stopPropagation()
-            const next = !open
-            setOpen(next)
-            if (next) document.addEventListener('mousedown', closeOnOutside as EventListener, { once: true })
-          }}
-          className="ml-0.5 text-stone-600 hover:text-stone-300 transition-colors"
-        >
-          <ChevronDown size={11} />
-        </button>
-      )}
-      {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 w-44 bg-stone-800 border border-stone-600 rounded-lg shadow-xl py-1 overflow-hidden">
-          {siblings.map(s => (
-            <button
-              key={s.id}
-              onClick={() => { onNavigate(s.id, s.name); setOpen(false) }}
-              className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs text-stone-200 hover:bg-stone-700 truncate"
-            >
-              <span>{TYPE_ICONS[s.type] ?? '📍'}</span>
-              {s.name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── AreaBreadcrumb ──────────────────────────────────────────────────────
-
-/** First crumb: shows all areas as a dropdown. */
-function AreaBreadcrumb({ areaName, onGoToMap }: { areaName: string; onGoToMap: () => void }) {
-  return (
-    <button onClick={onGoToMap} className="text-sm text-stone-400 hover:text-gold shrink-0" title="Back to world map">
-      {areaName}
-    </button>
-  )
-}
-
-// ── SubNodeComponent ─────────────────────────────────────────────────────
-
-interface SubNodeData {
-  node: SubNode
-  selected: boolean
-  onSelect: () => void
-  directChars: Character[]
-  subtreeChars: Character[]
-  hasChildren: boolean
-  canGoDeeper: boolean
-  onOpenSubMap: () => void
-  onCharNavigate: (subLocationId: string) => void
-  onDropCharacter?: (characterId: string) => void
-}
-
-function SubNodeComponent({ data }: { data: unknown }) {
-  const d = data as SubNodeData
-  const { node, selected, onSelect, directChars, subtreeChars, hasChildren, canGoDeeper, onOpenSubMap, onCharNavigate, onDropCharacter } = d
-  const [dragOver, setDragOver] = useState(false)
-  const hc = 'bg-stone-500! w-2! h-2! border-stone-400!'
-  return (
-    <div
-      onClick={onSelect}
-      onDragOver={e => {
-        if (onDropCharacter && e.dataTransfer.types.includes(CHAR_DND)) {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'move'
-          if (!dragOver) setDragOver(true)
-        }
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={e => {
-        setDragOver(false)
-        const charId = e.dataTransfer.getData(CHAR_DND)
-        if (charId && onDropCharacter) { e.preventDefault(); e.stopPropagation(); onDropCharacter(charId) }
-      }}
-      className={`relative min-w-28 bg-stone-800 border-2 rounded-lg p-2.5 cursor-pointer transition-all shadow-md ${
-        selected ? 'border-gold ring-1 ring-gold/50' : 'border-stone-600 hover:border-stone-400'
-      } ${dragOver ? 'ring-2 ring-teal-400 brightness-125' : ''}`}
-    >
-      <Handle id="top"    type="source" position={Position.Top}    className={hc} />
-      <Handle id="bottom" type="source" position={Position.Bottom} className={hc} />
-      <Handle id="left"   type="source" position={Position.Left}   className={hc} />
-      <Handle id="right"  type="source" position={Position.Right}  className={hc} />
-      <div className="flex items-center gap-1.5 mb-0.5">
-        <span className="text-sm">{TYPE_ICONS[node.type] ?? '📍'}</span>
-        <span className="text-xs font-semibold text-stone-100 truncate max-w-20">{node.name}</span>
-      </div>
-      <div className="text-xs text-stone-500 capitalize">{node.type}</div>
-      {subtreeChars.length > 0 && (
-        <div className="flex flex-wrap gap-0.5 mt-1">
-          {subtreeChars.slice(0, 4).map(c => {
-            const isDirect = directChars.some(dc => dc.id === c.id)
-            return (
-              <button
-                key={c.id}
-                onClick={e => { e.stopPropagation(); onCharNavigate(c.subLocationId!) }}
-                title={`${c.name}${isDirect ? '' : ' (in sub-location)'}`}
-                className={`rounded-full hover:ring-1 ring-gold transition-all ${isDirect ? 'opacity-100' : 'opacity-50'}`}
-              >
-                <TokenAvatar name={c.name} characterId={c.id} size={18} />
-              </button>
-            )
-          })}
-          {subtreeChars.length > 4 && <span className="text-xs text-stone-500 self-center">+{subtreeChars.length - 4}</span>}
-        </div>
-      )}
-      {hasChildren && canGoDeeper && (
-        <button
-          onClick={e => { e.stopPropagation(); onOpenSubMap() }}
-          className="flex items-center gap-0.5 text-xs text-stone-500 hover:text-gold mt-1"
-        >
-          Sub-map <ChevronRight size={9} />
-        </button>
-      )}
-    </div>
-  )
-}
+import { MAX_SUBMAP_DEPTH as MAX_DEPTH, structuresOnLevel } from '../../lib/world/places'
+import type { Area, SubNode } from '../../types'
+import { findSubNodePath, getAtPath, getSubtreeCharacters, type NavEntry } from './submap/navigation'
+import { SubMapHeader } from './submap/Breadcrumbs'
+import { SubNodeComponent, SubEdgeComponent, type SubNodeData } from './submap/SubMapNodes'
+import { StructureNode } from '../building/StructureNode'
+import { SubNodePanel } from './submap/SubNodePanel'
+import { TokenTray } from './submap/TokenTray'
+import { AddSubNodeModal } from './submap/AddSubNodeModal'
 
 const subNodeTypes = { subnode: SubNodeComponent as never, structure: StructureNode }
-
-// ── Sub-edge with delete button ───────────────────────────────────────────
-function SubEdgeComponent({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected }: EdgeProps) {
-  const [hovered, setHovered] = useState(false)
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX, sourceY, targetX, targetY,
-    sourcePosition, targetPosition,
-    borderRadius: 10,
-    offset: 20,
-  })
-  const onDelete = (data as { onDelete?: () => void })?.onDelete
-  const showDelete = selected || hovered
-
-  return (
-    <>
-      <BaseEdge id={id} path={edgePath} style={{ stroke: selected ? '#a78bfa' : '#4a4a4a', strokeWidth: selected ? 2 : 1.5 }} />
-      <EdgeLabelRenderer>
-        <div
-          style={{
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            zIndex: 1000,
-            padding: '8px',
-          }}
-          className="absolute pointer-events-auto nodrag nopan"
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          <button
-            onClick={e => {
-              e.stopPropagation()
-              e.preventDefault()
-              if (typeof onDelete === 'function') onDelete()
-            }}
-            onPointerDown={e => e.stopPropagation()}
-            style={{
-              opacity: showDelete ? 1 : 0,
-              pointerEvents: showDelete ? 'auto' : 'none',
-              transition: 'opacity 120ms',
-            }}
-            className="w-5 h-5 rounded-full bg-stone-700 hover:bg-red-600 border border-stone-500 hover:border-red-400 flex items-center justify-center shadow-sm"
-            title="Delete connection"
-          >
-            <X size={10} className="text-stone-300" />
-          </button>
-        </div>
-      </EdgeLabelRenderer>
-    </>
-  )
-}
-
 const subEdgeTypes = { subedge: SubEdgeComponent as never }
 
 // ── SubMap ───────────────────────────────────────────────────────────────
@@ -275,7 +33,7 @@ interface SubMapProps {
 }
 
 export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
-  const { addSubNode, moveSubNode, deleteSubNode, addSubEdge, updateSubEdge, deleteSubEdge, updateSubNode } = useWorldStore()
+  const { addSubNode, moveSubNode, deleteSubNode, addSubEdge, updateSubEdge, deleteSubEdge } = useWorldStore()
   const characters = useCharacterStore(s => s.characters)
   const { setLocation, setSubLocation } = useCharacterStore()
   const areas = useWorldStore(s => s.areas)
@@ -290,9 +48,6 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initialSubNodeId ?? null)
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newType, setNewType] = useState<SubNode['type']>('other')
-  const [newDesc, setNewDesc] = useState('')
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; nodeId: string | null } | null>(null)
   const [placeModal, setPlaceModal] = useState<{ subNodeId: string | null } | null>(null)
 
@@ -310,6 +65,11 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
     setSelectedNodeId(subLocationId)
     setCtxMenu(null)
   }, [area.subNodes])
+
+  const openSubMap = useCallback((node: SubNode) => {
+    setNavStack(prev => [...prev, { nodeId: node.id, nodeName: node.name }])
+    setSelectedNodeId(null)
+  }, [])
 
   const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
     e.preventDefault()
@@ -372,14 +132,14 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
         subtreeChars,
         hasChildren: (node.subNodes?.length ?? 0) > 0 || allStructures.some(st => st.subNodeId === node.id),
         canGoDeeper: navStack.length < MAX_DEPTH,
-        onOpenSubMap: () => { setNavStack(prev => [...prev, { nodeId: node.id, nodeName: node.name }]); setSelectedNodeId(null) },
+        onOpenSubMap: () => openSubMap(node),
         onCharNavigate: navigateToChar,
         // Drag-to-place into this sub-location.
         onDropCharacter: (charId: string) => { setLocation(charId, area.id); setSubLocation(charId, node.id) },
       } satisfies SubNodeData,
       draggable: true,
     }
-  }), [currentNodes, selectedNodeId, characters, allStructures, navStack.length, navigateToChar, area.id, setLocation, setSubLocation])
+  }), [currentNodes, selectedNodeId, characters, allStructures, navStack.length, navigateToChar, openSubMap, area.id, setLocation, setSubLocation])
 
   const baseNodes = useMemo(() => [...placeNodes, ...structureNodes], [placeNodes, structureNodes])
 
@@ -442,24 +202,13 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
     }
   }, [area.id, updateSubEdge, currentPath])
 
-  const handleAdd = () => {
-    if (!newName.trim()) return
-    addSubNode(area.id, { name: newName.trim(), type: newType, description: newDesc, position: { x: 200, y: 150 } }, currentPath)
-    setNewName(''); setNewDesc(''); setShowAddModal(false)
-  }
-
-  const handleBack = () => {
-    setNavStack(prev => prev.slice(0, -1))
-    setSelectedNodeId(null)
-  }
-
   // Build context menu items given a target nodeId (null = pane)
   const buildMenuItems = (nodeId: string | null): ContextMenuItem[] => {
     const node = nodeId ? currentNodes.find(n => n.id === nodeId) : null
     if (node) {
       return [
         { label: 'Select / Edit', icon: '✏️', onClick: () => setSelectedNodeId(node.id) },
-        ...(navStack.length < MAX_DEPTH ? [{ label: 'Open Sub-map', icon: '🗺️', onClick: () => { setNavStack(prev => [...prev, { nodeId: node.id, nodeName: node.name }]); setSelectedNodeId(null) } } as ContextMenuItem] : []),
+        ...(navStack.length < MAX_DEPTH ? [{ label: 'Open Sub-map', icon: '🗺️', onClick: () => openSubMap(node) } as ContextMenuItem] : []),
         {
           type: 'char-picker' as const,
           label: 'Place Characters Here',
@@ -485,71 +234,13 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* Breadcrumb / directory header */}
-      <div className="shrink-0 h-10 bg-stone-800 border-b border-stone-700 flex items-center gap-0 px-3 overflow-x-auto">
-        {/* Back arrow — only shown when inside a nested level */}
-        {navStack.length > 0 && (
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-100 shrink-0 mr-2"
-            title="Go back one level"
-          >
-            <ArrowLeft size={14} />
-          </button>
-        )}
-
-        {/* Area name — always goes straight to world map */}
-        <AreaBreadcrumb areaName={area.name} onGoToMap={onBack} />
-
-        {/* navStack segments — each has sibling dropdown */}
-        {navStack.map((entry, i) => {
-          const siblings = getSiblingsAtDepth(area, navStack, i)
-          return (
-            <span key={entry.nodeId} className="flex items-center shrink-0">
-              <ChevronRight size={12} className="text-stone-600 mx-1" />
-              <BreadcrumbSegment
-                label={entry.nodeName}
-                siblings={siblings}
-                onClickSelf={() => { setNavStack(prev => prev.slice(0, i)); setSelectedNodeId(entry.nodeId) }}
-                onNavigate={(nodeId, nodeName) => {
-                  const newStack = [...navStack.slice(0, i), { nodeId, nodeName }]
-                  setNavStack(newStack)
-                  setSelectedNodeId(null)
-                }}
-              />
-            </span>
-          )
-        })}
-
-        {/* Current level indicator (no segment for the root level) */}
-        {navStack.length === 0 && (
-          <span className="flex items-center text-stone-400 shrink-0">
-            <ChevronRight size={12} className="text-stone-600 mx-1" />
-            <span className="text-sm text-stone-400">Sub-locations</span>
-          </span>
-        )}
-
-        {/* Current-level sibling dropdown (what's at this depth) */}
-        {navStack.length > 0 && (() => {
-          const siblings = getSiblingsAtDepth(area, navStack, navStack.length)
-          if (siblings.length === 0) return null
-          return (
-            <span className="flex items-center shrink-0">
-              <ChevronRight size={12} className="text-stone-600 mx-1" />
-              <span className="text-sm text-stone-400 italic">{siblings.length} location{siblings.length !== 1 ? 's' : ''}</span>
-            </span>
-          )
-        })()}
-
-        <div className="ml-auto flex gap-2 shrink-0">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-stone-700 border border-stone-600 text-stone-200 hover:border-gold/50 text-xs"
-          >
-            <Plus size={12} /> Add
-          </button>
-        </div>
-      </div>
+      <SubMapHeader
+        area={area}
+        navStack={navStack}
+        onGoToMap={onBack}
+        onJump={(stack, selectId) => { setNavStack(stack); setSelectedNodeId(selectId) }}
+        onAdd={() => setShowAddModal(true)}
+      />
 
       <div className="flex flex-1 min-h-0">
         {/* Canvas */}
@@ -578,40 +269,7 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
             <Controls />
           </ReactFlow>
 
-          {/* Token tray — characters in this area. Drag onto a sub-location to nest;
-              drop back here to move them to the area root. */}
-          {characters.filter(c => c.locationId === area.id && !c.isDead).length > 0 && (
-            <div
-              className="absolute top-3 left-3 z-10 w-52 bg-stone-900/95 border border-stone-700 rounded-lg shadow-2xl p-2"
-              onDragOver={e => { if (e.dataTransfer.types.includes(CHAR_DND)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }}
-              onDrop={e => {
-                const charId = e.dataTransfer.getData(CHAR_DND)
-                if (charId) { e.preventDefault(); setSubLocation(charId, null) }
-              }}
-            >
-              <div className="text-xs text-stone-500 mb-1.5 px-1">Here — drag onto a sub-location</div>
-              <div className="flex flex-col gap-1 max-h-52 overflow-y-auto">
-                {characters.filter(c => c.locationId === area.id && !c.isDead).map(c => {
-                  const at = c.subLocationId ? (findSubNodePath(area.subNodes, c.subLocationId)?.slice(-1)[0]?.nodeName ?? 'sub-location') : null
-                  return (
-                    <div
-                      key={c.id}
-                      draggable
-                      onDragStart={e => { e.dataTransfer.setData(CHAR_DND, c.id); e.dataTransfer.effectAllowed = 'move' }}
-                      className="flex items-center gap-2 px-1.5 py-1 rounded-sm hover:bg-stone-800 cursor-grab active:cursor-grabbing"
-                      title="Drag onto a sub-location"
-                    >
-                      <TokenAvatar name={c.name} characterId={c.id} size={20} />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs text-stone-200 truncate">{c.name}</div>
-                        <div className="text-xs text-stone-500 truncate">{at ? `📍 ${at}` : 'Area root'}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+          <TokenTray area={area} />
         </div>
 
         {/* Selected build */}
@@ -623,98 +281,16 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
 
         {/* Selected node side panel */}
         {selectedNode && !selectedStructureId && (
-          <div className="w-64 shrink-0 border-l border-stone-700 bg-stone-800 p-4 overflow-y-auto">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-semibold text-stone-100 text-sm">{selectedNode.name}</span>
-              <button
-                onClick={() => { deleteSubNode(area.id, selectedNode.id, currentPath); setSelectedNodeId(null) }}
-                className="text-xs text-red-400 hover:text-red-300"
-              >
-                Delete
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-stone-500 mb-1">Name</label>
-                <input
-                  value={selectedNode.name}
-                  onChange={e => updateSubNode(area.id, selectedNode.id, { name: e.target.value }, currentPath)}
-                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-100 text-xs outline-hidden focus:border-gold/50"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-stone-500 mb-1">Type</label>
-                <select
-                  value={selectedNode.type}
-                  onChange={e => updateSubNode(area.id, selectedNode.id, { type: e.target.value as SubNode['type'] }, currentPath)}
-                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-xs outline-hidden"
-                >
-                  {SUB_NODE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              {selectedNode.type === 'mine' && (
-                <div>
-                  <div className="text-xs text-stone-500 mb-1">Mineable here</div>
-                  <MaterialsEditor
-                    materials={selectedNode.materials ?? []}
-                    onChange={materials => updateSubNode(area.id, selectedNode.id, { materials }, currentPath)}
-                  />
-                </div>
-              )}
-              <div>
-                <label className="block text-xs text-stone-500 mb-1">Notes</label>
-                <textarea
-                  value={selectedNode.description ?? ''}
-                  onChange={e => updateSubNode(area.id, selectedNode.id, { description: e.target.value }, currentPath)}
-                  rows={4}
-                  className="w-full bg-stone-900 border border-stone-600 rounded-sm px-2 py-1.5 text-stone-200 text-xs outline-hidden resize-none"
-                />
-              </div>
-              <div className="flex gap-2">
-                {navStack.length < MAX_DEPTH && (
-                  <button
-                    onClick={() => { setNavStack(prev => [...prev, { nodeId: selectedNode.id, nodeName: selectedNode.name }]); setSelectedNodeId(null) }}
-                    className="flex-1 px-2 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs"
-                  >
-                    Open Sub-map
-                  </button>
-                )}
-                <button
-                  onClick={() => setPlaceModal({ subNodeId: selectedNode.id })}
-                  className="flex-1 px-2 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-xs"
-                >
-                  Place Characters
-                </button>
-              </div>
-              {characters.filter(c => c.subLocationId === selectedNode.id).length > 0 && (
-                <div>
-                  <div className="text-xs text-stone-500 mb-1">At this location</div>
-                  {characters.filter(c => c.subLocationId === selectedNode.id).map(c => (
-                    <div key={c.id} className="flex items-center gap-1.5 text-xs text-stone-300 mb-1">
-                      <TokenAvatar name={c.name} characterId={c.id} size={16} />
-                      {c.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {(() => {
-                const descendantChars = getSubtreeCharacters(selectedNode, characters).filter(c => c.subLocationId !== selectedNode.id)
-                if (descendantChars.length === 0) return null
-                return (
-                  <div>
-                    <div className="text-xs text-stone-500 mb-1">In sub-locations</div>
-                    {descendantChars.map(c => (
-                      <button key={c.id} onClick={() => navigateToChar(c.subLocationId!)}
-                        className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-100 mb-1 w-full text-left">
-                        <TokenAvatar name={c.name} characterId={c.id} size={16} />
-                        {c.name} <ChevronRight size={10} className="ml-auto opacity-50" />
-                      </button>
-                    ))}
-                  </div>
-                )
-              })()}
-            </div>
-          </div>
+          <SubNodePanel
+            node={selectedNode}
+            areaId={area.id}
+            path={currentPath}
+            canGoDeeper={navStack.length < MAX_DEPTH}
+            onDeleted={() => setSelectedNodeId(null)}
+            onOpenSubMap={() => openSubMap(selectedNode)}
+            onPlaceCharacters={() => setPlaceModal({ subNodeId: selectedNode.id })}
+            onCharNavigate={navigateToChar}
+          />
         )}
       </div>
 
@@ -730,32 +306,10 @@ export function SubMap({ area, onBack, initialSubNodeId }: SubMapProps) {
 
       {/* Add modal */}
       {showAddModal && (
-        <Modal title="Add Sub-location" onClose={() => setShowAddModal(false)}>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm text-stone-400 mb-1">Name *</label>
-              <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 text-sm outline-hidden focus:border-gold/50"
-                placeholder="Iron Throne Room..." />
-            </div>
-            <div>
-              <label className="block text-sm text-stone-400 mb-1">Type</label>
-              <select value={newType} onChange={e => setNewType(e.target.value as SubNode['type'])} className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden">
-                {SUB_NODE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-stone-400 mb-1">Notes</label>
-              <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={2}
-                className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-200 text-sm outline-hidden resize-none" />
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setShowAddModal(false)} className="px-3 py-1.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-stone-600 text-sm">Cancel</button>
-              <button onClick={handleAdd} disabled={!newName.trim()} className="px-3 py-1.5 rounded-sm bg-gold text-stone-900 font-semibold hover:bg-yellow-400 text-sm disabled:opacity-50">Add</button>
-            </div>
-          </div>
-        </Modal>
+        <AddSubNodeModal
+          onAdd={n => { addSubNode(area.id, { ...n, position: { x: 200, y: 150 } }, currentPath); setShowAddModal(false) }}
+          onClose={() => setShowAddModal(false)}
+        />
       )}
 
       {placeModal && (

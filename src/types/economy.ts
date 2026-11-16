@@ -1,3 +1,5 @@
+import type { WeaponSpec } from './gear'
+
 // ── Economy ────────────────────────────────────────────────────────────
 // A grounded, GM-controlled trade system. The engine SUGGESTS prices from a
 // place's profile; the GM can override any final number. Everything is
@@ -38,6 +40,8 @@ export interface Good {
   recipe?: { goodId: string; qty: number }[]
   /** Crafting difficulty surcharge as a fraction of material cost (labour). */
   craftLabour?: number       // e.g. 0.25 = +25% over materials
+  /** For a weapon: the stats a buyer gets. */
+  weapon?: WeaponSpec
   /** True for GM-authored goods (vs the built-in catalog). */
   custom?: boolean
 }

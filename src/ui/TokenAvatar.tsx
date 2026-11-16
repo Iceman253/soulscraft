@@ -1,4 +1,4 @@
-import { loadPortrait } from '../lib/imageCache'
+import { loadPortrait } from '../lib/platform/imageCache'
 
 interface TokenAvatarProps {
   name: string

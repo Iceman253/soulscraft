@@ -4,7 +4,7 @@ import { useWorldStore } from '../map/store'
 import { FullScreen } from './FullScreen'
 import { PlaceMap } from './PlaceMap'
 import { BuildSheet } from './BuildSheet'
-import { findSubPath, levelCrumbs, levelLabel, type MapLevel } from '../../lib/places'
+import { findSubPath, levelCrumbs, levelLabel, type MapLevel } from '../../lib/world/places'
 import type { Character } from '../../types'
 
 /** Look inside an area from the player map: its sub-locations and any builds there. */

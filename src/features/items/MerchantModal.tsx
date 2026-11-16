@@ -1,22 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { X, ShoppingCart } from 'lucide-react'
 import { useItemStore } from './store'
 import { useCharacterStore } from '../characters/store'
+import { allGoods, useEconomyStore } from '../economy/store'
 import { log } from '../log/store'
-import { looksLikeBlocks } from '../../lib/building'
-import { CURRENCY_OPTIONS, COIN_VALUE, toCopper, fromCopper, formatCopper } from '../../lib/currency'
-import type { CurrencyKey } from '../../lib/currency'
-
-const WEAPONS_CATALOG = [
-  'Wood Sword', 'Stone Sword', 'Iron Sword', 'Gold Sword', 'Diamond Sword',
-  'Wood Axe', 'Stone Axe', 'Iron Axe', 'Gold Axe', 'Diamond Axe',
-  'Bow', 'Crossbow', 'Iron Dagger',
-]
-
-const ARMOR_CATALOG = [
-  'Leather Armor', 'Chainmail Armor', 'Iron Armor', 'Gold Armor', 'Diamond Armor',
-  'Leather Shield', 'Iron Shield',
-]
+import { CURRENCY_OPTIONS, COIN_VALUE, toCopper, fromCopper, formatCopper } from '../../lib/economy/currency'
+import type { CurrencyKey } from '../../lib/economy/currency'
+import { WeaponSpecLine } from '../../ui/WeaponSpecLine'
+import { WareList } from './WareList'
+import { ARMOR_CATALOG, WEAPONS_CATALOG, catalogWares, itemFromWare, marketWeaponWares, wholeCoinPrice, worldItemWares, type Ware } from './wares'
 
 interface Props {
   onClose: () => void
@@ -24,9 +16,12 @@ interface Props {
 
 export function MerchantModal({ onClose }: Props) {
   const items = useItemStore(s => s.items)
+  const economy = useEconomyStore(s => s.economy)
+  const marketWeapons = useMemo(() => marketWeaponWares(allGoods(economy)), [economy])
   const { characters, addOnHandItem, setCurrency } = useCharacterStore()
 
-  const [selectedItem, setSelectedItem] = useState<string>('')
+  const [selected, setSelected] = useState<Ware | null>(null)
+  const selectedItem = selected?.name ?? ''
   const [quantity, setQuantity] = useState(1)
   const [price, setPrice] = useState(0)
   const [currency, setCurrencyKey] = useState<CurrencyKey>('gold')
@@ -42,19 +37,28 @@ export function MerchantModal({ onClose }: Props) {
   const walletCopper = selectedChar ? toCopper(selectedChar.currency) : 0
   const insufficient = !!selectedChar && walletCopper < priceCopper
 
+  const select = (ware: Ware) => {
+    setSelected(ware)
+    if (ware.basePriceCopper) {
+      const suggested = wholeCoinPrice(ware.basePriceCopper)
+      setPrice(suggested.amount * quantity)
+      setCurrencyKey(suggested.currency)
+    }
+  }
+
   const handlePurchase = () => {
-    if (!selectedItem || !charId || !selectedChar) return
+    if (!selected || !charId || !selectedChar) return
     if (insufficient && !forceShort) return
 
     setCurrency(charId, fromCopper(Math.max(0, walletCopper - priceCopper)))
-    addOnHandItem(charId, { name: selectedItem, quantity, isBlock: looksLikeBlocks(selectedItem) })
+    addOnHandItem(charId, itemFromWare(selected, quantity))
 
     const currLabel = CURRENCY_OPTIONS.find(c => c.key === currency)?.label ?? currency
     const shortNote = insufficient ? ' (purse emptied — GM waived the shortfall)' : ''
     log('item-purchase', `🛒 ${selectedChar.name} purchased ${quantity}× ${selectedItem} for ${price} ${currLabel}${shortNote}.`)
 
     // Reset item selection but keep form open
-    setSelectedItem('')
+    setSelected(null)
     setQuantity(1)
     setPrice(0)
     setForceShort(false)
@@ -86,87 +90,15 @@ export function MerchantModal({ onClose }: Props) {
               <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider font-heading">Wares</span>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-4">
-
-              {/* World Items */}
-              {items.length > 0 && (
-                <div>
-                  <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">World Items</div>
-                  <div className="space-y-1">
-                    {items.map(item => (
-                      <div
-                        key={item.id}
-                        className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                          selectedItem === item.name
-                            ? 'bg-amber-900/40 border border-amber-700/60'
-                            : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-700/60 hover:border-stone-600'
-                        }`}
-                        onClick={() => setSelectedItem(item.name)}
-                      >
-                        <span className="text-stone-200 text-sm">📦 {item.name}</span>
-                        <button
-                          className="text-xs px-2 py-0.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
-                          onClick={e => { e.stopPropagation(); setSelectedItem(item.name) }}
-                        >
-                          Select
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+              <WareList title="⚔️ Market weapons" wares={marketWeapons} selectedKey={selected?.key} onSelect={select} />
+              <WareList title="World Items" wares={worldItemWares(items)} selectedKey={selected?.key} onSelect={select} />
+              <WareList title="⚔️ Weapons" wares={catalogWares(WEAPONS_CATALOG, 'weapon')} selectedKey={selected?.key} onSelect={select} />
+              <WareList title="🛡️ Armor" wares={catalogWares(ARMOR_CATALOG, 'armor')} selectedKey={selected?.key} onSelect={select} />
+              {marketWeapons.length === 0 && (
+                <div className="text-[11px] text-stone-600">
+                  Named weapons with their own power and abilities come from the Economy tab: add a custom good of category Weapon.
                 </div>
               )}
-
-              {/* Weapons Catalog */}
-              <div>
-                <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">⚔️ Weapons</div>
-                <div className="space-y-1">
-                  {WEAPONS_CATALOG.map(name => (
-                    <div
-                      key={name}
-                      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                        selectedItem === name
-                          ? 'bg-amber-900/40 border border-amber-700/60'
-                          : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-700/60 hover:border-stone-600'
-                      }`}
-                      onClick={() => setSelectedItem(name)}
-                    >
-                      <span className="text-stone-200 text-sm">{name}</span>
-                      <button
-                        className="text-xs px-2 py-0.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
-                        onClick={e => { e.stopPropagation(); setSelectedItem(name) }}
-                      >
-                        Select
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Armor Catalog */}
-              <div>
-                <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2 font-heading">🛡️ Armor</div>
-                <div className="space-y-1">
-                  {ARMOR_CATALOG.map(name => (
-                    <div
-                      key={name}
-                      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                        selectedItem === name
-                          ? 'bg-amber-900/40 border border-amber-700/60'
-                          : 'bg-stone-800 border border-stone-700/50 hover:bg-stone-700/60 hover:border-stone-600'
-                      }`}
-                      onClick={() => setSelectedItem(name)}
-                    >
-                      <span className="text-stone-200 text-sm">{name}</span>
-                      <button
-                        className="text-xs px-2 py-0.5 rounded-sm bg-stone-700 text-stone-300 hover:bg-amber-800 hover:text-amber-100 transition-colors ml-2 shrink-0"
-                        onClick={e => { e.stopPropagation(); setSelectedItem(name) }}
-                      >
-                        Select
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
             </div>
           </div>
 
@@ -184,9 +116,12 @@ export function MerchantModal({ onClose }: Props) {
                   ? (
                     <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-900/30 border border-amber-700/50">
                       <ShoppingCart size={14} className="text-amber-400 shrink-0" />
-                      <span className="text-amber-100 font-medium text-sm">{selectedItem}</span>
+                      <span className="min-w-0">
+                        <span className="text-amber-100 font-medium text-sm">{selectedItem}</span>
+                        {selected?.weapon && <WeaponSpecLine spec={selected.weapon} />}
+                      </span>
                       <button
-                        onClick={() => setSelectedItem('')}
+                        onClick={() => setSelected(null)}
                         className="ml-auto text-stone-500 hover:text-stone-300"
                       >
                         <X size={12} />

@@ -29,15 +29,10 @@ server/data
 # Claude Code session files
 .claude/
 
-# Scratch / extraction files at project root
+# Local reference material: the rulebook PDF, its text extracts, source images
+reference/
 *.txt
 *.pdf
-Copper.png
-Diamond.png
-Emerald.png
-Gold.png
-Iron.png
-MCD_Soul_Siphon.png
 
 # Image backup files
 *.bak
