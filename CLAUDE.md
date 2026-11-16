@@ -1,6 +1,6 @@
 # Soulscraft Campaign Manager
 
-A fan-made GM and player companion for the Soulscraft 3.1e tabletop RPG (by rebeljayd).
+A fan-made GM and player companion for the Soulscraft 3.1e tabletop RPG (by rebelJC).
 React 19 + Vite + TypeScript + Zustand 5 + Tailwind. A small Node server (`server/`)
 stores campaign data; the browser syncs to it.
 

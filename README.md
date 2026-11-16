@@ -1,6 +1,6 @@
 # Soulscraft Campaign Manager
 
-> **Soulscraft is a tabletop RPG created by rebeljayd.** This repository is a fan-made
+> **Soulscraft is a tabletop RPG created by rebelJC.** This repository is a fan-made
 > companion app for running Soulscraft campaigns; all credit for the game itself goes
 > to its creator.
 

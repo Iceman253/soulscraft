@@ -190,7 +190,7 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
 
       {/* Credit */}
       <div className="mt-10 text-center text-xs text-stone-600">
-        Soulscraft is a tabletop RPG created by <span className="text-stone-400">rebeljayd</span>.
+        Soulscraft is a tabletop RPG created by <span className="text-stone-400">rebelJC</span>.
         This is a fan-made companion app.
       </div>
 
