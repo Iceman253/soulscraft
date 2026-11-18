@@ -112,7 +112,17 @@ cp -r dist/* "$WEB_ROOT/"
 
 # ── Backend service (shared campaigns: REST + WebSocket + SQLite) ──────────────
 msg "Installing backend server dependencies…"
+# better-sqlite3 ships ready-made binaries, so server/package.json marks its
+# compile-from-source install script as not needed ("allowScripts": false), which
+# keeps newer npm quiet. If the bundled binary won't load on this machine, compile
+# it here, and stop before restarting a server that can't open its database.
 ( cd "$APP_DIR/server" && npm install --omit=dev )
+sqlite_ok() { ( cd "$APP_DIR/server" && node -e "new (require('better-sqlite3'))(':memory:').close()" ) >/dev/null 2>&1; }
+if ! sqlite_ok; then
+  msg "The bundled database driver didn't load; compiling better-sqlite3…"
+  ( cd "$APP_DIR/server" && npm rebuild better-sqlite3 --dangerously-allow-all-scripts --foreground-scripts ) || true
+  sqlite_ok || die "better-sqlite3 won't load, so the backend can't open its database. The running server was not restarted."
+fi
 
 SRV_DATA_DIR="/var/lib/soulscraft"
 mkdir -p "$SRV_DATA_DIR"
