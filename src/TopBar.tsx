@@ -85,8 +85,11 @@ export function TopBar({ activeTab, onTabChange, onToggleCombat, onToggleDice, o
         ))}
       </nav>
 
+      {/* Divider between the tabs and the time buttons, with room on both sides */}
+      <div className="self-center w-px h-5 bg-stone-600 mx-4 shrink-0" />
+
       {/* Right actions */}
-      <div className="self-center flex items-center gap-1 shrink-0 pl-2">
+      <div className="self-center flex items-center gap-1 shrink-0">
 
         {/* Time advancement — subtle, text-only style */}
         <button
