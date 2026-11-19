@@ -182,6 +182,21 @@ LockPersonality=yes
 RestrictRealtime=yes
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
+PrivateDevices=yes
+PrivateUsers=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RemoveIPC=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
 
 [Install]
 WantedBy=multi-user.target
