@@ -2,8 +2,8 @@
 #
 # proxmox-lxc-setup.sh
 # ────────────────────
-# Creates a Debian 12 LXC container on a Proxmox VE host, installs Docker,
-# and deploys Soulscraft into it. Run this ON THE PROXMOX HOST as root.
+# Creates a Debian 12 LXC container on a Proxmox VE host and deploys Soulscraft
+# into it with deploy/install-native.sh (nginx + Node, no Docker). Run this ON THE PROXMOX HOST as root.
 #
 #   bash deploy/proxmox-lxc-setup.sh
 #
@@ -13,18 +13,16 @@
 #   CT_HOSTNAME     Container hostname                 [soulscraft]
 #   DISK_GB         Root disk size in GB               [4]
 #   CORES           CPU cores                          [1]
-#   RAM_MB          Memory in MB                       [512]
+#   RAM_MB          Memory in MB (the build needs ~1 GB) [1024]
 #   BRIDGE          Network bridge                     [vmbr0]
 #   STORAGE         Storage pool for the rootfs        [local-lvm]
 #   TEMPLATE_STORE  Storage pool holding CT templates  [local]
 #   REPO_URL        Git repo to deploy                 [github.com/Iceman253/soulscraft]
-#   HTTP_PORT       Published HTTP port (redirects)    [80]
-#   HTTPS_PORT      Published HTTPS port               [443]
 #   CT_PASSWORD     root password inside the container [random, printed at end]
 #   UNPRIVILEGED    1 = unprivileged container         [1]
 #
 # Example:
-#   CTID=250 RAM_MB=1024 HTTPS_PORT=8443 bash deploy/proxmox-lxc-setup.sh
+#   CTID=250 RAM_MB=2048 bash deploy/proxmox-lxc-setup.sh
 #
 set -euo pipefail
 
@@ -32,13 +30,11 @@ set -euo pipefail
 CT_HOSTNAME="${CT_HOSTNAME:-soulscraft}"
 DISK_GB="${DISK_GB:-4}"
 CORES="${CORES:-1}"
-RAM_MB="${RAM_MB:-512}"
+RAM_MB="${RAM_MB:-1024}"
 BRIDGE="${BRIDGE:-vmbr0}"
 STORAGE="${STORAGE:-local-lvm}"
 TEMPLATE_STORE="${TEMPLATE_STORE:-local}"
 REPO_URL="${REPO_URL:-https://github.com/Iceman253/soulscraft.git}"
-HTTP_PORT="${HTTP_PORT:-80}"
-HTTPS_PORT="${HTTPS_PORT:-443}"
 UNPRIVILEGED="${UNPRIVILEGED:-1}"
 CT_PASSWORD="${CT_PASSWORD:-$(openssl rand -base64 12 2>/dev/null || echo "soulscraft$(date +%s)")}"
 
@@ -83,16 +79,10 @@ pct create "$CTID" "$TEMPLATE_REF" \
   --swap "$RAM_MB" \
   --rootfs "${STORAGE}:${DISK_GB}" \
   --net0 "name=eth0,bridge=${BRIDGE},ip=dhcp" \
-  --features "nesting=1,keyctl=1" \
+  --features "nesting=1" \
   --unprivileged "$UNPRIVILEGED" \
   --password "$CT_PASSWORD" \
   --onboot 1
-
-# Docker's runtime (runc) writes a sysctl via a /proc magic-symlink that the
-# default LXC AppArmor profile blocks — this is required for Docker to start
-# containers inside the LXC (applies to privileged and unprivileged alike).
-msg "Applying AppArmor profile for Docker compatibility…"
-echo "lxc.apparmor.profile: unconfined" >> "/etc/pve/lxc/${CTID}.conf"
 
 msg "Starting container…"
 pct start "$CTID"
@@ -107,27 +97,19 @@ for _ in $(seq 1 30); do
 done
 
 # ── Provision inside the container ────────────────────────────────────────────
-msg "Installing Docker + deploying Soulscraft inside the container…"
+msg "Deploying Soulscraft inside the container (native nginx + Node)…"
 pct exec "$CTID" -- bash -euo pipefail -c "
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
   apt-get install -y -qq ca-certificates curl git >/dev/null
-
-  # Official Docker convenience installer (includes the compose plugin).
-  if ! command -v docker >/dev/null 2>&1; then
-    curl -fsSL https://get.docker.com | sh
-  fi
-  systemctl enable --now docker
-
   rm -rf /opt/soulscraft
   git clone --depth 1 '${REPO_URL}' /opt/soulscraft
-  cd /opt/soulscraft
-  HTTP_PORT='${HTTP_PORT}' HTTPS_PORT='${HTTPS_PORT}' docker compose up -d --build
+  REPO_URL='${REPO_URL}' bash /opt/soulscraft/deploy/install-native.sh
 "
 
 # ── Report ────────────────────────────────────────────────────────────────────
 IP="$(pct exec "$CTID" -- hostname -I 2>/dev/null | awk '{print $1}')"
-if [ "$HTTPS_PORT" = "443" ]; then URL="https://${IP:-<container-ip>}"; else URL="https://${IP:-<container-ip>}:${HTTPS_PORT}"; fi
+URL="https://${IP:-<container-ip>}"
 echo
 msg "Soulscraft is deployed! 🎲"
 echo "    Container : ${CTID} (${CT_HOSTNAME})"
@@ -136,4 +118,4 @@ echo "    root pw   : ${CT_PASSWORD}"
 echo
 echo "  Note: self-signed cert — accept the one-time browser warning."
 echo "  Update later with:"
-echo "    pct exec ${CTID} -- bash -c 'cd /opt/soulscraft && git pull && docker compose up -d --build'"
+echo "    pct exec ${CTID} -- bash /opt/soulscraft/deploy/install-native.sh"

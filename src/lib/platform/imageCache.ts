@@ -2,17 +2,22 @@
 // read synchronously); writes also push to the server, and hydrateImages() seeds
 // the cache from the server when a campaign is entered.
 import { getImages, putImage, deleteImage } from './api'
+import { isSafeImageEntry } from './imageSafety'
 
 let ctx: { campaignId: string; code: string } | null = null
 
 /** Set (or clear) the active campaign + code so image writes reach the server. */
 export function setImageSyncContext(c: { campaignId: string; code: string } | null) { ctx = c }
 
-/** Seed the local cache from the server for a campaign (call on enter / remote change). */
-export async function hydrateImages(campaignId: string): Promise<void> {
+/** Seed the local cache from the server for a campaign (call on enter / remote change).
+ *  Only image entries are stored: a key outside the image namespaces could otherwise
+ *  overwrite this device's remembered codes or other app settings. */
+export async function hydrateImages(campaignId: string, code: string): Promise<void> {
   try {
-    const imgs = await getImages(campaignId)
-    for (const [key, data] of Object.entries(imgs)) localStorage.setItem(key, data)
+    const imgs = await getImages(campaignId, code)
+    for (const [key, data] of Object.entries(imgs)) {
+      if (isSafeImageEntry(key, data)) localStorage.setItem(key, data)
+    }
   } catch { /* offline — fall back to whatever is cached locally */ }
 }
 

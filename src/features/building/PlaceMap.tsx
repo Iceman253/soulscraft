@@ -10,6 +10,7 @@ import { StructureNode } from './StructureNode'
 import { PixelIcon } from './PixelIcon'
 import { ChevronRight } from 'lucide-react'
 import type { ProjectTier } from '../../types'
+import { cssImageUrl } from '../../lib/platform/imageSafety'
 
 function PlaceNode({ data }: NodeProps) {
   const { place } = data as unknown as { place: MapPlace }
@@ -33,7 +34,7 @@ function PinNode({ data }: NodeProps) {
 
 function BgNode({ data }: NodeProps) {
   const { url, w, h } = data as unknown as { url: string; w: number; h: number }
-  return <div style={{ width: w, height: h, backgroundImage: `url(${url})`, backgroundSize: '100% 100%', opacity: 0.5, borderRadius: 4 }} />
+  return <div style={{ width: w, height: h, backgroundImage: cssImageUrl(url), backgroundSize: '100% 100%', opacity: 0.5, borderRadius: 4 }} />
 }
 
 const nodeTypes = { place: PlaceNode, structure: StructureNode, pin: PinNode, bg: BgNode }
