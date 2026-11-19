@@ -46,7 +46,7 @@ export function makeStatements(db) {
     count:       db.prepare('SELECT COUNT(*) AS n FROM campaigns'),
     weak:        db.prepare('SELECT id, name FROM campaigns WHERE weakCode = 1'),
     get:         db.prepare('SELECT * FROM campaigns WHERE id = ?'),
-    code:        db.prepare('SELECT code FROM campaigns WHERE id = ?'),
+    code:        db.prepare('SELECT code, weakCode FROM campaigns WHERE id = ?'),
     insert:      db.prepare('INSERT INTO campaigns (id, name, code, data, updatedAt, weakCode) VALUES (?,?,?,?,?,0)'),
     update:      db.prepare('UPDATE campaigns SET name = ?, data = ?, updatedAt = ? WHERE id = ?'),
     setCode:     db.prepare('UPDATE campaigns SET code = ?, weakCode = 0 WHERE id = ?'),

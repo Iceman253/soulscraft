@@ -5,7 +5,7 @@
 //   4001  didn't subscribe in time        4003  wrong code / campaign gone
 //   4029  too many wrong codes            1013  server busy (too many sockets)
 import { WebSocketServer } from 'ws'
-import { clientIp } from './clientIp.js'
+import { clientIp, isRemote } from './clientIp.js'
 import { LIMITS } from './limits.js'
 
 export function attachSync({ server, stmts, guard, log = console.warn }) {
@@ -15,6 +15,7 @@ export function attachSync({ server, stmts, guard, log = console.warn }) {
 
   wss.on('connection', (ws, req) => {
     const ip = clientIp(req.headers, req.socket.remoteAddress)
+    const remote = isRemote(req.headers, req.socket.remoteAddress)
     const open = perIp.get(ip) ?? 0
     if (wss.clients.size > LIMITS.wsClients || open >= LIMITS.wsClientsPerIp) {
       ws.close(1013, 'busy')
@@ -31,7 +32,7 @@ export function attachSync({ server, stmts, guard, log = console.warn }) {
       try { msg = JSON.parse(raw.toString()) } catch { return }
       if (msg?.type !== 'subscribe') return
       const campaignId = String(msg.campaignId ?? '')
-      const r = guard.check(campaignId, msg.code, ip)
+      const r = guard.check(campaignId, msg.code, ip, remote)
       if (!r.ok) {
         subs.delete(ws)
         ws.close(r.status === 429 ? 4029 : 4003, r.status === 429 ? 'rate limited' : 'bad code')

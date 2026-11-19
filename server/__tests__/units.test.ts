@@ -6,7 +6,7 @@ import Database from 'better-sqlite3'
 import { isValidId, isValidNewCode, isValidImageKey, isValidImageData, isPlainObject, LIMITS } from '../limits.js'
 import { hashCode, verifyCode, isHashed } from '../codes.js'
 import { RateLimiter } from '../rateLimit.js'
-import { clientIp } from '../clientIp.js'
+import { clientIp, isRemote } from '../clientIp.js'
 import { makeDiskGuard } from '../diskGuard.js'
 import { pruneBackups } from '../backup.js'
 import { migrate, makeStatements, openDb } from '../db.js'
@@ -85,6 +85,11 @@ describe('clientIp', () => {
   })
   it('uses the last forwarded hop when the request came through a local proxy', () => {
     expect(clientIp({ 'x-real-ip': '127.0.0.1', 'x-forwarded-for': '6.6.6.6, 203.0.113.9' }, '127.0.0.1')).toBe('203.0.113.9')
+  })
+  it('tells home-network requests from ones through a local proxy', () => {
+    expect(isRemote({ 'x-real-ip': '10.0.10.5' }, '127.0.0.1')).toBe(false)
+    expect(isRemote({ 'x-real-ip': '127.0.0.1' }, '127.0.0.1')).toBe(true)
+    expect(isRemote({ 'x-real-ip': '::1' }, '127.0.0.1')).toBe(true)
   })
   it('falls back to the socket address', () => {
     expect(clientIp({}, '::1')).toBe('::1')
