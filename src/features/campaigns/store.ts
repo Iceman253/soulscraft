@@ -113,8 +113,11 @@ function flush(get: () => CampaignStore) {
   dirtyKeys.clear()
   // JSON drops undefined, so a cleared field is sent as null to reach the server.
   const patch = Object.fromEntries(keys.map(k => [k, activeCampaign[k] ?? null])) as Partial<CampaignData>
-  void patchCampaign(activeId, activeCode, patch).catch(() => {
-    // Offline — keep the fields dirty so the next change retries them.
+  void patchCampaign(activeId, activeCode, patch).catch((e) => {
+    // The code was changed or the campaign deleted elsewhere: retrying would only
+    // count as more wrong codes, so leave the campaign instead.
+    if (e instanceof ApiError && (e.status === 403 || e.status === 404)) { get().exitToSwitcher(); return }
+    // Offline (or rate-limited) — keep the fields dirty so the next change retries them.
     keys.forEach(k => dirtyKeys.add(k))
   })
 }
@@ -175,7 +178,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     if (!s) return
     dirtyKeys.clear()   // nothing unsaved can carry over from another campaign
     setImageSyncContext({ campaignId: s.id, code: s.code })
-    await hydrateImages(s.id)   // seed the image cache before the app renders
+    await hydrateImages(s.id, s.code)   // seed the image cache before the app renders
     sessionStorage.setItem(ACTIVE_KEY, JSON.stringify({ id: s.id, code: s.code }))
     set({ activeId: s.id, activeCode: s.code, activeCampaign: s.data, staged: null })
   },

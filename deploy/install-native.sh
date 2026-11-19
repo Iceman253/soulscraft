@@ -17,8 +17,10 @@
 #   SERVER_NAME  Hostname for nginx + the cert      [<container-hostname>.local]
 #   APP_DIR      Source checkout dir                [/opt/soulscraft]
 #   WEB_ROOT     Where the built files are served   [/var/www/soulscraft]
-#   AUDIT_FIX    Vulnerability repair before build: safe (default) | force | off
-#                'force' allows major-version bumps that may break the build.
+#   AUDIT_FIX    Vulnerability check before build: report (default) | safe | force | off
+#                'report' only lists known vulnerabilities and installs exactly what the
+#                lockfile pins. 'safe'/'force' let npm change versions on the server,
+#                which means running code nobody has reviewed or tested.
 #
 # Tip: give the container >=1 GB RAM (2 GB comfortable) — the Vite build is the
 # heaviest step and can OOM on 512 MB.
@@ -40,7 +42,16 @@ export DEBIAN_FRONTEND=noninteractive
 msg "Installing nginx, git, openssl, Node, avahi, and build tools…"
 apt-get update -qq
 # build-essential + python3 let better-sqlite3 compile if no prebuilt binary exists.
-apt-get install -y -qq ca-certificates curl git openssl nginx avahi-daemon build-essential python3 >/dev/null
+apt-get install -y -qq ca-certificates curl git openssl nginx avahi-daemon build-essential python3 \
+  unattended-upgrades >/dev/null
+
+# Install security updates automatically (Debian's default origins: security fixes).
+cat > /etc/apt/apt.conf.d/20auto-upgrades <<'APT'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
+APT
+
 
 # Node 22 (via NodeSource) — needed to test and build the static bundle.
 # ESLint requires Node >= 22.13 (Vitest >= 22.12); Debian's packaged Node (18) is
@@ -68,6 +79,9 @@ if [ -d "$APP_DIR/.git" ]; then
   msg "Updating existing checkout in ${APP_DIR}…"
   # npm audit fix below rewrites these on every deploy; drop that so the pull can apply.
   git -C "$APP_DIR" checkout -- package.json package-lock.json
+  # Older deploys generated an untracked server lockfile; the repo now ships one.
+  git -C "$APP_DIR" ls-files --error-unmatch server/package-lock.json >/dev/null 2>&1 \
+    || rm -f "$APP_DIR/server/package-lock.json"
   git -C "$APP_DIR" pull --ff-only
 else
   msg "Cloning ${REPO_URL} → ${APP_DIR}…"
@@ -80,20 +94,34 @@ msg "Installing dependencies (npm ci)…"
 cd "$APP_DIR"
 npm ci
 
-# Security: repair known vulnerabilities before building. Controlled by AUDIT_FIX:
-#   safe  (default) — non-breaking fixes only
-#   force           — allow major-version bumps that may break the build
-#   off             — skip entirely
-case "${AUDIT_FIX:-safe}" in
+# Known-vulnerability check. Controlled by AUDIT_FIX (see the header):
+case "${AUDIT_FIX:-report}" in
   off)
-    msg "Skipping npm audit fix (AUDIT_FIX=off)." ;;
+    msg "Skipping npm audit (AUDIT_FIX=off)." ;;
   force)
     msg "Running npm audit fix --force (may introduce breaking changes)…"
     npm audit fix --force || true ;;
-  *)
+  safe)
     msg "Running npm audit fix (non-breaking)…"
     npm audit fix || true ;;
+  *)
+    msg "Checking for known vulnerabilities (npm audit)…"
+    npm audit --omit=dev || msg "npm audit found issues above: update the lockfile in the repo, then redeploy." ;;
 esac
+
+# ── Backend dependencies (needed by the tests too) ─────────────────────────────
+msg "Installing backend server dependencies…"
+# better-sqlite3 ships ready-made binaries, so server/package.json marks its
+# compile-from-source install script as not needed ("allowScripts": false), which
+# keeps newer npm quiet. If the bundled binary won't load on this machine, compile
+# it here, and stop before restarting a server that can't open its database.
+( cd "$APP_DIR/server" && npm ci --omit=dev )
+sqlite_ok() { ( cd "$APP_DIR/server" && node -e "new (require('better-sqlite3'))(':memory:').close()" ) >/dev/null 2>&1; }
+if ! sqlite_ok; then
+  msg "The bundled database driver didn't load; compiling better-sqlite3…"
+  ( cd "$APP_DIR/server" && npm rebuild better-sqlite3 --dangerously-allow-all-scripts --foreground-scripts ) || true
+  sqlite_ok || die "better-sqlite3 won't load, so the backend can't open its database. The running server was not restarted."
+fi
 
 # Unit tests — abort the deploy if any fail, so a broken build never replaces
 # the live site.
@@ -111,21 +139,16 @@ mkdir -p "$WEB_ROOT"
 cp -r dist/* "$WEB_ROOT/"
 
 # ── Backend service (shared campaigns: REST + WebSocket + SQLite) ──────────────
-msg "Installing backend server dependencies…"
-# better-sqlite3 ships ready-made binaries, so server/package.json marks its
-# compile-from-source install script as not needed ("allowScripts": false), which
-# keeps newer npm quiet. If the bundled binary won't load on this machine, compile
-# it here, and stop before restarting a server that can't open its database.
-( cd "$APP_DIR/server" && npm install --omit=dev )
-sqlite_ok() { ( cd "$APP_DIR/server" && node -e "new (require('better-sqlite3'))(':memory:').close()" ) >/dev/null 2>&1; }
-if ! sqlite_ok; then
-  msg "The bundled database driver didn't load; compiling better-sqlite3…"
-  ( cd "$APP_DIR/server" && npm rebuild better-sqlite3 --dangerously-allow-all-scripts --foreground-scripts ) || true
-  sqlite_ok || die "better-sqlite3 won't load, so the backend can't open its database. The running server was not restarted."
-fi
-
+# The backend runs as its own unprivileged user that can write only its data
+# folder, so a bug in it can't reach the rest of the container (TLS keys,
+# Tailscale's machine key, ...).
 SRV_DATA_DIR="/var/lib/soulscraft"
+SRV_USER="soulscraft"
+id "$SRV_USER" >/dev/null 2>&1 \
+  || useradd --system --home-dir "$SRV_DATA_DIR" --no-create-home --shell /usr/sbin/nologin "$SRV_USER"
 mkdir -p "$SRV_DATA_DIR"
+chown -R "$SRV_USER:$SRV_USER" "$SRV_DATA_DIR"
+chmod 700 "$SRV_DATA_DIR"
 
 msg "Installing systemd service (soulscraft-server)…"
 NODE_BIN="$(command -v node)"
@@ -136,12 +159,29 @@ After=network.target
 
 [Service]
 Type=simple
+User=${SRV_USER}
+Group=${SRV_USER}
 WorkingDirectory=${APP_DIR}/server
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
 Environment=PORT=8787
 Environment=DATA_DIR=${SRV_DATA_DIR}
 ExecStart=${NODE_BIN} ${APP_DIR}/server/server.js
 Restart=always
 RestartSec=3
+
+# Sandbox: read-only system, writable data folder only, no privilege gain.
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=${SRV_DATA_DIR}
+ProtectHome=yes
+PrivateTmp=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
 
 [Install]
 WantedBy=multi-user.target
@@ -162,13 +202,30 @@ if [ ! -s "$CERT_DIR/selfsigned.crt" ] || [ ! -s "$CERT_DIR/selfsigned.key" ]; t
     -addext "subjectAltName=DNS:${SERVER_NAME},DNS:localhost,IP:127.0.0.1"
 fi
 
+# Security headers, in a snippet because nginx drops server-level add_header
+# lines in any location that sets its own.
+mkdir -p /etc/nginx/snippets
+cat > /etc/nginx/snippets/soulscraft-headers.conf <<'HEADERS'
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "no-referrer" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+HEADERS
+
 # nginx site — HTTP→HTTPS redirect + SPA fallback + asset caching.
 msg "Configuring nginx…"
 cat > /etc/nginx/sites-available/soulscraft <<NGINX
+# Request flood protection for the API (the backend also limits wrong codes,
+# campaign creation and sockets itself).
+limit_req_zone \$binary_remote_addr zone=soulscraft_api:10m rate=20r/s;
+
 server {
     listen 80;
     listen [::]:80;
     server_name ${SERVER_NAME} _;
+    server_tokens off;
     location / { return 301 https://\$host\$request_uri; }
 }
 server {
@@ -177,6 +234,7 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name ${SERVER_NAME} _;
+    server_tokens off;
 
     ssl_certificate     ${CERT_DIR}/selfsigned.crt;
     ssl_certificate_key ${CERT_DIR}/selfsigned.key;
@@ -184,6 +242,7 @@ server {
 
     root ${WEB_ROOT};
     index index.html;
+    include /etc/nginx/snippets/soulscraft-headers.conf;
 
     gzip on;
     gzip_vary on;
@@ -192,24 +251,35 @@ server {
                image/svg+xml application/xml font/woff2;
 
     location /assets/ {
+        include /etc/nginx/snippets/soulscraft-headers.conf;
         expires 1y;
         add_header Cache-Control "public, immutable";
         try_files \$uri =404;
     }
 
-    # Backend REST API → Node service.
+    # Backend REST API → Node service (listening on loopback only).
+    # X-Real-IP is who connected to nginx; X-Forwarded-For is passed through
+    # unchanged so the backend can read the client a local proxy (Tailscale) added.
     location /api/ {
+        limit_req zone=soulscraft_api burst=60 nodelay;
+        limit_req_status 429;
         proxy_pass http://127.0.0.1:8787;
         proxy_set_header Host \$host;
-        client_max_body_size 32m;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$http_x_forwarded_for;
+        client_max_body_size 5m;
     }
     # Live-sync WebSocket → Node service (needs HTTP/1.1 upgrade headers).
     location /ws {
+        limit_req zone=soulscraft_api burst=60 nodelay;
+        limit_req_status 429;
         proxy_pass http://127.0.0.1:8787;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$http_x_forwarded_for;
         proxy_read_timeout 3600s;
     }
 
@@ -217,6 +287,7 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
     location = /index.html {
+        include /etc/nginx/snippets/soulscraft-headers.conf;
         add_header Cache-Control "no-cache";
     }
 }

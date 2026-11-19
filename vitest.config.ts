@@ -7,7 +7,7 @@ import viteConfig from './vite.config.ts'
 export default mergeConfig(viteConfig, defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'server/**/*.test.ts'],
     restoreMocks: true,
   },
 }))

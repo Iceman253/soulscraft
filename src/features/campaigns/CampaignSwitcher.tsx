@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, Upload, Trash2, Download, ChevronRight, Shield, User, Lock, KeyRound } from 'lucide-react'
 import { useCampaignStore, getRememberedCode, wasCreatedHere } from './store'
 import { TokenAvatar } from '../../ui/TokenAvatar'
+import { MIN_CODE_LENGTH } from '../../lib/platform/api'
 
 interface Props {
   onPlay: (campaignId: string, characterId: string | null) => void
@@ -60,15 +61,15 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
     setBusy(true); setCodeError(null)
     const ok = await stageCampaign(codePrompt.id, code)
     setBusy(false)
-    if (!ok) { setCodeError('Wrong code, or the campaign is unavailable.'); return }
+    if (!ok) { setCodeError('Wrong code, or too many tries (wait 15 minutes), or the campaign is unavailable.'); return }
     proceed(codePrompt.id)
   }
 
   const handleCreate = async () => {
-    if (!newName.trim() || !newCode.trim() || busy) return
+    if (!newName.trim() || newCode.trim().length < MIN_CODE_LENGTH || busy) return
     setBusy(true)
     const id = await createCampaign(newName.trim(), newCode.trim())
-    if (!id) { setBusy(false); alert('Could not create the campaign (server unreachable?).'); return }
+    if (!id) { setBusy(false); alert('Could not create the campaign (server unreachable, or too many new campaigns: try again later).'); return }
     const ok = await stageCampaign(id, newCode.trim())
     setBusy(false)
     setShowNew(false); setNewName(''); setNewCode('')
@@ -82,8 +83,9 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
       const text = await file.text()
-      const code = window.prompt('Set a campaign code for this imported campaign:')
+      const code = window.prompt(`Set a campaign code for this imported campaign (at least ${MIN_CODE_LENGTH} characters):`)?.trim()
       if (!code) return
+      if (code.length < MIN_CODE_LENGTH) { alert(`The code must be at least ${MIN_CODE_LENGTH} characters.`); return }
       const id = await importCampaign(text, code)
       if (!id) { alert('Invalid campaign file or server error.'); return }
       const ok = await stageCampaign(id, code)
@@ -232,17 +234,17 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
                   className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 outline-hidden focus:border-gold/60 text-sm" />
               </div>
               <div>
-                <label className="block text-xs text-stone-400 mb-1 uppercase tracking-widest" style={{ fontSize: '10px' }}>Campaign Code * <span className="text-stone-600 normal-case">(players need this to join)</span></label>
+                <label className="block text-xs text-stone-400 mb-1 uppercase tracking-widest" style={{ fontSize: '10px' }}>Campaign Code * <span className="text-stone-600 normal-case">(players need this to join; at least {MIN_CODE_LENGTH} characters)</span></label>
                 <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                  placeholder="e.g. nether42"
+                  placeholder="e.g. nether-gate-42"
                   className="w-full bg-stone-900 border border-stone-600 rounded-sm px-3 py-2 text-stone-100 outline-hidden focus:border-gold/60 text-sm" />
               </div>
             </div>
             <div className="flex gap-2 mt-5 justify-end">
               <button onClick={() => { setShowNew(false); setNewName(''); setNewCode('') }}
                 className="px-3 py-1.5 rounded-sm border border-stone-600 text-stone-400 hover:text-stone-200 text-sm">Cancel</button>
-              <button onClick={handleCreate} disabled={busy || !newName.trim() || !newCode.trim()}
+              <button onClick={handleCreate} disabled={busy || !newName.trim() || newCode.trim().length < MIN_CODE_LENGTH}
                 className="px-4 py-1.5 rounded-sm border border-gold/60 text-gold hover:bg-gold/10 font-heading text-sm disabled:opacity-40">
                 {busy ? 'Creating…' : 'Create'}
               </button>

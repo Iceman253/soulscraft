@@ -33,6 +33,9 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export const listCampaigns = () =>
   req<Array<Pick<CampaignMeta, 'id' | 'name'> & { updatedAt: number }>>('/api/campaigns')
 
+/** Shortest code the server accepts for a new campaign. */
+export const MIN_CODE_LENGTH = 6
+
 export const createCampaignOnServer = (id: string, name: string, code: string, data: CampaignData) =>
   req<{ id: string }>('/api/campaigns', { method: 'POST', body: JSON.stringify({ id, name, code, data }) })
 
@@ -49,8 +52,9 @@ export const deleteCampaignOnServer = (id: string, code: string) =>
   req<{ ok: true }>(`/api/campaigns/${id}`, { method: 'DELETE', body: JSON.stringify({ code }) })
 
 // ── Images ──────────────────────────────────────────────────────────────────
-export const getImages = (id: string) =>
-  req<Record<string, string>>(`/api/campaigns/${id}/images`)
+/** Needs the campaign code; it goes in a header because this is a GET. */
+export const getImages = (id: string, code: string) =>
+  req<Record<string, string>>(`/api/campaigns/${id}/images`, { headers: { 'x-campaign-code': code } })
 
 export const putImage = (id: string, code: string, key: string, data: string) =>
   req<{ ok: true }>(`/api/campaigns/${id}/images/${encodeURIComponent(key)}`,

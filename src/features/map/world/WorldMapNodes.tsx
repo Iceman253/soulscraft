@@ -2,6 +2,7 @@
 import type { NodeProps } from '@xyflow/react'
 import { TokenAvatar } from '../../../ui/TokenAvatar'
 import type { Character } from '../../../types'
+import { cssImageUrl } from '../../../lib/platform/imageSafety'
 
 /** A free-floating character token on the world map (dropped on empty canvas). */
 export function TokenNode({ data }: NodeProps) {
@@ -20,7 +21,7 @@ export function TokenNode({ data }: NodeProps) {
 export function MapBackgroundNode({ data }: NodeProps) {
   const { url, w, h } = data as unknown as { url: string; w: number; h: number }
   return (
-    <div style={{ width: w, height: h, backgroundImage: `url(${url})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', opacity: 0.5, borderRadius: 4 }} />
+    <div style={{ width: w, height: h, backgroundImage: cssImageUrl(url), backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', opacity: 0.5, borderRadius: 4 }} />
   )
 }
 

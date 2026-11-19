@@ -139,67 +139,79 @@ npm run preview # preview the production build
 
 ---
 
-## Self-Hosting (Docker / Proxmox)
+## Self-Hosting (Proxmox LXC or any Debian/Ubuntu machine)
 
-Soulscraft is a static site with no backend, so it deploys as a single nginx container. Three ways to run it, easiest first.
+Soulscraft is a static React app plus a small Node server (`server/`) that stores
+campaigns in SQLite and syncs them live between devices. nginx serves the app over
+HTTPS and is the only way in: the Node server listens on `127.0.0.1` only.
 
-### 1. Docker (any host)
+### 1. Into a container you already made (recommended)
 
-```bash
-docker compose up -d --build
-```
-
-Then open `https://<host>`. HTTP on port 80 auto-redirects to HTTPS on 443. The
-container generates a **self-signed certificate** on first boot, so your browser
-shows a one-time warning — choose *Advanced → Proceed*. HTTPS is required so the
-app runs in a browser "secure context" (needed for `crypto.randomUUID` when
-accessed by IP on a LAN). Override the ports if 80/443 are taken:
-`HTTP_PORT=8080 HTTPS_PORT=8443 docker compose up -d --build` (then browse to
-`https://<host>:8443`).
-
-### 2. Proxmox — one command on the host
-
-Run this **on the Proxmox VE host** (as root). It creates a Debian 12 LXC, installs Docker, deploys the app, and prints the URL:
-
-```bash
-bash deploy/proxmox-lxc-setup.sh
-```
-
-Tune it with environment variables, e.g. give it more RAM and publish on port 80:
-
-```bash
-RAM_MB=1024 HOST_PORT=80 bash deploy/proxmox-lxc-setup.sh
-```
-
-Configurable: `CTID`, `CT_HOSTNAME`, `DISK_GB`, `CORES`, `RAM_MB`, `BRIDGE`, `STORAGE`, `TEMPLATE_STORE`, `HOST_PORT`, `REPO_URL`. The container is set to start on boot; update later with:
-
-```bash
-pct exec <CTID> -- bash -c 'cd /opt/soulscraft && git pull && docker compose up -d --build'
-```
-
-### 3. Proxmox — into a container you already made
-
-Create a Debian/Ubuntu LXC (or VM) in the Proxmox web UI, then run inside it as root:
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Iceman253/soulscraft/master/deploy/install.sh)"
-```
-
-> **LXC note:** Docker needs nesting enabled. The one-command host script sets `nesting=1,keyctl=1` automatically. If you created the container yourself, enable **Options → Features → Nesting** (or `pct set <CTID> --features nesting=1,keyctl=1`) before running the installer. Docker inside an LXC also needs `lxc.apparmor.profile: unconfined` in `/etc/pve/lxc/<CTID>.conf` (the host script adds this for you).
-
-### 4. Proxmox — native, no Docker (simplest for an LXC)
-
-Because the app is a static site, you don't need Docker at all. Create a plain **unprivileged** Debian/Ubuntu LXC (no nesting, no AppArmor changes needed), give it ≥1 GB RAM, and run inside it as root:
+Create a plain **unprivileged** Debian/Ubuntu LXC (or VM) with ≥1 GB RAM, then run inside it as root:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Iceman253/soulscraft/master/deploy/install-native.sh)"
 ```
 
-This installs nginx directly, builds the app, serves it over HTTPS, and advertises a `<hostname>.local` name via mDNS — so you can reach it at `https://soulscraft.local` (rename the container to change that). It avoids the whole Docker-in-LXC nesting/AppArmor dance. Re-run the same command to update.
+This installs nginx and Node, runs the tests, builds the app, serves it over HTTPS
+(self-signed certificate: accept the one-time browser warning), and advertises
+`<hostname>.local` via mDNS. Re-run `bash /opt/soulscraft/deploy/install-native.sh` to update.
 
-**Local hostname options:** the native installer gives you `<hostname>.local` via mDNS out of the box. For a name that resolves on every device regardless of mDNS support, add an A-record (e.g. `soulscraft.lan → <container-ip>`) on your router or Pi-hole instead. Avoid pointing a real public domain at a LAN IP.
+### 2. Proxmox — one command on the host
 
-Because all state lives in each browser's `localStorage`, the container itself is stateless — you can rebuild or move it freely without losing campaigns. Use the in-app **Export** button to back up campaign data.
+Run **on the Proxmox VE host** as root. It creates an unprivileged Debian 12 LXC and runs the installer above inside it:
+
+```bash
+bash deploy/proxmox-lxc-setup.sh
+```
+
+Configurable: `CTID`, `CT_HOSTNAME`, `DISK_GB`, `CORES`, `RAM_MB`, `BRIDGE`, `STORAGE`, `TEMPLATE_STORE`, `REPO_URL`.
+
+> The `Dockerfile` / `docker-compose.yml` / `deploy/install.sh` build the frontend only,
+> without the campaign server, so campaigns can't be created or shared with them.
+
+### Security
+
+The installer sets up:
+
+- **Campaign codes** are required to read anything in a campaign (data, images, live
+  updates), not just to change it. They're stored as salted scrypt hashes. New codes
+  must be at least 6 characters; use something longer than a PIN if the app is reachable
+  from the internet.
+- **Brute-force limits:** 10 wrong codes per client and 100 per campaign every 15
+  minutes, 5 new campaigns per client per hour, at most 50 campaigns, and per-request
+  limits in nginx.
+- **Storage limits:** 4 MB per campaign, 3 MB per image (PNG/JPEG/WebP/GIF only),
+  1000 images per campaign, and writes stop when less than 150 MB of disk is free.
+- **Sandboxed backend:** runs as the `soulscraft` user under systemd sandboxing and can
+  only write `/var/lib/soulscraft`.
+- **Daily backups** of the database in `/var/lib/soulscraft/backups` (last 7 kept).
+- **Security headers** (Content-Security-Policy and friends) and automatic Debian
+  security updates.
+
+**Changing a campaign's code** (there's no screen for it; anyone with the code can
+use the app as GM, so change it if it leaks):
+
+```bash
+cd /opt/soulscraft/server
+runuser -u soulscraft -- env DATA_DIR=/var/lib/soulscraft node set-code.js             # list campaigns
+runuser -u soulscraft -- env DATA_DIR=/var/lib/soulscraft node set-code.js "Everworld" # asks for the new code
+```
+
+Devices using the old code are sent back to the campaign list and asked for the new one.
+
+**Restoring a backup:** `systemctl stop soulscraft-server`, copy a file from
+`/var/lib/soulscraft/backups/` over `/var/lib/soulscraft/soulscraft.db` (delete the
+`-wal`/`-shm` files next to it), `chown soulscraft: ` it, and start the service again.
+
+**Putting it on the internet:** use a tunnel that terminates HTTPS with a real
+certificate and forwards to `https://localhost:443` on the container, such as
+Tailscale Funnel (`tailscale funnel --bg https+insecure://localhost:443`). Anyone can
+see the campaign *names*; everything else needs a code.
+
+**Local hostname options:** the installer gives you `<hostname>.local` via mDNS. For a
+name that resolves on every device regardless of mDNS support, add an A-record (e.g.
+`soulscraft.lan → <container-ip>`) on your router or Pi-hole instead.
 
 ---
 

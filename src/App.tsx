@@ -54,7 +54,7 @@ function hydrateAll(d: CampaignData) {
 }
 
 export default function App() {
-  const { activeId, activeCampaign, loading, init, flushCurrent, commitStaged, applyRemote, refetchActive, exitToSwitcher } = useCampaignStore()
+  const { activeId, activeCode, activeCampaign, loading, init, flushCurrent, commitStaged, applyRemote, refetchActive, exitToSwitcher } = useCampaignStore()
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(loadPlayerRole)
   const isPhone = useIsPhone()
 
@@ -74,13 +74,14 @@ export default function App() {
 
   // Live sync: subscribe to this campaign; adopt changes from other devices.
   useEffect(() => {
-    if (!activeId) return
-    connectSync(activeId, async (msg) => {
+    if (!activeId || activeCode == null) return
+    connectSync(activeId, activeCode, async (msg) => {
+      if (msg.type === 'denied') { exitToSwitcher(); return }   // code changed or campaign gone
       if (msg.type === 'update') {
         if (!msg.data) { exitToSwitcher(); return }   // campaign was deleted elsewhere
         hydrateAll(applyRemote(msg.data))
       } else if (msg.type === 'image') {
-        await hydrateImages(activeId)
+        await hydrateImages(activeId, activeCode)
         const d = useCampaignStore.getState().activeCampaign
         if (d) hydrateAll(d)   // nudge a re-render so the new image shows
       } else if (msg.type === 'reconnected') {

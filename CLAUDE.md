@@ -67,6 +67,9 @@ Root: `App.tsx`/`AppShell.tsx` (GM layout and routing), `TopBar.tsx`.
 
 ## Elsewhere
 
-- `server/`: API server (`server.js`, shallow `merge.js`)
+- `server/`: API server. `server.js` (entry, env config) → `soulscraft.js` (wiring); `api.js` (REST), `sync.js` (WebSocket),
+  `guard.js` + `codes.js` (hashed codes, brute-force limits), `limits.js` (all size limits and validators), `db.js`,
+  `backup.js`, `diskGuard.js`, `clientIp.js`, shallow `merge.js`; `set-code.js` CLI. Tests in `server/__tests__/`.
+  **Security:** every read needs the campaign code; validate every new field in `limits.js`.
 - `deploy/`: install scripts (native, Proxmox LXC); `Dockerfile`, `docker-compose.yml`, `nginx.conf`
 - `reference/`: rulebook text and images (gitignored)
