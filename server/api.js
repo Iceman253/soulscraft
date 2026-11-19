@@ -2,7 +2,7 @@
 // everything else, reading included, needs that campaign's code.
 import express from 'express'
 import { hashCode } from './codes.js'
-import { clientIp } from './clientIp.js'
+import { clientIp, isRemote } from './clientIp.js'
 import { mergeCampaign } from './merge.js'
 import { RateLimiter } from './rateLimit.js'
 import {
@@ -11,6 +11,7 @@ import {
 } from './limits.js'
 
 const ERRORS = { 403: 'bad code', 404: 'not found', 429: 'too many wrong codes, try again later' }
+const WEAK = 'this campaign\'s code is too short to use outside the home network; the GM must change it'
 
 export function createApp({ stmts, guard, sync, diskOk, maxCampaigns, log = console.warn, now = () => Date.now() }) {
   const app = express()
@@ -19,14 +20,15 @@ export function createApp({ stmts, guard, sync, diskOk, maxCampaigns, log = cons
 
   const creations = new RateLimiter({ max: 5, windowMs: 60 * 60 * 1000, now })
   const ipOf = (req) => clientIp(req.headers, req.socket.remoteAddress)
+  const remote = (req) => isRemote(req.headers, req.socket.remoteAddress)
   const clientIdOf = (req) => String(req.get('x-client-id') ?? '').slice(0, LIMITS.clientIdChars)
 
   /** Runs the code check; on failure sends the error and returns null. */
   function authorize(req, res, code) {
-    const r = guard.check(req.params.id, code, ipOf(req))
+    const r = guard.check(req.params.id, code, ipOf(req), remote(req))
     if (r.ok) return r
     if (r.retryAfter) res.set('Retry-After', String(r.retryAfter))
-    res.status(r.status).json({ error: ERRORS[r.status] })
+    res.status(r.status).json({ error: r.weak ? WEAK : ERRORS[r.status] })
     return null
   }
   const noRoom = (res) => res.status(507).json({ error: 'server storage is full' })
@@ -36,6 +38,9 @@ export function createApp({ stmts, guard, sync, diskOk, maxCampaigns, log = cons
   app.get('/api/campaigns', (_req, res) => res.json(stmts.list.all()))
 
   app.post('/api/campaigns', (req, res) => {
+    // New campaigns (and imports) only from the home network, not through the
+    // public Funnel link, so strangers can't fill the campaign list.
+    if (remote(req)) return res.status(403).json({ error: 'new campaigns can only be created from the home network' })
     const { id, name, code, data } = req.body ?? {}
     if (!isValidId(id) || !isValidName(name) || !isPlainObject(data)) {
       return res.status(400).json({ error: 'id, name and data are required' })

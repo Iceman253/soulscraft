@@ -16,7 +16,8 @@ const IMG = 'data:image/webp;base64,UklGRsx+/A=='
 async function call(method: string, path: string, body?: unknown, headers: Record<string, string> = {}) {
   const res = await fetch(base + path, {
     method,
-    headers: { 'Content-Type': 'application/json', ...headers },
+    // Requests look like they came straight from the home network unless a test says otherwise.
+    headers: { 'Content-Type': 'application/json', 'x-real-ip': '10.0.10.5', ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
   const text = await res.text()
@@ -28,9 +29,11 @@ async function call(method: string, path: string, body?: unknown, headers: Recor
 const create = (over: Record<string, unknown> = {}, headers: Record<string, string> = {}) =>
   call('POST', '/api/campaigns', { id: ID, name: 'Everworld', code: CODE, data: { name: 'Everworld', notes: 'secret' }, ...over }, headers)
 
-function openSocket(): Promise<WebSocket> {
+const VIA_FUNNEL = { 'x-real-ip': '127.0.0.1', 'x-forwarded-for': '203.0.113.9' }
+
+function openSocket(headers: Record<string, string> = { 'x-real-ip': '10.0.10.5' }): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(base.replace('http', 'ws') + '/ws')
+    const ws = new WebSocket(base.replace('http', 'ws') + '/ws', { headers })
     ws.once('open', () => resolve(ws))
     ws.once('error', reject)
   })
@@ -54,6 +57,32 @@ describe('campaigns', () => {
     expect(list.json).toEqual([{ id: ID, name: 'Everworld', updatedAt: expect.any(Number) }])
     expect(list.text).not.toContain(CODE)
     expect(list.text).not.toContain('secret')
+  })
+
+  it('only creates campaigns from the home network, not through Funnel', async () => {
+    const res = await create({}, VIA_FUNNEL)
+    expect(res.status).toBe(403)
+    expect(res.json.error).toMatch(/home network/)
+    expect((await call('GET', '/api/campaigns')).json).toEqual([])
+  })
+
+  it('opens weak-code campaigns only from the home network', async () => {
+    await create()
+    built.db.prepare('UPDATE campaigns SET weakCode = 1 WHERE id = ?').run(ID)
+    const remote = await call('POST', `/api/campaigns/${ID}/enter`, { code: CODE }, VIA_FUNNEL)
+    expect(remote.status).toBe(403)
+    expect(remote.json.error).toMatch(/too short/)
+    expect((await call('POST', `/api/campaigns/${ID}/enter`, { code: CODE })).status).toBe(200)
+
+    const ws = await openSocket(VIA_FUNNEL)
+    const closed = nextClose(ws)
+    ws.send(JSON.stringify({ type: 'subscribe', campaignId: ID, clientId: 'x', code: CODE }))
+    expect(await closed).toBe(4003)
+  })
+
+  it('opens strong-code campaigns through Funnel', async () => {
+    await create()
+    expect((await call('POST', `/api/campaigns/${ID}/enter`, { code: CODE }, VIA_FUNNEL)).status).toBe(200)
   })
 
   it('refuses short codes, bad ids and non-object data', async () => {

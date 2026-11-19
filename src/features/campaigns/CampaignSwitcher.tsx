@@ -61,7 +61,7 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
     setBusy(true); setCodeError(null)
     const ok = await stageCampaign(codePrompt.id, code)
     setBusy(false)
-    if (!ok) { setCodeError('Wrong code, or too many tries (wait 15 minutes), or the campaign is unavailable.'); return }
+    if (!ok) { setCodeError('Wrong code, too many tries (wait 15 minutes), or the campaign is unavailable from outside the home network.'); return }
     proceed(codePrompt.id)
   }
 
@@ -69,7 +69,7 @@ export function CampaignSwitcher({ onPlay, playerOnly }: Props) {
     if (!newName.trim() || newCode.trim().length < MIN_CODE_LENGTH || busy) return
     setBusy(true)
     const id = await createCampaign(newName.trim(), newCode.trim())
-    if (!id) { setBusy(false); alert('Could not create the campaign (server unreachable, or too many new campaigns: try again later).'); return }
+    if (!id) { setBusy(false); alert('Could not create the campaign. New campaigns can only be created from your home network; otherwise the server may be unreachable or busy.'); return }
     const ok = await stageCampaign(id, newCode.trim())
     setBusy(false)
     setShowNew(false); setNewName(''); setNewCode('')

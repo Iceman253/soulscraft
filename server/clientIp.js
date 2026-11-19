@@ -9,6 +9,12 @@ const LOOPBACK = /^(127\.|::1$|::ffff:127\.)/
 
 const first = (v) => (Array.isArray(v) ? v[0] : v)
 
+/** True when the request reached nginx through a proxy on this machine (Tailscale
+ *  Serve/Funnel) rather than directly from the home network. */
+export function isRemote(headers, socketAddress) {
+  return LOOPBACK.test(String(first(headers['x-real-ip']) || socketAddress || '').trim())
+}
+
 export function clientIp(headers, socketAddress) {
   const real = String(first(headers['x-real-ip']) || socketAddress || 'unknown').trim()
   if (LOOPBACK.test(real)) {

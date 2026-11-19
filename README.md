@@ -181,6 +181,9 @@ The installer sets up:
 - **Brute-force limits:** 10 wrong codes per client and 100 per campaign every 15
   minutes, 5 new campaigns per client per hour, at most 50 campaigns, and per-request
   limits in nginx.
+- **Home network vs. internet:** requests that arrive through a tunnel on the container
+  (Tailscale Funnel/Serve) can't create or import campaigns, and can't open campaigns
+  whose code is shorter than 6 characters until the GM changes it.
 - **Storage limits:** 4 MB per campaign, 3 MB per image (PNG/JPEG/WebP/GIF only),
   1000 images per campaign, and writes stop when less than 150 MB of disk is free.
 - **Sandboxed backend:** runs as the `soulscraft` user under systemd sandboxing and can
